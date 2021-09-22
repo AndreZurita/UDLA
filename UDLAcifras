@@ -1,0 +1,52 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+
+
+# libraries:
+library(ggplot2)
+library(gganimate)
+library(gifski)
+library(magick)
+
+# Make 2 basic states and concatenate them:
+z <- data.frame(group=c("2013","2016","2020","2021"), values=c(0,0,0,0), frame=rep('z',4))
+a <- data.frame(group=c("2013","2016","2020","2021"), values=c(3853,0,0,0), frame=rep('a',4))
+b <- data.frame(group=c("2013","2016","2020","2021"), values=c(3853,4722,0, 0), frame=rep('b',4))
+c <- data.frame(group=c("2013","2016","2020","2021"), values=c(3853,4722,6192, 0), frame=rep('c',4))
+d <- data.frame(group=c("2013","2016","2020","2021"), values=c(3853,4722,6192,9154), frame=rep('d',4))
+
+
+
+data <- rbind(z,a,b,c,d)  
+
+# Basic barplot:
+ggplot(a, aes(x=group, y=values, fill=group)) + 
+  geom_bar(stat='identity')
+
+# Make a ggplot, but add frame=year: one image per year
+p <- ggplot(data, aes(x=group, y=values, fill=group)) + 
+  geom_bar(stat='identity') +
+  theme_bw()+
+  scale_fill_manual(values=c("#042c4b", "#c83349", "#5b9aa0", "#135857")) +
+  geom_text(aes(label = signif(values, digits = 3)), position = position_stack(vjust = 0.5), size = 8, colour = "white")+
+  labs(y="Becas Otorgadas", x = "Años", colour ="Becas Otorgadas por Años") +
+  # gganimate specific bits:
+  transition_states(
+    frame,
+    transition_length = 2,
+    state_length = 1
+  ) +
+  ease_aes('sine-in-out')
+
+animate(p, renderer = gifski_renderer())
+
+# Save at gif:
+anim <- anim_save("288-animated-barplot-transition.gif")
+
+magick::image_write(anim, path="C:\Users\ritaz\Desktop\COORDINACION DE PROYECTOS")
+
+
+
