@@ -1,0 +1,398 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+
+                        #/// CADENA COMERCIAL \\\#
+
+#Match entre base de leads y oportunidades por ci o correo electronico 
+
+#BASE: CADENA COMERCIAL
+
+comercial <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/KPIs/BasesMkt/cadena_comercial.xlsx")
+
+comercial <- rename(comercial, f_creacion_op = 'Fecha de creación')
+comercial <- rename(comercial, f_ultmod_etapa = 'Fecha de la última modificación de Etapa')
+
+comercial$f_creacion_op <- as.Date(comercial$f_creacion_op, format= "%d/%m/%Y")
+comercial$f_ultmod_etapa <- as.Date(comercial$f_ultmod_etapa, format= "%d/%m/%Y")
+
+
+comercial$f_ultmod_etapa[is.na(comercial$f_ultmod_etapa)] <- Sys.Date()
+comercial$f_ultmod_etapa <- as.Date(comercial$f_ultmod_etapa, format= "%d/%m/%Y")
+
+#De comercial necesito sacar el codigo de la carrera y periodo, eso lo hago desde nombre de oportunidad
+
+comercial <- comercial %>%
+        separate(`Nombre de la oportunidad`, c("apellido", "cod", "carrera", "periodo"), "-")
+
+#Codigos de programas
+
+comercial$EDCO <- substr(comercial$cod, 1,4)
+
+comercial$`Línea de negocio`[comercial$EDCO == "EDCO"] <- "EDCO"
+
+comercial$periodo[comercial$EDCO == "EDCO"] <- "EDCO2021"
+
+comercial$periodo[comercial$periodo == " HUMANA"] <- "EDCO2021"
+comercial$periodo[comercial$periodo == " EST DIGITAL"] <- "EDCO2021"
+comercial$periodo[comercial$periodo == "ESP. CIRUGÍA GRAL. NOV. 2021"] <- "2022-00"
+comercial$periodo[comercial$periodo == "ESP. ORT. Y TRAUM. NOV. 2021"] <- "2022-00"
+comercial$periodo[comercial$periodo == "202100"] <- "2021-00"
+comercial$periodo[comercial$periodo == "202101"] <- "2021-00"
+comercial$periodo[comercial$periodo == "202200"] <- "2022-00"
+comercial$periodo[comercial$periodo == "202210"] <- "2022-10"
+comercial$periodo[comercial$periodo == "202220"] <- "2022-20"
+comercial$periodo[comercial$periodo == "202310"] <- "2023-10"
+
+
+comercial$cod <- substr(comercial$cod, 7, 10)
+
+#Errores varios
+comercial$cod[comercial$cod == " ORO"] <- "P025"
+comercial$cod[comercial$cod == "ALIZ"] <- "P023"
+comercial<-comercial[!(comercial$cod=="RA N"),]
+comercial<-comercial[!(comercial$cod==" "),]
+
+#Quitar estudio trabajo dado que esta sobre estimando indicadores
+
+comercial = comercial[comercial$`Plan de Programa: Nombre del plan del programa` != "ENFERMERIA MODALIDAD ESTUDIO TRABAJO",]
+
+
+#Trabajo de origen
+
+comercial <- rename(comercial, origen = 'Origen del candidato')
+
+comercial$origen[comercial$origen == "Bing Natural Search" | comercial$origen == "Google Natural Search" | comercial$origen == "Yahoo! Natural Search"] <- "Google Natural Search"
+comercial$origen[comercial$origen == "Spotyfy" | comercial$origen == "CI_Santuario_youtube"] <- "Youtube+Spotify"
+comercial$origen[comercial$origen == "Campañas Doppler" | comercial$origen == "educacionsuperior.net"] <- "Otros"
+comercial$origen[comercial$origen == "Chat en línea" | comercial$origen == "Correo" | comercial$origen == "Llamada" | comercial$origen == "Whatsapp" | comercial$origen == "Chatbot"] <- "Inbound"
+comercial$origen[comercial$origen == "Chat en línea" | comercial$origen == "Correo" | comercial$origen == "Llamada" | comercial$origen == "Whatsapp" | comercial$origen == "hs_email"] <- "Inbound"
+comercial$origen[comercial$origen == "Colegios" | comercial$origen == "Empresas" | comercial$origen == "Referidos"] <- "Colegios/Prospeccion"
+comercial$origen[is.na(comercial$origen)] <- "Colegios/Prospeccion"
+
+
+comercial$origen_resum <- 0
+
+comercial$origen_resum[comercial$origen == "Facebook" | comercial$origen == "Formulario web" | comercial$origen == "Google Ad" 
+                       | comercial$origen == "Instagram" | comercial$origen == "Linkedin" | comercial$origen == "Otros" |
+                               comercial$origen == "Twitter" |  comercial$origen == "Youtube+Spotify"] <- "Digital"
+
+
+comercial$origen_resum[comercial$origen == "Base comprada" | comercial$origen == "Colegios/Prospeccion" |
+                               comercial$origen == "Eventos" | comercial$origen == "Inbound" | comercial$origen == "Simulador Homologación" |                 
+                               comercial$origen == "Walk-in" |comercial$origen == "Datos de período anterior"] <- "Admisiones"
+
+
+comercial$origen_resum[comercial$origen == "Google Natural Search"] <- "Busqueda Natural"       
+
+
+#Match Codigos de programas con los habilitados
+
+cod_pregrado <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/KPIs/cod_pregrado.xlsx")
+cod_posg <- read_excel("C:/Users/ritaz/Desktop/CONSULTOR CIERRE/Analítica/AnalisisVarios/MATCH CRM_SF/cod_carr2.xlsx")
+cod_edco <- read_excel("C:/Users/ritaz/Desktop/CONSULTOR CIERRE/Analítica/AnalisisVarios/MATCH CRM_SF/cod_carr3.xlsx")
+
+
+codigos <- rbind(cod_pregrado, cod_posg, cod_edco)
+
+comercial <- merge(comercial,codigos,by="cod")
+
+
+comercial <-rename(comercial, carrera = "carrera.y")
+
+
+leads <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/KPIs/Match/base_leads_cadena.xlsx")
+
+#Solo procesare Leads antes de entrar en cadena comercial que es tener una etapa
+leads202210 <- subset(leads, leads$`Plan de Programa: Periodo Académico: Nombre de plazo` == '2022-10' & 
+                              leads$`Plan de Programa: Línea de negocio` == "Pregrado")
+                      
+leads202220 <- subset(leads, leads$`Plan de Programa: Periodo Académico: Nombre de plazo` == '2022-20' & 
+                                                    leads$`Plan de Programa: Línea de negocio` == "Pregrado")
+
+#Unicamente LEADS        
+resumen202210 <- count(leads202210, 'carrera') #Leads
+resumen202220 <- count(leads202220, 'carrera') #Leads
+
+
+cadena_comercial <- merge(comercial,leads, by="Identificación") #SOLO POR EL PERIODO SELECCIONADO
+
+
+
+#Bases por periodos SOLO pregrado:
+
+comercial_202210 <- subset(comercial, comercial$periodo == '2022-10' & 
+                                comercial$`Línea de negocio` == "Pregrado")
+
+comercial_202220 <- subset(comercial, comercial$periodo == '2022-20' & 
+                                   comercial$`Línea de negocio` == "Pregrado")
+
+                ##Cadena Comercial Indicadores y Valores por Carrera
+
+#Solo Afluencias, Abiertos y Documentaciones 202210
+
+afluencias202210 <- count(comercial_202210, 'carrera') #Afluencias 
+
+abiertos_202210 <- subset(comercial_202210, comercial_202210$periodo == '2022-10' & 
+                                  comercial_202210$`Línea de negocio` == "Pregrado" & comercial_202210$`Etapa` != "Cerrada Perdida")
+
+abiertos_202210 <- subset(abiertos_202210, abiertos_202210$`Etapa` != "Cerrada Ganada")
+
+abiertos_202210 <- count(abiertos_202210, 'carrera') #Abiertos 
+
+documentados_202210 <- subset(comercial_202210, comercial_202210$periodo == '2022-10' & 
+                                      comercial_202210$`Línea de negocio` == "Pregrado" & comercial_202210$`Etapa` == "Cerrada Ganada")
+
+documentados_202210 <- count(documentados_202210, 'carrera') #Documentados 
+
+
+#LISTO PARA HACER MATCH ENTRE TABLAS DE CADENA, RECUERDA HACER 2 COSAS, UN SEMANAL Y UN ACUMULADO TIPO YDT
+
+
+#CADENA COMPLETA 202210
+
+resumen202210 <- as.data.frame(resumen202210)
+abiertos_202210 <- as.data.frame(abiertos_202210)
+afluencias202210 <- as.data.frame(afluencias202210)
+documentados_202210 <- as.data.frame(documentados_202210)
+
+resultados202210 <- cod_pregrado
+resultados202210 <- as.data.frame(resultados202210)
+
+resultados202210 <- join(resumen202210,abiertos_202210,by = "carrera")
+
+resultados202210 <- join(resultados202210,afluencias202210,by = "carrera")
+
+resultados202210 <- join(resultados202210,documentados_202210,by = "carrera")
+
+
+names(resultados202210)[2] <- "Leads"
+names(resultados202210)[3] <- "Abiertos"
+names(resultados202210)[4] <- "Afluentes"
+names(resultados202210)[5] <- "Documentados"
+
+resultados202210$Leads[is.na(resultados202210$Leads)] <- 0
+resultados202210$Abiertos[is.na(resultados202210$Abiertos)] <- 0
+resultados202210$Afluentes[is.na(resultados202210$Afluentes)] <- 0
+resultados202210$Documentados[is.na(resultados202210$Documentados)] <- 0
+
+View(resultados202210)
+                        #Solo Afluencias, Abiertos y Documentaciones 202220
+
+afluencias202220 <- count(comercial_202220, 'carrera') #Afluencias 
+
+abiertos_202220 <- subset(comercial_202220, comercial_202220$periodo == '2022-10' & 
+                                  comercial_202220$`Línea de negocio` == "Pregrado" & comercial_202220$`Etapa` != "Cerrada Perdida")
+
+abiertos_202220 <- subset(abiertos_202220, abiertos_202220$`Etapa` != "Cerrada Ganada")
+
+abiertos_202220 <- count(abiertos_202220, 'carrera') #Abiertos 
+
+documentados_202220 <- subset(comercial_202220, comercial_202220$periodo == '2022-10' & 
+                                      comercial_202220$`Línea de negocio` == "Pregrado" & comercial_202220$`Etapa` == "Cerrada Ganada")
+
+documentados_202220 <- count(documentados_202220, 'carrera') #Documentados 
+
+
+#LISTO PARA HACER MATCH ENTRE TABLAS DE CADENA, RECUERDA HACER 2 COSAS, UN SEMANAL Y UN ACUMULADO TIPO YDT
+
+
+#CADENA COMPLETA 202220
+
+resumen202220 <- as.data.frame(resumen202220)
+abiertos_202220 <- as.data.frame(abiertos_202220)
+afluencias202220 <- as.data.frame(afluencias202220)
+documentados_202220 <- as.data.frame(documentados_202220)
+
+resultados202220 <- cod_pregrado
+resultados202220 <- as.data.frame(resultados202220)
+
+resultados202220 <- join(resumen202220,abiertos_202220,by = "carrera")
+
+resultados202220 <- join(resultados202220,afluencias202220,by = "carrera")
+
+resultados202220 <- join(resultados202220,documentados_202220,by = "carrera")
+
+
+names(resultados202220)[2] <- "Leads"
+names(resultados202220)[3] <- "Abiertos"
+names(resultados202220)[4] <- "Afluentes"
+names(resultados202220)[5] <- "Documentados"
+
+resultados202220$Leads[is.na(resultados202220$Leads)] <- 0
+resultados202220$Abiertos[is.na(resultados202220$Abiertos)] <- 0
+resultados202220$Afluentes[is.na(resultados202220$Afluentes)] <- 0
+resultados202220$Documentados[is.na(resultados202220$Documentados)] <- 0
+
+View(resultados202220)
+
+                #Tablas de resumen semanal ambos periodos
+
+#INDICADORES Af/L, Ab/Af, Doc/Af, Doc/L
+
+resultados202210$Af_L <- (resultados202210$Afluentes)/(resultados202210$Leads)
+resultados202210$Ab_Af <- (resultados202210$Abiertos)/(resultados202210$Afluentes)
+resultados202210$Doc_Af <- (resultados202210$Documentados)/(resultados202210$Afluentes)
+resultados202210$Doc_L <- (resultados202210$Documentados)/(resultados202210$Leads)
+
+resultados202220$Af_L <- (resultados202220$Afluentes)/(resultados202220$Leads)
+resultados202220$Ab_Af <- (resultados202220$Abiertos)/(resultados202220$Afluentes)
+resultados202220$Doc_Af <- (resultados202220$Documentados)/(resultados202220$Afluentes)
+resultados202220$Doc_L <- (resultados202220$Documentados)/(resultados202220$Leads)
+
+
+View(resultados202210)
+View(resultados202220)
+
+write.table(resultados202210, "clipboard", sep="\t")
+write.table(resultados202220, "clipboard", sep="\t")
+
+
+
+                     #Origen Digital, Adm u Natural de documentados
+
+
+
+doc202210_com <- subset(comercial, comercial$origen_resum == "Digital" & comercial$Etapa == "Cerrada Ganada" & comercial$periodo == "2022-10")
+doc_202210_com <- count(doc202210_com, 'carrera')
+
+doc202210_adm <- subset(comercial, comercial$origen_resum == "Admisiones" & comercial$Etapa == "Cerrada Ganada" & comercial$periodo == "2022-10")
+doc_202210_adm <- count(doc202210_adm, 'carrera')
+
+doc2022210_natural <- subset(comercial, comercial$origen_resum == "Busqueda Natural" & comercial$Etapa == "Cerrada Ganada" & comercial$periodo == "2022-10")
+doc_202210_natural <- count(doc2022210_natural, 'carrera')
+
+#202220
+
+doc20220_com <- subset(comercial, comercial$origen_resum == "Digital" & comercial$Etapa == "Cerrada Ganada" & comercial$periodo == "2022-20")
+doc_202220_com <- count(doc20220_com, 'carrera')
+
+doc20220_adm <- subset(comercial, comercial$origen_resum == "Admisiones" & comercial$Etapa == "Cerrada Ganada" & comercial$periodo == "2022-20")
+doc_202220_adm <- count(doc20220_adm, 'carrera')
+
+doc202220_natural <- subset(comercial, comercial$origen_resum == "Busqueda Natural" & comercial$Etapa == "Cerrada Ganada" & comercial$periodo == "2022-20")
+doc_202220_natural <- count(doc202220_natural, 'carrera')
+
+
+#Tabla resumen
+
+n<- max(length(doc_202210_com), length(doc_202210_adm), length(doc_202210_natural), length(doc_202220_com), 
+        length(doc_202220_adm), length(doc_202220_natural))
+
+length(doc_202210_com) <- n
+length(doc_202210_adm) <- n
+length(doc_202210_natural) <- n
+length(doc_202220_com) <- n
+length(doc_202220_adm) <- n
+length(doc_202220_natural) <- n
+
+
+auxcarr <- count(comercial, 'carrera')
+auxcarr <- auxcarr[c(1)]
+
+
+doc_202210_com[is.na(doc_202210_com)] <-0
+doc_202210_adm[is.na(doc_202210_adm)] <-0
+doc_202210_natural[is.na(doc_202210_natural)] <-0
+doc_202220_com[is.na(doc_202220_com)] <-0
+doc_202220_adm[is.na(doc_202220_adm)] <-0
+doc_202220_natural[is.na(doc_202220_natural)] <-0
+
+com <- join(auxcarr,doc_202210_com, by = 'carrera' )
+aux <- join(com,doc_202220_com, by = 'carrera' )
+adm <- join(aux,doc_202210_adm, by = 'carrera' )
+aux2 <- join(adm,doc_202220_adm, by = 'carrera' )
+aux3 <- join(aux2,doc_202210_natural, by = 'carrera' )
+
+tabla_doc_origen <- join(aux3,doc_202220_natural, by = 'carrera' )
+tabla_doc_origen[is.na(tabla_doc_origen)] <-0
+
+names(tabla_doc_origen)[2] <- 'doc_202210_com'
+names(tabla_doc_origen)[3] <- 'doc_202220_com'
+names(tabla_doc_origen)[4] <- 'doc_202210_adm'
+names(tabla_doc_origen)[5] <- 'doc_202220_adm'
+names(tabla_doc_origen)[6] <- 'doc_202210_natural'
+names(tabla_doc_origen)[7] <- 'doc_202220_natural'
+
+write.table(tabla_doc_origen, "clipboard", sep="\t")
+    
+                        #Indicadores 
+
+#Crecimiento Documentacion. Al menos del 5% semanal
+
+crec_doc = 0.0429 #sale a mano de excel hasta que que arregle SF
+estabilidad = crec_doc/0.05
+
+
+#Origen. Usar EXCEL hasta que se arregle SF para ver tanto evolucion como total
+#Documentados Admsiones/ Documentados Comunicacion
+
+rat_origen_doc_cum = 1826/227 #Por cada doc cuyo origen es en comunicacion, admisiones docuemnta 8
+rat_origen_doc_sem = 68/9 #Por cada doc cuyo origen es en comunicacion, admisiones docuemnta 8
+
+
+#Leads Admsiones/ Leads Comunicacion
+
+rat_origen_lead_sem = 178/97 #Por cada lead cuyo origen es en comunicacion, admisiones trae 1.8
+
+#Perdidos
+
+#Total perdidos esta semana
+
+perdidos = subset(comercial, comercial$Etapa == "Cerrada Perdida" & comercial$`Línea de negocio` == "Pregrado")
+perdidos_freq = count(perdidos, 'Identificación')
+
+ratio_per_afl = sum(perdidos_freq$freq)/(sum(afluencias202210$freq)+sum(afluencias202220$freq))
+
+#Motivo de perdida esta semana
+
+mot_perdidos_freq = count(perdidos, 'Subetapa')
+
+mot_perdidos_freq %>%
+        mutate(name = fct_reorder(Subetapa, desc(freq))) %>%
+        ggplot( aes(x=Subetapa, y=freq)) +
+        geom_bar(stat="identity", fill="#de3e37", alpha=.6, width=0.9) +
+        xlab("") +
+        theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1))
+
+#Dias promedio para perdida admisones
+
+perdidos$dias_perdida <- (perdidos$f_ultmod_etapa - perdidos$f_creacion_op)
+
+
