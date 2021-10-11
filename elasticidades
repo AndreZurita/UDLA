@@ -1,0 +1,403 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+#/// BECAS Y GRAFICOS \\\#
+
+# library
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(officer)
+library(magrittr)
+library(htmlwidgets)
+library(webshot)
+library(treemap)
+library(writexl)
+library(reshape2)
+library(tidyr)
+library(sqldf)
+library(plyr)
+
+
+becas <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "beca_media")
+
+## BECAS MEDIAS POR PERIODO. 
+#BECA MEDIA ES: PROPORCION POBLACION CON BECA X BECA PROMEDIO ENTREGADA
+
+beca_media <- melt(becas, id.vars = c("Carrera"))
+names(beca_media)[2] <- "Periodo"
+names(beca_media)[3] <- "BecaMedia"
+
+
+# Plot
+        ggplot(beca_media, aes(x = BecaMedia, y = Periodo, fill = ..x..)) +
+                geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+                scale_fill_viridis(name = "Becas Medias", option = "D") +
+                labs(title = 'Becas Medias por Periodo') +
+                theme_ipsum() +
+                theme(
+                        legend.position="none",
+                        panel.spacing = unit(0.1, "lines"),
+                        strip.text.x = element_text(size = 8)
+                )
+        
+        
+      # With transparency 
+p2 <- ggplot(data=beca_media, aes(x=BecaMedia, group=Periodo, fill=Periodo)) +
+        geom_density(adjust=1.5, alpha=.4) +
+        theme_ipsum()
+        p2
+        
+        
+ggplotly(p2, hoverinfo = "text")
+
+
+## EVOLUCION DE LOS PRECIOS ACEPTADOS MEDIOS. 
+#PRECIO ACEPTADO MEDIO: % DE BECA OTORGADO 
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola        
+        
+arancel <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "arancel_beca")
+
+arancel_medio <- melt(arancel, id.vars = c("Carrera"))
+names(arancel_medio)[2] <- "Periodo"
+names(arancel_medio)[3] <- "Arancel"
+
+#Solo de alto pago
+
+pago_alto <- subset(arancel_medio, Carrera %in% c("MEDICINA", "ODONTOLOGIA", "GESTION DEPORTIVA", "COMUNICACION", 
+                                            "GASTRONOMIA", "DISEÑO DE PRODUCTOS", "MEDICINA VETERINARIA", "DISEÑO GRAFICO",
+                                            "DISEÑO DE INTERIORES", "ARQUITECTURA", "SONIDO Y ACUSTICA", "ARTES MUSICALES", "LIC. HOSPIT. Y HOTELERIA"))
+
+
+ggplot(pago_alto, aes(fill=Carrera, y=Periodo, x=Arancel)) + 
+                geom_bar(position="dodge", stat="identity") +
+                scale_fill_viridis(discrete = T, option = "D") +
+                ggtitle("Evolucion Arancel: Pago Alto") +
+                facet_wrap(~Carrera) +
+                theme_ipsum() +
+                theme(legend.position="center") +
+                xlab("")
+        
+
+#Solo de pago medio 
+
+pago_medio <- subset(arancel_medio, !(Carrera %in% c("MEDICINA", "ODONTOLOGIA", "GESTION DEPORTIVA", "COMUNICACION", 
+                                               "GASTRONOMIA", "DISEÑO DE PRODUCTOS", "MEDICINA VETERINARIA", "DISEÑO GRAFICO",
+                                               "DISEÑO DE INTERIORES", "ARQUITECTURA", "SONIDO Y ACUSTICA", "ARTES MUSICALES", "LIC. HOSPIT. Y HOTELERIA")))
+
+
+ggplot(pago_medio, aes(fill=Carrera, y=Periodo, x=Arancel)) + 
+        geom_bar(position="dodge", stat="identity") +
+        scale_fill_viridis(discrete = T, option = "D") +
+        ggtitle("Evolucion Arancel: Pago Medio") +
+        facet_wrap(~Carrera) +
+        theme_ipsum() +
+        theme(legend.position="center") +
+        xlab("")
+
+ 
+## SCATTER PLOT REVENUE CON BECA VS PRECIO PROMEDIO DE CARRERA SIN BECA 
+#ACUMULADO
+#TOMAREMOS DATA DE ALGUNAS HOJAS PARA EL CALCULO DE LA HOJA 
+
+#De arancel tomamos los aranceles de la carrera
+
+base1 <- arancel[c("Carrera", "arancel")]
+
+ingreso <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "Total_Ingreso")
+base_ingreso <- ingreso[c("Carrera", "2022-10")]
+
+base1 <- join(base1, base_ingreso, by = "Carrera")
+becas <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "beca_media")
+beca_media <- becas[c("Carrera", "202210")]
+
+base1 <- join(base1, beca_media, by = "Carrera")
+names(base1)[2] <- "Arancel202210"
+names(base1)[3] <- "Ingreso202210"
+names(base1)[4] <- "BecaMedia202210"
+
+
+
+
+#Quitamos medicina y odontologia
+
+scatter <- subset(base1, !(Carrera %in% c("MEDICINA", "ODONTOLOGIA")))
+
+
+p <- ggplot(scatter, aes(x=Ingreso202210, y=BecaMedia202210, color=Carrera, size=Arancel202210)) +
+        geom_point() +
+        theme(legend.position="none")
+
+p <- ggMarginal(p, type="histogram", fill = "slateblue", xparams = list(  bins=10))
+
+
+p
+
+
+## SCATTER PLOT REVENUE CON BECA VS PRECIO PROMEDIO DE CARRERA SIN BECA 
+#POR PERIODO
+
+#Generacion de la base. 
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola 
+
+ingreso <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "Total_Ingreso")
+ingreso_his <- melt(ingreso, id.vars = c("Carrera"))
+arancel <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "arancel_beca")
+solo_arancel <- arancel[c("Carrera", "arancel")]
+aux_preciomedio <- arancel[c("Carrera", "2019-20","2020-10","2020-20","2021-10"
+                              ,"202120","202210")]
+
+precio_medio <- melt(aux_preciomedio, id.vars = c("Carrera"))
+precio_medio$variable <- as.character(precio_medio$variable)
+precio_medio$variable[precio_medio$variable == "202120"] <- "2021-20"
+precio_medio$variable[precio_medio$variable == "202210"] <- "2022-10"
+
+
+beca <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "beca_media")
+aux_becamedia <- beca[c("Carrera", "201920","202010","202020","202110"
+                             ,"202120","202210")]
+beca_media <- melt(aux_becamedia, id.vars = c("Carrera"))
+
+beca_media$variable <- as.character(beca_media$variable)
+
+beca_media$variable[beca_media$variable == "201920"] <- "2019-20"
+beca_media$variable[beca_media$variable == "202010"] <- "2020-10"
+beca_media$variable[beca_media$variable == "202020"] <- "2020-20"
+beca_media$variable[beca_media$variable == "202110"] <- "2021-10"
+beca_media$variable[beca_media$variable == "202120"] <- "2021-20"
+beca_media$variable[beca_media$variable == "202210"] <- "2022-10"
+
+doc <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "Documentados")
+doc_medio <- melt(doc, id.vars = c("Carrera"))
+
+doc_medio$variable <- as.character(doc_medio$variable)
+
+doc_medio$variable[doc_medio$variable == "201920"] <- "2019-20"
+doc_medio$variable[doc_medio$variable == "202010"] <- "2020-10"
+doc_medio$variable[doc_medio$variable == "202020"] <- "2020-20"
+doc_medio$variable[doc_medio$variable == "202110"] <- "2021-10"
+doc_medio$variable[doc_medio$variable == "202120"] <- "2021-20"
+doc_medio$variable[doc_medio$variable == "202210"] <- "2022-10"
+
+base <- join(ingreso_his, solo_arancel, by = "Carrera")
+base <- join(base, precio_medio, by = c('Carrera','variable'))
+base <- join(base, beca_media, by = c('Carrera','variable'))
+base <- join(base, doc_medio, by = c('Carrera','variable'))
+
+names(base)[2] <- "Periodo"
+names(base)[3] <- "Ingreso"
+names(base)[4] <- "Arancel"
+names(base)[5] <- "Precio_medio"
+names(base)[6] <- "Beca_media"
+names(base)[7] <- "Documentados"
+
+base$grupo <- 0
+base$grupo[base$Arancel >=3522.5] <- "g1"
+base$grupo[base$Arancel >=3420 &  base$Arancel <=3490] <- "g2"
+base$grupo[base$Arancel < 3420] <- "g3"
+
+#Quitamos medicina y odontologia
+
+scatter <- subset(base, !(Carrera %in% c("MEDICINA", "ODONTOLOGIA")))
+
+# Filtro
+
+#scatter_2 <- scatter %>% filter(Periodo=="2019-20") %>% dplyr::select(-Periodo)
+
+##
+
+colores <- c("#13A16C", "#43BCDA", "#032030", "#4BD65F", "#B94040", "#322A2A")
+names(colores) <- levels(factor(c(levels(scatter$Periodo), levels(scatter$Periodo))))
+
+elasticidad <- scatter %>%
+
+                ggplot(aes(x = Documentados, y = Precio_medio, size = Ingreso, shape = grupo, label = Carrera)) + 
+                geom_point(mapping = aes(color = Periodo)) + 
+                scale_size(range = c(.1, 12), name="Periodo") +
+                scale_fill_manual(name="Periodo", values= colores) +
+                theme_ipsum() 
+
+ggplotly(elasticidad, hoverinfo = "text")
+
+
+##
+
+## SCATTER PLOT DE CUADRANTES TIPO DE BIEN 
+
+#HOJA GRAPH5
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola        
+
+
+elasticidad2 <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "Elasticidad")
+
+var_precios <- elasticidad2[c("Carrera","v_p1920_marzo", "v_p2021_sep", "v_p2021_marzo", "v_p202122_sep")]
+var_doc <- elasticidad2[c("Carrera","v_doc1920_marzo", "v_doc2021_sep", "v_doc2021_marzo", "v_doc202122_sep")]
+
+names(var_precios)[2] <- "2019-20_a_2020-20"
+names(var_precios)[3] <- "2020-10_a_2021-10"
+names(var_precios)[4] <- "2020-20_a_2021-20"
+names(var_precios)[5] <- "2021-10_a_2022-10"
+
+names(var_doc)[2] <- "2019-20_a_2020-20"
+names(var_doc)[3] <- "2020-10_a_2021-10"
+names(var_doc)[4] <- "2020-20_a_2021-20"
+names(var_doc)[5] <- "2021-10_a_2022-10"
+
+var_precios_long <- melt(var_precios, id.vars = c("Carrera"))
+var_doc_long <- melt(var_doc, id.vars = c("Carrera"))
+
+elasticidades <- join(var_precios_long, var_doc_long, by = c('Carrera','variable'))
+
+names(elasticidades)[2] <- "periodo"
+names(elasticidades)[3] <- "var_precio"
+names(elasticidades)[4] <- "var_doc"
+
+
+elast <- elasticidades %>%
+  
+  ggplot(aes(x = var_doc, y = var_precio, label = Carrera)) + 
+  geom_point(mapping = aes(color = periodo)) + 
+  scale_size(range = c(.1, 12), name="periodo") +
+  scale_fill_viridis(discrete=FALSE, guide="none", option="A") +
+  geom_hline(yintercept = 0, color = "red", size = 0.75) +
+  geom_vline(xintercept = 0, color = "red", size = 0.75) +
+  annotate("text", x = -1, y = 0.2, label = "Normal", color = "black", size = 7) +
+  annotate("text", x = -1, y = -0.2, label = "Critico", color = "black", size = 7) +
+  annotate("text", x = 0.5, y = 0.2, label = "Giffen", color = "black", size = 7) +
+  annotate("text", x = 0.5, y = -0.2, label = "Nomal", color = "black", size = 7)
+  theme_ipsum() 
+
+ggplotly(elast, hoverinfo = "text")
+
+
+##Resumen de cambios de estado 
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola        
+
+
+estado <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "Elasticidad")
+
+estado <- estado[c("Carrera","TipoBien1", "TipoBien2", "TipoBien3", "TipoBien4")]
+
+
+
+estado$`Estatus Marzo` <- 0
+
+
+estado$`Estatus Marzo`[estado$TipoBien1 == "Normal" & estado$TipoBien3 == "Normal"] <-"Mantiene Normal"
+estado$`Estatus Marzo`[estado$TipoBien1 == "Normal" & estado$TipoBien3 == "Critico"] <-"Empeora Critico"
+estado$`Estatus Marzo`[estado$TipoBien1 == "Normal" & estado$TipoBien3 == "Giffen"] <-"Mejora Max"
+estado$`Estatus Marzo`[estado$TipoBien1 == "Critico" & estado$TipoBien3 == "Normal"] <-"Mejora Normal"
+estado$`Estatus Marzo`[estado$TipoBien1 == "Critico" & estado$TipoBien3 == "Giffen"] <-"Mejora Max"
+estado$`Estatus Marzo`[estado$TipoBien1 == "Critico" & estado$TipoBien3 == "Critico"] <-"Mantiene Critico"
+estado$`Estatus Marzo`[estado$TipoBien1 == "Giffen" & estado$TipoBien3 == "Giffen"] <-"Mantiene Max"
+estado$`Estatus Marzo`[estado$TipoBien1 == "Giffen" & estado$TipoBien3 == "Normal"] <-"Empeora Normal"
+estado$`Estatus Marzo`[estado$TipoBien1 == "Giffen" & estado$TipoBien3 == "Critico"] <-"Empeora Critico"
+
+
+estado$`Estatus Septiembre` <- 0
+
+
+estado$`Estatus Septiembre`[estado$TipoBien2 == "Normal" & estado$TipoBien4 == "Normal"] <-"Mantiene Normal"
+estado$`Estatus Septiembre`[estado$TipoBien2 == "Normal" & estado$TipoBien4 == "Critico"] <-"Empeora Critico"
+estado$`Estatus Septiembre`[estado$TipoBien2 == "Normal" & estado$TipoBien4 == "Giffen"] <-"Mejora Max"
+estado$`Estatus Septiembre`[estado$TipoBien2 == "Critico" & estado$TipoBien4 == "Normal"] <-"Mejora Normal"
+estado$`Estatus Septiembre`[estado$TipoBien2 == "Critico" & estado$TipoBien4 == "Giffen"] <-"Mejora Max"
+estado$`Estatus Septiembre`[estado$TipoBien2 == "Critico" & estado$TipoBien4 == "Critico"] <-"Mantiene Critico"
+estado$`Estatus Septiembre`[estado$TipoBien2 == "Giffen" & estado$TipoBien4 == "Giffen"] <-"Mantiene Max"
+estado$`Estatus Septiembre`[estado$TipoBien2 == "Giffen" & estado$TipoBien4 == "Normal"] <-"Empeora Normal"
+estado$`Estatus Septiembre`[estado$TipoBien2 == "Giffen" & estado$TipoBien4 == "Critico"] <-"Empeora Critico"
+
+treemap <- count(estado$`Estatus Marzo`)
+treemap2 <- count(estado$`Estatus Septiembre`)
+
+tree <- join(treemap, treemap2, by = "x")
+
+names(tree)[1] <- "Estado"
+names(tree)[2] <- "Estatus Marzo"
+names(tree)[3] <- "Estatus Septiembre"
+
+
+tree[is.na(tree)] <- 0
+
+#Cambios de Marzo
+
+treemap(tree,
+        index="Estado",
+        vSize="Estatus Marzo",
+        type="index"
+)
+
+#Cambios de Septiembre
+
+treemap(tree,
+        index="Estado",
+        vSize="Estatus Septiembre",
+        type="index"
+)
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola        
+
+
+estado <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "Elasticidad")
+
+estado <- estado[c("Carrera","TipoBien1", "TipoBien2", "TipoBien3", "TipoBien4")]
+
+names(estado)[2] <- "2019-20_a_2020-20"
+names(estado)[3] <- "2020-10_a_2021-10"
+names(estado)[4] <- "2020-20_a_2021-20"
+names(estado)[5] <- "2021-10_a_2022-10"
+
+estado_evol <- melt(estado, id.vars = c("Carrera"))
+
+names(estado_evol)[2] <- "periodo"
+names(estado_evol)[3] <- "TipoBien"
+
+
+estado_evol$valor <- 0
+estado_evol$valor[estado_evol$TipoBien == "Giffen"] <- 1
+estado_evol$valor[estado_evol$TipoBien == "Normal"] <- 0
+estado_evol$valor[estado_evol$TipoBien == "Critico"] <- -1
+
+
+
+#Evolucion en el tiempo por tipo de bien y carrera
+
+evolucion <- estado_evol %>%
+  ggplot( aes(x=periodo, y=valor, group=Carrera, color=Carrera)) +
+  geom_line()+
+  geom_hline(yintercept = 0, color = "red", size = 0.75) +
+  annotate("text", x = 0.75, y = 0.9, label = "Giffen", color = "black", size = 7) +
+  annotate("text", x = 0.75, y = 0.2, label = "Normal", color = "black", size = 7) +
+  annotate("text", x = 0.75, y = -0.9, label = "Critico", color = "black", size = 7) +
+  scale_color_viridis(discrete = TRUE) +
+  theme(axis.text.x = element_text(60) )
+theme_ipsum() 
+
+ggplotly(evolucion, hoverinfo = "text")
