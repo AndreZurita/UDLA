@@ -1,0 +1,162 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(heatmaply)
+library(normalr)
+library(DataExplorer)
+
+
+
+                        #/// IMPORTES GASTADOS Y RESULTADOS \\\#
+
+
+desemfb <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/KPIs/BasesMkt/InformeAZ.xlsx")
+desemfb[is.na(desemfb)] <- 0 
+desemfb <- rename(desemfb, estado =  "Estado de la entrega")
+desemfb <- rename(desemfb, tipo_res =  "Tipo de resultado")
+
+
+#Numero de campañas y su estatus actual 
+desemfb <- as.data.frame(desemfb)
+camp <- count(desemfb, 'estado')
+
+
+#Trim para solo tener las campañas que han gastado dinero: desemfb2
+
+
+desemfb2 <- subset(desemfb, desemfb$`Importe gastado (USD)` > 0)
+desemfb2[is.na(desemfb2)] <- 0 
+dataMatNorm <- as.matrix(normalize(desemfb2, method = "standardize"))
+data <- subset.matrix(desemfb2, select = (4:11))
+
+#CTR Clicks/Visualizaciones 
+
+desemfb2$ctr <- (desemfb2$`Clics en el enlace`)/(desemfb2$Impresiones)
+
+
+#Resumen de resultados
+
+result <- count(desemfb2, 'tipo_res')
+
+result <- aggregate(desemfb2$Resultados, by=list(Category=desemfb2$tipo_res), FUN=sum)
+result <- rename(result, Resultado = "Category")
+
+costo_resultados <- aggregate(desemfb2$`Importe gastado (USD)`, by=list(Category=desemfb2$tipo_res), FUN=sum)
+costo_resultados <- rename(costo_resultados, Resultado = "Category")
+
+cpm <- aggregate(desemfb2$`CPC (Coste por clic en el enlace)`, by=list(Category=desemfb2$tipo_res), FUN=mean)
+cpm <- rename(cpm, Resultado = "Category")
+
+cpc <- aggregate(desemfb2$`CPC (Coste por clic en el enlace)`, by=list(Category=desemfb2$tipo_res), FUN=mean)
+cpc <- rename(cpc, Resultado = "Category")
+
+
+costo_medio_resultado <- join(result,costo_resultados,by = "Resultado")
+names(costo_medio_resultado)[2] <- "Resultados"
+names(costo_medio_resultado)[3] <- "Gasto Total"
+
+costo_medio_resultado$CPR <- (costo_medio_resultado$`Gasto Total`)/(costo_medio_resultado$Resultados) #Costo por resultado individual
+
+costo_medio_resultado <- join(costo_medio_resultado,cpm,by = "Resultado")
+names(costo_medio_resultado)[5] <- "CPM"
+
+costo_medio_resultado <- join(costo_medio_resultado,cpc,by = "Resultado")
+names(costo_medio_resultado)[6] <- "CPC"
+
+#Incluyo ahora CPM y CPC por categorias
+
+
+#Graficos de Matrices para ver correlaciones de data
+
+heatmap(cor(normalize(na.omit(data))))
+plot_correlation(data)
+
+#Distribucion de las variables
+options(repr.plot.width=8, repr.plot.height=4)
+plot_histogram(data)
+
+#Producto
+
+View(costo_medio_resultado)
+
+                                #Indicadores
+
+#Gasto Total 
+
+gasto = sum(data$`Importe gastado (USD)`)
+
+
+#Para calculo de ROI 
+#ROI: Gasto en publicidad 3 semanas/ingreso medio de esa semana. 
+#SOLO considerar documentados digitales 
+
+roi = (24561.8)/sum(data$`Importe gastado (USD)`)
+
+#CPC costo por click, Disponibilidad de gasto por click. benchmarked average CPC at $1.46.
+#CPC:  gasto total/clicks
+
+cpc = sum(data$`Importe gastado (USD)`)/sum(data$`Clics en el enlace`)
+
+#DG Disponilidad de gasto. benchmarked average CPC at $1.46.
+
+#CTR Rango de click sobre visualizaciones. benchmarked average CPM at 2.27%.
+#Clicks/Visualizaciones
+
+
+ctr = sum(data$`Clics en el enlace`)/sum(data$Impresiones)*100
+
+#DG: VEntas x Conversion media ACUMULADO
+
+dg = (24561.8)*0.067
+
+#CPM costo por mil visualizaciones. benchmarked average CPM at $9.31. #HISTORICO
+#DG: VEntas x Conversion media
+
+cpm = mean(data$`CPM (coste por 1000 impresiones)`)
+
+#Conversion leads/documentados. #HISTORICO
+
+conv = 0.067
+
+#CPL costo por leads. benchmarked average CPM at $119.34.
+#Costo total/Leads Comunicacion
+
+cpl = sum(data$`Importe gastado (USD)`)/178
+
+
