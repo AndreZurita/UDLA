@@ -1,0 +1,473 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+#/// NACIMIENTOS \\\#
+
+# library
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+
+nacimientos <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/Nacimientos/nacimientos_base.xlsx")
+
+
+#Hoja graph2: Nacimientos brutos por canton 1996-2007
+
+
+tasa_nac <- nacimientos %>%
+        ggplot( aes(x=ano, y=var, color=lugar)) +
+        geom_line()+
+        scale_color_viridis(discrete = TRUE, option = "H") +
+        theme_ipsum() 
+
+ggplotly(tasa_nac, hoverinfo = "text")
+
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+nacimientos <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/Nacimientos/nacimientos_base.xlsx")
+
+#Hoja graph3: cambios en nacimiento bruto 1996-2007
+
+
+ggplot_object <- nacimientos %>%
+        
+        ggplot(aes(x = ano, y = nac_brut, label = prov, size = nac)) + 
+        geom_point(mapping = aes(color = prov)) + 
+        scale_size(range = c(.1, 12), name="periodo") +
+        scale_fill_viridis(discrete=FALSE, guide="none", option="A") +
+        theme_ipsum() 
+
+ggplotly(ggplot_object, hoverinfo = "text")
+
+
+##Tasa de nacimientos por provincia
+
+tmp <- nacimientos %>%
+        mutate(prov2=prov)
+
+tmp %>%
+        ggplot( aes(x=ano, y=nac)) +
+        geom_line( data=tmp %>% dplyr::select(-prov), aes(group=prov2), color="grey", size=0.5, alpha=0.5) +
+        geom_line( aes(color=prov), color="#00146F", size=1.2 )+
+        scale_color_viridis(discrete = TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                plot.title = element_text(size=14),
+                panel.grid = element_blank()
+        ) +
+        ggtitle("Tasa de Nacimientos por Provincia 1996-2007") +
+        facet_wrap(~prov)
+
+##Nacimientos brutos por provincia 
+
+tmp <- nacimientos %>%
+        mutate(prov2=prov)
+
+tmp %>%
+        ggplot( aes(x=ano, y=nac_brut)) +
+        geom_line( data=tmp %>% dplyr::select(-prov), aes(group=prov2), color="grey", size=0.5, alpha=0.5) +
+        geom_line( aes(color=prov), color="#00146F", size=1.2 )+
+        scale_color_viridis(discrete = TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                plot.title = element_text(size=14),
+                panel.grid = element_blank()
+        ) +
+        ggtitle("Nacimientos Brutos por Provincia 1996-2007") +
+        facet_wrap(~prov)
+
+
+
+##################################### NACIMIENTOS MAPAS ###########################
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(forcats)
+library(hrbrthemes)
+library(viridis)
+library(rjson)
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+###################
+# Librerías:
+###################
+
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+
+
+
+###############################################################################
+#                         CANTOES
+###############################################################################
+dirmapas <- "C:/Users/ritaz/Desktop/UDLA/Maestria/Semestre_III/Econometria_Espacial/Shapes"
+setwd(dirmapas)
+poligonos <- shapefile("C:/Users/ritaz/Desktop/UDLA/Maestria/Semestre_III/Econometria_Espacial/Shapes/ecuador_Cantones.shp")
+dir.resul <- "C:/Users/ritaz/Desktop/UDLA/Maestria/Semestre_III/Econometria_Espacial"
+setwd(dir.resul)
+
+plot(poligonos)
+
+##Quitar provincias del analisis y zonas no delimitadas
+
+poligonos = poligonos[poligonos$DPA_CANTON !=8881,]
+poligonos = poligonos[poligonos$DPA_CANTON !=8882,]
+poligonos = poligonos[poligonos$DPA_CANTON !=8883,]
+poligonos = poligonos[poligonos$DPA_CANTON !=8884,]
+poligonos = poligonos[poligonos$DPA_CANTON !=8885,]
+poligonos = poligonos[poligonos$DPA_CANTON !=8889,]
+poligonos = poligonos[poligonos$DPA_CANTON !=9001,]
+poligonos = poligonos[poligonos$DPA_CANTON !=9003,]
+poligonos = poligonos[poligonos$DPA_CANTON !=9004,]
+
+poligonos = poligonos[poligonos$DPA_CANTON !=2001,]
+poligonos = poligonos[poligonos$DPA_CANTON !=2002,]
+poligonos = poligonos[poligonos$DPA_CANTON !=2003,]
+
+plot(poligonos)
+
+
+
+# Calculo los centroides
+centroides <- coordinates(poligonos)
+plot(poligonos)
+
+
+library(readxl)
+nacimientos <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/Nacimientos/nacimientos_base.xlsx")
+
+datos <- nacimientos
+
+datos$cod <- poligonos@data$DPA_CANTONES
+
+LlarC <- as.matrix(datos[,2:13]) #Datos sin el codigo ni el nombre
+
+#HOJA CANTON_VAR1000
+
+#1996
+
+a1996 <- as.data.frame(datos$'1996')
+names(a1996) <- "1996"
+row.names(a1996) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a1996)
+
+
+plotvar <- poligonos.data$'1996'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 1996", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+
+
+
+
+##1997
+
+a1997 <- as.data.frame(datos$'1997')
+names(a1997) <- "1997"
+row.names(a1997) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a1997)
+
+
+plotvar <- poligonos.data$'1997'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 1997", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+
+
+##1998
+
+a1998 <- as.data.frame(datos$'1998')
+names(a1998) <- "1998"
+row.names(a1998) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a1998)
+
+
+plotvar <- poligonos.data$'1998'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 1998", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+
+
+##1999
+
+a1999 <- as.data.frame(datos$'1999')
+names(a1999) <- "1999"
+row.names(a1999) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a1999)
+
+
+plotvar <- poligonos.data$'1999'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 1999", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+##2000
+
+a2000 <- as.data.frame(datos$'2000')
+names(a2000) <- "2000"
+row.names(a2000) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a2000)
+
+
+plotvar <- poligonos.data$'2000'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 2000", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+
+##2001
+
+a2001 <- as.data.frame(datos$'2001')
+names(a2001) <- "2001"
+row.names(a2001) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a2001)
+
+
+plotvar <- poligonos.data$'2001'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 2001", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+##2002
+
+a2002 <- as.data.frame(datos$'2002')
+names(a2002) <- "2002"
+row.names(a2002) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a2002)
+
+
+plotvar <- poligonos.data$'2002'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 2002", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+
+##2003
+
+a2003 <- as.data.frame(datos$'2003')
+names(a2003) <- "2003"
+row.names(a2003) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a2003)
+
+
+plotvar <- poligonos.data$'2003'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 2003", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+##2004
+
+a2004 <- as.data.frame(datos$'2004')
+names(a2004) <- "2004"
+row.names(a2004) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a2004)
+
+
+plotvar <- poligonos.data$'2004'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 2004", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+
+
+##2005
+
+a2005 <- as.data.frame(datos$'2005')
+names(a2005) <- "2005"
+row.names(a2005) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a2005)
+
+
+plotvar <- poligonos.data$'2005'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 2005", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+
+##2006
+
+a2006 <- as.data.frame(datos$'2006')
+names(a2006) <- "2006"
+row.names(a2006) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a2006)
+
+
+plotvar <- poligonos.data$'2006'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 2006", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+
+##2007
+
+a2007 <- as.data.frame(datos$'2007')
+names(a2007) <- "2007"
+row.names(a2007) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a2007)
+
+
+plotvar <- poligonos.data$'2007'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 2007", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
+
+
+##2008
+
+a2008 <- as.data.frame(datos$'2008')
+names(a2008) <- "2008"
+row.names(a2008) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,a2008)
+
+
+plotvar <- poligonos.data$'2008'
+nclr <- 9 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Tasa de Nacimientos Cantonal Clase Media 2008", sub = "Nacimientos por cada 1000 habitantes" ,cex=3)
+legend("bottomright",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.55)
+
