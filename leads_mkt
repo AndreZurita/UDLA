@@ -1,0 +1,636 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+                        #/// LEADS Y REPORTE MKT \\\#
+
+#Bases necesarias: Leads_reportKPIs, cod_prov
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+
+leads <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/KPIs/BasesMkt/Leads_reportKPIS.xlsx")
+cod_prov <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/cod_prov.xlsx")
+
+#Correcion de programas
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1P684-AMBIENTAL-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P018-MAE. EN GESTION DE PROYECTOS-202200-MGDP OCTUBRE 2021-1"] <- "UDLA1P684-AMBIENTAL-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1P614-ARQUITECTURA-2022100" & leads$`Nombre Interés` ==
+                               "UDLA5P026-MAES. DISEÑO ARQUIT. AVANZADO-202200-M. DIS. ARQU. AVANZ. OCT. 2021-1"] <- "UDLA1P614-ARQUITECTURA-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1P524-ELECTRONICA Y AUTOMATIZACION-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P902-GEREN.SIST.Y TEC. EMPRESARIAL-202200-MGST EMPRESARIAL OCT. 2021-1"] <- "UDLA1P524-ELECTRONICA Y AUTOMATIZACION-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA2P257-NEGOCIOS INTERNACIONALES-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P010-MAES DIREC Y POSTP AUDIO DIG-202200-MDPA OCTUBRE 2021-1"] <- "UDLA2P257-NEGOCIOS INTERNACIONALES-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA2P237-ADMINISTRACION DE EMPRESAS-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P010-MAES DIREC Y POSTP AUDIO DIG-202200-MDPA OCTUBRE 2021-1"] <- "UDLA2P237-ADMINISTRACION DE EMPRESAS-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1P714-ENFERMERIA-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P006-MAESTRIA EN ENFERMERIA-202200-MENF OCTUBRE 2021-1"] <- "UDLA1P714-ENFERMERIA-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1H564-DERECHOS HUMANOS Y NATURALEZA-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P032-MAES. DERECHO PROCESAL CONSTIT-202200-MDPC OCTUBRE 2021-1"] <- "UDLA1H564-DERECHOS HUMANOS Y NATURALEZA-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA2P237-ADMINISTRACION DE EMPRESAS-202210" & leads$`Nombre Interés` ==
+                               "UDLA5S040-MAESTRÍA EN DESARROLLO LOCAL-202200-MAE. DESARR. LOCAL OCT 2021-1"] <- "UDLA2P237-ADMINISTRACION DE EMPRESAS-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1P484-GASTRONOMIA-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P900-MAE.AGROIN.MEN.CAL. SEG. ALIM.-202200-MAG SEGUR ALIME OCTUBRE 2021-1"] <- "UDLA1P484-GASTRONOMIA-2"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1P714-ENFERMERIA-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P900-MAE.AGROIN.MEN.CAL. SEG. ALIM.-202200-MAG SEGUR ALIME OCTUBRE 2021-1"] <- "UDLA1P714-ENFERMERIA-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1P584-INDUSTRIAL-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P902-GEREN.SIST.Y TEC. EMPRESARIAL-202200-MGST EMPRESARIAL OCT. 2021-1"] <- "UDLA1P584-INDUSTRIAL-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA2S238-ADMINISTRACION DE EMPRESAS-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P965-MAE. ADMINISTRACION EMPRESAS-202200-MAE OCTUBRE 2021-1"] <- "UDLA2S238-ADMINISTRACION DE EMPRESAS-202210"
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1P614-ARQUITECTURA-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P026-MAES. DISEÑO ARQUIT. AVANZADO-202200-M. DIS. ARQU. AVANZ. OCT. 2021-1"] <- "UDLA1P614-ARQUITECTURA-202210"
+
+
+leads$`Nombre Interés`[leads$`Plan de Programa: Nombre del plan del programa` 
+                       == "UDLA1P684-AMBIENTAL-202210" & leads$`Nombre Interés` ==
+                               "UDLA5P018-MAE. EN GESTION DE PROYECTOS-202200-MGDP OCTUBRE 2021-1"] <- "UDLA1P684-AMBIENTAL-202210"
+
+##
+
+leads$`Fecha de creación` <- as.Date(leads$`Fecha de creación`, format= "%d/%m/%Y")
+
+##Trabajo Origen
+
+leads <- rename(leads, origen = 'Origen del candidato')
+
+leads$origen[leads$origen == "Bing Natural Search" | leads$origen == "Google Natural Search" | leads$origen == "Yahoo! Natural Search"] <- "Google Natural Search"
+leads$origen[leads$origen == "Spotyfy" | leads$origen == "CI_Santuario_youtube"] <- "Youtube+Spotify"
+leads$origen[leads$origen == "Campañas Doppler" | leads$origen == "educacionsuperior.net"] <- "Otros"
+leads$origen[leads$origen == "Chat en línea" | leads$origen == "Correo" | leads$origen == "Llamada" | leads$origen == "Whatsapp" | leads$origen == "Chatbot"] <- "Inbound"
+leads$origen[leads$origen == "Chat en línea" | leads$origen == "Correo" | leads$origen == "Llamada" | leads$origen == "Whatsapp" | leads$origen == "hs_email"] <- "Inbound"
+leads$origen[leads$origen == "Colegios" | leads$origen == "Empresas" | leads$origen == "Referidos"] <- "Colegios/Prospeccion"
+
+
+leads$origen_resum <- 0
+
+leads$origen_resum[leads$origen == "Facebook" | leads$origen == "Formulario web" | leads$origen == "Google Ad" 
+                   | leads$origen == "Instagram" | leads$origen == "Linkedin" | leads$origen == "Otros" |
+                        leads$origen == "Twitter" |  leads$origen == "Youtube+Spotify"] <- "Digital"
+
+
+leads$origen_resum[leads$origen == "Base comprada" | leads$origen == "Colegios/Prospeccion" |
+                           leads$origen == "Eventos" | leads$origen == "Inbound" | leads$origen == "Simulador Homologación" |                 
+                           leads$origen == "Walk-in" |leads$origen == "Datos de período anterior"] <- "Admisiones"
+                           
+
+leads$origen_resum[leads$origen == "Google Natural Search"] <- "Busqueda Natural"        
+
+        
+leads$cod_prov <- substr(leads$Identificación, 1,2)
+
+#Codigos de programas
+
+leads$EDCO <- substr(leads$`Nombre Interés`, 1,4)
+
+leads$`Plan de Programa: Línea de negocio`[leads$EDCO == "EDCO"] <- "EDCO"
+
+leads$`Plan de Programa: Periodo Académico: Nombre de plazo`[leads$EDCO == "EDCO"] <- "EDCO2021"
+leads$`Plan de Programa: Periodo Académico: Nombre de plazo`[leads$`Plan de Programa: Periodo Académico: Nombre de plazo` 
+                                                             == "1er Se- Preg. Diur/Ves - 2022"] <- "2022-10"
+leads$`Plan de Programa: Periodo Académico: Nombre de plazo`[leads$`Plan de Programa: Periodo Académico: Nombre de plazo` 
+                                                             == "2do Se- Preg. Diur/Ves - 2022"] <- "2022-20"
+leads$`Plan de Programa: Periodo Académico: Nombre de plazo`[leads$`Plan de Programa: Periodo Académico: Nombre de plazo` 
+                                                             == "1er Sem- Preg. Diur/Ves - 2023"] <- "2023-10"
+leads$`Plan de Programa: Periodo Académico: Nombre de plazo`[leads$`Plan de Programa: Periodo Académico: Nombre de plazo` 
+                                                             == "1er Sem- Preg. Diur/Ves - 2025"] <- "2025-10"
+leads$`Plan de Programa: Periodo Académico: Nombre de plazo`[leads$`Plan de Programa: Periodo Académico: Nombre de plazo` 
+                                                             == "2do Sem- Preg. Diur/Ves - 2025"] <- "2025-20"
+
+
+leads$cod <- substr(leads$`Nombre Interés`, 6,9)
+
+
+#Match Codigos de programas con los habilitados
+
+cod_pregrado <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/KPIs/cod_pregrado.xlsx")
+cod_posg <- read_excel("C:/Users/ritaz/Desktop/CONSULTOR CIERRE/Analítica/AnalisisVarios/MATCH CRM_SF/cod_carr2.xlsx")
+cod_edco <- read_excel("C:/Users/ritaz/Desktop/CONSULTOR CIERRE/Analítica/AnalisisVarios/MATCH CRM_SF/cod_carr3.xlsx")
+
+
+codigos <- rbind(cod_pregrado, cod_posg, cod_edco)
+
+leads <- merge(leads,codigos,by="cod")
+
+
+
+table(leads$carrera)
+table(leads$`Origen del candidato`)
+table(leads$`Plan de Programa: Periodo Académico: Nombre de plazo`)
+
+#Quitar estudio trabajo dado que esta sobre estimando indicadores
+
+leads = leads[leads$carrera != "ENFERMERIA MODALIDAD ESTUDIO TRABAJO",]
+
+
+#Base utilizable para match CADENA COMERCIAL 
+write_xlsx(leads,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/KPIs/Match//base_leads_cadena.xlsx")
+
+
+                                    ##Total Leads por periodo
+
+#Leads 202210 pregrado
+
+leads202210 <- subset( leads, leads$`Plan de Programa: Periodo Académico: Nombre de plazo` == '2022-10' & 
+                               leads$`Plan de Programa: Línea de negocio` == "Pregrado")
+
+
+l_202210 <- count(leads202210, 'carrera')
+write.table(l_202210, "clipboard", sep="\t")
+                            
+#Leads 202220 pregrado
+
+leads202220 <- subset( leads, leads$`Plan de Programa: Periodo Académico: Nombre de plazo` == '2022-20' & 
+                               leads$`Plan de Programa: Línea de negocio` == "Pregrado")
+
+l_202220<-count(leads202220, 'carrera')
+write.table(l_202220, "clipboard", sep="\t")
+
+                              ## Leads 202210 y 202220 por periodo y carrera ##
+
+
+n<- max(length(l_202210), length(l_202220))
+length(l_202210) <- n
+length(l_202220) <- n
+
+l_202210[is.na(l_202210)] <-0
+l_202220[is.na(l_202220)] <-0
+
+tabla_leads <- join(l_202210,l_202220, by = 'carrera' )
+
+tabla_leads[is.na(tabla_leads)] <-0
+
+names(tabla_leads)[2] <- 'l_202210'
+names(tabla_leads)[3] <- 'l_202220'
+
+write.table(tabla_leads, "clipboard", sep="\t")
+
+
+#Grafico
+
+#Primero para aquellos que han tenido mayor o igual crecimiento que el promedio para 202220
+
+tabla_leads_sup <- subset(tabla_leads, l_202220 >= mean(l_202220))
+
+tabla_leads_sup <- melt(setDT(tabla_leads_sup), id.vars = c("carrera"))
+
+names(tabla_leads_sup)[2] <- 'periodo'
+names(tabla_leads_sup)[3] <- 'leads'
+
+
+ggplot(tabla_leads_sup, aes(fill=carrera, y=periodo, x=leads)) + 
+        geom_bar(position="dodge", stat="identity") +
+        scale_fill_viridis(discrete = T, option = "D") +
+        ggtitle("Evolucion Leads: Sobre Media") +
+        facet_wrap(~carrera) +
+        theme_ipsum() +
+        theme(legend.position="center") +
+        xlab("")
+
+#Segundo para aquellos que han tenido menor crecimiento que el promedio para 202220
+
+tabla_leads_min <- subset(tabla_leads, l_202220 < mean(l_202220))
+
+tabla_leads_min <- melt(setDT(tabla_leads_min), id.vars = c("carrera"))
+
+names(tabla_leads_min)[2] <- 'periodo'
+names(tabla_leads_min)[3] <- 'leads'
+
+
+ggplot(tabla_leads_min, aes(fill=carrera, y=periodo, x=leads)) + 
+        geom_bar(position="dodge", stat="identity") +
+        scale_fill_viridis(discrete = T, option = "D") +
+        ggtitle("Evolucion Leads: Bajo Media") +
+        facet_wrap(~carrera) +
+        theme_ipsum() +
+        theme(legend.position="center") +
+        xlab("")
+
+
+#Leads por Origen 
+
+#Grafico 202210
+
+
+leads_origen202210 <- count(leads202210, 'origen')
+leads_origen202210$prop <- round((leads_origen202210$freq/sum(leads_origen202210$freq)),3)*100
+
+
+leads_origen202210 %>%
+        mutate(name = fct_reorder(origen, desc(prop))) %>%
+        ggplot( aes(x=origen, y=prop)) +
+        geom_bar(stat="identity", fill="#288BA8", alpha=.6, width=0.9) +
+        xlab("") +
+        theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1))
+
+#Grafico 202220
+
+
+leads_origen202220 <- count(leads202220, 'origen')
+leads_origen202220$prop <- round((leads_origen202220$freq/sum(leads_origen202220$freq)),3)*100
+
+
+leads_origen202220 %>%
+        mutate(name = fct_reorder(origen, desc(prop))) %>%
+        ggplot( aes(x=origen, y=prop)) +
+        geom_bar(stat="identity", fill="#de3e37", alpha=.6, width=0.9) +
+        xlab("") +
+        theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1))
+
+
+
+##### OK!!
+
+
+                                ## Leads Semanales 202210 y 202220 pregrado ##
+
+#Grafico de Leads Totales en la semana
+
+leads202210_sem <- table(cut(leads202210$'Fecha de creación', 'day'))
+
+
+leads202210_sem <- data.frame(Date=format(as.Date(names(leads202210_sem)), '%d/%m/%Y'),
+           Frequency=as.vector(leads202210_sem))
+
+#
+
+leads202220_sem <- table(cut(leads202220$'Fecha de creación', 'day'))
+
+
+leads202220_sem <- data.frame(Date=format(as.Date(names(leads202220_sem)), '%d/%m/%Y'),
+           Frequency=as.vector(leads202220_sem))
+
+
+
+
+leads_tot_sem <- join(leads202210_sem,leads202220_sem, by = 'Date' )
+
+names(leads_tot_sem)[1] <- 'Fecha'
+names(leads_tot_sem)[2] <- 'l_202210'
+names(leads_tot_sem)[3] <- 'l_202220'
+
+
+leads_tot_sem
+
+#Grafico
+
+leads_evol_tot <- melt(setDT(leads_tot_sem), id.vars = c("Fecha"))
+
+
+graph <- leads_evol_tot %>%
+        ggplot( aes(x=Fecha, y=value, group=variable, color=variable)) +
+        geom_line() +
+        ggtitle("Evolucion Leads Semanales") +
+        theme_ipsum() +
+        ylab("Leads") +
+        theme(axis.text.x = element_text(angle = 60, vjust = 0.5, hjust=1))
+
+ggplotly(graph, hoverinfo = "text")
+
+
+##Match para tabular unicamente los que tienen provincia
+leads2 <- merge(leads,cod_prov,by="cod_prov")
+
+
+            ## Leads Totales 202210 y 202220 pregrado solo MARKETING ##
+
+#Por carrera y periodo
+
+#202210
+
+leads20210_com <- subset(leads202210, leads202210$origen_resum == "Digital")
+l_202210_com <- count(leads20210_com, 'carrera')
+
+leads202210_adm <- subset(leads202210, leads202210$origen_resum == "Admisiones")
+l_202210_adm <- count(leads202210_adm, 'carrera')
+
+leads202210_natural <- subset(leads202210, leads202210$origen_resum == "Busqueda Natural")
+l_202210_natural <- count(leads202210_natural, 'carrera')
+
+#202220
+
+leads202220_com <- subset(leads202220, leads202220$origen_resum == "Digital")
+l_202220_com <- count(leads202220_com, 'carrera')
+
+leads202220_adm <- subset(leads202220, leads202220$origen_resum == "Admisiones")
+l_202220_adm <- count(leads202220_adm, 'carrera')
+
+leads202220_natural <- subset(leads202220, leads202220$origen_resum == "Busqueda Natural")
+l_202220_natural <- count(leads202220_natural, 'carrera')
+
+
+#Tabla resumen
+
+n<- max(length(l_202210_com), length(l_202210_adm), length(l_202210_natural), length(l_202220_com), 
+        length(l_202220_adm), length(l_202220_natural))
+
+length(l_202210_com) <- n
+length(l_202210_adm) <- n
+length(l_202210_natural) <- n
+length(l_202220_com) <- n
+length(l_202220_adm) <- n
+length(l_202220_natural) <- n
+
+
+l_202210_com[is.na(l_202210_com)] <-0
+l_202210_adm[is.na(l_202210_adm)] <-0
+l_202210_natural[is.na(l_202210_natural)] <-0
+l_202220_com[is.na(l_202220_com)] <-0
+l_202220_adm[is.na(l_202220_adm)] <-0
+l_202220_natural[is.na(l_202220_natural)] <-0
+
+com <- join(l_202210_com,l_202220_com, by = 'carrera' )
+aux <- join(com,l_202210_adm, by = 'carrera' )
+adm <- join(aux,l_202220_adm, by = 'carrera' )
+aux2 <- join(adm,l_202210_natural, by = 'carrera' )
+
+tabla_leads_origen <- join(aux2,l_202220_natural, by = 'carrera' )
+tabla_leads_origen[is.na(tabla_leads_origen)] <-0
+
+names(tabla_leads_origen)[2] <- 'l_202210_com'
+names(tabla_leads_origen)[3] <- 'l_202220_com'
+names(tabla_leads_origen)[4] <- 'l_202210_adm'
+names(tabla_leads_origen)[5] <- 'l_202220_adm'
+names(tabla_leads_origen)[6] <- 'l_202210_natural'
+names(tabla_leads_origen)[7] <- 'l_202220_natural'
+
+write.table(tabla_leads_origen, "clipboard", sep="\t")
+
+
+
+
+                                        #Leads por provincia
+
+#Leads 202210 pregrado
+
+leads202210_prov <- subset(leads2, leads2$`Plan de Programa: Periodo Académico: Nombre de plazo` == '2022-10' & 
+                                   leads2$`Plan de Programa: Línea de negocio` == "Pregrado")
+
+
+l_202210_prov <- count(leads202210_prov, 'prov')
+l_202210_prov$cod <- 0
+l_202210_prov$cod[l_202210_prov$prov == "Azuay"] <- 1
+l_202210_prov$cod[l_202210_prov$prov == "Bolivar"] <- 2
+l_202210_prov$cod[l_202210_prov$prov == "Cañar"] <- 3
+l_202210_prov$cod[l_202210_prov$prov == "Carchi"] <- 4
+l_202210_prov$cod[l_202210_prov$prov == "Cotopaxi"] <- 5
+l_202210_prov$cod[l_202210_prov$prov ==  "Chimborazo"] <-6
+l_202210_prov$cod[l_202210_prov$prov == "El Oro"] <- 7
+l_202210_prov$cod[l_202210_prov$prov =="Esmeraldas"] <- 8
+l_202210_prov$cod[l_202210_prov$prov == "Guayas"] <- 9
+l_202210_prov$cod[l_202210_prov$prov == "Imbabura"] <- 10
+l_202210_prov$cod[l_202210_prov$prov == "Loja"] <- 11
+l_202210_prov$cod[l_202210_prov$prov =="Los Rios"] <- 12 
+l_202210_prov$cod[l_202210_prov$prov ==  "Manabi"] <- 13
+l_202210_prov$cod[l_202210_prov$prov == "Morona Santiago"] <- 14 
+l_202210_prov$cod[l_202210_prov$prov == "Napo"] <- 15
+l_202210_prov$cod[l_202210_prov$prov == "Pastaza"] <- 16
+l_202210_prov$cod[l_202210_prov$prov == "Pichincha"] <- 17
+l_202210_prov$cod[l_202210_prov$prov == "Tunguragua"] <- 18
+l_202210_prov$cod[l_202210_prov$prov == "Zamora Chinchipe"] <- 19
+l_202210_prov$cod[l_202210_prov$prov == "Galápagos"] <- 20
+l_202210_prov$cod[l_202210_prov$prov == "Sucumbíos"] <- 21
+l_202210_prov$cod[l_202210_prov$prov == "Orellana"] <- 22
+l_202210_prov$cod[l_202210_prov$prov == "Santo Domingo"] <-23
+l_202210_prov$cod[l_202210_prov$prov == "Santa Elena"] <- 24
+
+l_202210_prov <- l_202210_prov[, c(2,1,3)]
+
+
+#Leads 202220 pregrado
+
+leads202220_prov <- subset(leads2, leads2$`Plan de Programa: Periodo Académico: Nombre de plazo` == '2022-20' & 
+                                   leads2$`Plan de Programa: Línea de negocio` == "Pregrado")
+
+
+l_202220_prov <- count(leads202220_prov, 'prov')
+l_202220_prov$cod <- 0
+l_202220_prov$cod[l_202220_prov$prov == "Azuay"] <- 1
+l_202220_prov$cod[l_202220_prov$prov == "Bolivar"] <- 2
+l_202220_prov$cod[l_202220_prov$prov == "Cañar"] <- 3
+l_202220_prov$cod[l_202220_prov$prov == "Carchi"] <- 4
+l_202220_prov$cod[l_202220_prov$prov == "Cotopaxi"] <- 5
+l_202220_prov$cod[l_202220_prov$prov ==  "Chimborazo"] <-6
+l_202220_prov$cod[l_202220_prov$prov == "El Oro"] <- 7
+l_202220_prov$cod[l_202220_prov$prov =="Esmeraldas"] <- 8
+l_202220_prov$cod[l_202220_prov$prov == "Guayas"] <- 9
+l_202220_prov$cod[l_202220_prov$prov == "Imbabura"] <- 10
+l_202220_prov$cod[l_202220_prov$prov == "Loja"] <- 11
+l_202220_prov$cod[l_202220_prov$prov =="Los Rios"] <- 12 
+l_202220_prov$cod[l_202220_prov$prov ==  "Manabi"] <- 13
+l_202220_prov$cod[l_202220_prov$prov == "Morona Santiago"] <- 14 
+l_202220_prov$cod[l_202220_prov$prov == "Napo"] <- 15
+l_202220_prov$cod[l_202220_prov$prov == "Pastaza"] <- 16
+l_202220_prov$cod[l_202220_prov$prov == "Pichincha"] <- 17
+l_202220_prov$cod[l_202220_prov$prov == "Tunguragua"] <- 18
+l_202220_prov$cod[l_202220_prov$prov == "Zamora Chinchipe"] <- 19
+l_202220_prov$cod[l_202220_prov$prov == "Galápagos"] <- 20
+l_202220_prov$cod[l_202220_prov$prov == "Sucumbíos"] <- 21
+l_202220_prov$cod[l_202220_prov$prov == "Orellana"] <- 22
+l_202220_prov$cod[l_202220_prov$prov == "Santo Domingo"] <-23
+l_202220_prov$cod[l_202220_prov$prov == "Santa Elena"] <- 24
+
+l_202220_prov <- l_202220_prov[, c(2,1,3)]
+
+##Armado de tabla de provincias
+
+# 1 al 23 de ahi le cruzo con nombre prov y luego lleno datos con leads. Los NA son cero
+
+provincias_leads <- matrix(1:24, nrow = 24, ncol = 1)
+
+colnames(provincias_leads) <- c("cod")
+
+provincias_leads <- as.data.frame(provincias_leads)
+
+provincias_leads <- join(provincias_leads, l_202210_prov, by = "cod")
+provincias_leads <- join(provincias_leads, l_202220_prov, by = "cod")
+
+names(provincias_leads)[2] <- 'l_202210'
+names(provincias_leads)[3] <- 'provincia'
+names(provincias_leads)[4] <- 'l_202220'
+
+provincias_leads <- subset(provincias_leads, select = -c(prov))
+
+
+provincias_leads <- provincias_leads[, c(1,3,2,4)]
+
+
+provincias_leads$l_202210[is.na(provincias_leads$l_202210)] <-0
+provincias_leads$l_202220[is.na(provincias_leads$l_202220)] <-0
+
+
+provincias_leads$provincia[provincias_leads$cod == 1 ] <- "Azuay"
+provincias_leads$provincia[provincias_leads$cod == 2 ] <- "Bolivar"
+provincias_leads$provincia[provincias_leads$cod == 3 ] <-"Cañar"
+provincias_leads$provincia[provincias_leads$cod == 4 ]<-"Carchi"
+provincias_leads$provincia[provincias_leads$cod == 5 ] <- "Cotopaxi"
+provincias_leads$provincia[provincias_leads$cod == 6 ] <-"Chimborazo"
+provincias_leads$provincia[provincias_leads$cod == 7 ] <- "El Oro"
+provincias_leads$provincia[provincias_leads$cod == 8 ]<- "Esmeraldas"
+provincias_leads$provincia[provincias_leads$cod == 9 ] <- "Guayas"
+provincias_leads$provincia[provincias_leads$cod == 10 ] <- "Imbabura"
+provincias_leads$provincia[provincias_leads$cod == 11] <- "Loja"
+provincias_leads$provincia[provincias_leads$cod == 12 ] <- "Los Rios"
+provincias_leads$provincia[provincias_leads$cod == 13 ] <-"Manabi"
+provincias_leads$provincia[provincias_leads$cod == 14 ] <- "Morona Santiago"
+provincias_leads$provincia[provincias_leads$cod == 15 ] <- "Napo"
+provincias_leads$provincia[provincias_leads$cod == 16 ] <-"Pastaza"
+provincias_leads$provincia[provincias_leads$cod == 17 ]<- "Pichincha"
+provincias_leads$provincia[provincias_leads$cod == 18 ] <- "Tunguragua"
+provincias_leads$provincia[provincias_leads$cod == 19 ] <- "Zamora Chinchipe"
+provincias_leads$provincia[provincias_leads$cod == 20 ] <- "Galápagos"
+provincias_leads$provincia[provincias_leads$cod == 21 ] <- "Sucumbíos"
+provincias_leads$provincia[provincias_leads$cod == 22 ] <- "Orellana"
+provincias_leads$provincia[provincias_leads$cod == 23 ] <-"Santo Domingo"
+provincias_leads$provincia[provincias_leads$cod == 24] <- "Santa Elena"
+
+
+
+##MAPA GRAFICO DE LEADS TOTALES ****SIN PICHINCHA*****
+
+
+dirmapas <- "C:/Users/ritaz/Desktop/UDLA/Maestria/Semestre_III/Econometria_Espacial/Shapes"
+setwd(dirmapas)
+poligonos <- shapefile("C:/Users/ritaz/Desktop/UDLA/Maestria/Semestre_III/Econometria_Espacial/Shapes/ecuador_prov.shp")
+dir.resul <- "C:/Users/ritaz/Desktop/UDLA/Maestria/Semestre_III/Econometria_Espacial"
+setwd(dir.resul)
+
+plot(poligonos)
+
+##Quitar provincias del analisis y zonas no delimitadas
+
+poligonos = poligonos[poligonos$DPA_PROVIN !=17,]
+poligonos = poligonos[poligonos$DPA_PROVIN !=90,]
+poligonos = poligonos[poligonos$DPA_PROVIN !=88,]
+
+
+plot(poligonos)
+
+
+
+# Calculo los centroides
+centroides <- coordinates(poligonos)
+plot(poligonos)
+
+
+#Tabla de proporciones
+
+datos <- provincias_leads 
+
+datos <- datos[datos$cod != 17,]
+
+datos$l_202210 <- round((datos$l_202210/sum(datos$l_202210)),3)*100
+datos$l_202220 <- round((datos$l_202220/sum(datos$l_202220)),3)*100
+
+
+datos$cod <- poligonos@data$DPA_PROVIN
+
+
+#LEADS 202210
+
+l_202210 <- as.data.frame(datos$l_202210)
+names(l_202210) <- "l_202210"
+row.names(l_202210) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,l_202210)
+
+
+plotvar <- poligonos.data$l_202210
+nclr <- 5 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+mapa_l202210 <-plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Porcentaje de Leads 202210 sin Pichincha", sub = "Nivel Provincia" ,cex=3)
+legend("bottomleft",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.85, ncol = 2)
+
+
+#LEADS 202220
+
+l_202220 <- as.data.frame(datos$l_202220)
+names(l_202220) <- "l_202220"
+row.names(l_202220) <- row.names(poligonos)
+poligonos.data <- SpatialPolygonsDataFrame(poligonos,l_202220)
+
+
+plotvar <- poligonos.data$l_202220
+nclr <- 5 # Numero de colores
+plotclr <- brewer.pal(nclr,"Blues")
+class <- classIntervals(round(plotvar,3),nclr,style="pretty") # Aqui fijo el numero de decimales
+
+colcode <- findColours(class,plotclr) # defino paleta de colores
+
+
+
+mapa_l202220 <-plot (poligonos.data, col=colcode, border="grey", axes=T)
+title(main = "Porcentaje de Leads 202210 sin Pichincha", sub = "Nivel Provincia" ,cex=3)
+legend("bottomleft",legend = names(attr(colcode,"table")),
+       fill= attr(colcode,"palette"),cex=0.85, ncol = 2)
+
+
+        ##### CALCULO DE ROI DE LOS LEADS. CALCULO DE COSTO POR LEADS ########
+
+
+
+
+
+
