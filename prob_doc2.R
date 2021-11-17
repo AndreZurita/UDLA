@@ -48,6 +48,10 @@ library(sjmisc)
 library(mice)
 library(VIM)
 library(fastDummies)
+library(lifecycle)
+library(stable)
+library(metan)
+
 
 #------------------------------------------------------------------------------
                                 #PROBABLIDAD DE DOCUMENTAR
@@ -63,7 +67,7 @@ base_cruda$new_periodoname <- str_replace(base_cruda$new_periodoname, "-A", "-10
 base_cruda$new_periodoname <- str_replace(base_cruda$new_periodoname, "-S", "-20" )
 
 #Solo para pregrado
-base_cruda <- base_cruda[- grep("Educación continua", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
+base_cruda <- base_cruda[- grep("EducaciÃ³n continua", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
 base_cruda <- base_cruda[- grep("Graduate", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
 base_cruda <- base_cruda[- grep("Linea negocio no definida", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
 base_cruda <- base_cruda[- grep("Technology", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
@@ -184,9 +188,9 @@ table(base_cruda$statecodename, base_cruda$new_periodoname)
 
 base_cruda <- base_cruda[- grep("911 - CURSO AUXILIAR EN ENFERMERIA", base_cruda$new_carrera_acuerdoname),]
 base_cruda <- base_cruda[- grep("UDLA1P000-CARRERA NO DEFINIDA", base_cruda$new_carrera_acuerdoname),]
-base_cruda <- base_cruda[- grep("UDLA1P001 - PSICOLOGÍA CLÍNICA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA1P001 - PSICOLOGÃA CLÃNICA", base_cruda$new_carrera_acuerdoname),]
 base_cruda <- base_cruda[- grep("UDLA2P000-CARRERA NO DEFINIDA", base_cruda$new_carrera_acuerdoname),]
-base_cruda <- base_cruda[- grep("UDLA2P001 - PSICOLOGÍA CLÍNICA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA2P001 - PSICOLOGÃA CLÃNICA", base_cruda$new_carrera_acuerdoname),]
 
 table(base_cruda$statecodename, base_cruda$new_periodoname)
 table(base_cruda$new_carrera_acuerdoname,base_cruda$statecodename)
@@ -280,9 +284,9 @@ base_cruda$origen <- 0
 base_cruda$origen[base_cruda$new_origendedatosdelregistroname == "Career Cruising" 
                   | base_cruda$new_origendedatosdelregistroname == "Datos importados"
                   | base_cruda$new_origendedatosdelregistroname == "Llamada"
-                  | base_cruda$new_origendedatosdelregistroname == "Prospección"
-                  | base_cruda$new_origendedatosdelregistroname == "Prospección Alianzas educativas"
-                  | base_cruda$new_origendedatosdelregistroname == "Prospección Corporativa"
+                  | base_cruda$new_origendedatosdelregistroname == "ProspecciÃ³n"
+                  | base_cruda$new_origendedatosdelregistroname == "ProspecciÃ³n Alianzas educativas"
+                  | base_cruda$new_origendedatosdelregistroname == "ProspecciÃ³n Corporativa"
                   | base_cruda$new_origendedatosdelregistroname == "Walk-in"] <- 1
 
 base_cruda$ing_f <- (base_cruda$Ingresos_MAD + base_cruda$Ingresos_PAD)/1.73
@@ -296,7 +300,7 @@ count(base_cruda$new_colegiooempresaname)
 #Base utilizable
 write_xlsx(base_cruda,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc///base_prob_doc.xlsx")
 
-#TRABAJO Y SUBIDA DE BASES DE: PAGOS, BECAS Y AÑO DE GRADUACION
+#TRABAJO Y SUBIDA DE BASES DE: PAGOS, BECAS Y AÃ‘O DE GRADUACION
 
 #FALTA RESPUESTA DE CRIS 
 
@@ -325,7 +329,7 @@ base_cruda <- base_cruda %>% dplyr::select(id, new_periodoname, createdon, state
 # APPEND CON VARIABLES DE 202210 QUE ESTAN EN SALESFORCE
 
 
-base_def <- read_excel("C:/Users/ritaz/Desktop/CONSULTOR CIERRE/Analítica/AnalisisVarios/MATCH CRM_SF/base_definitiva.xlsx")
+base_def <- read_excel("C:/Users/ritaz/Desktop/CONSULTOR CIERRE/AnalÃ­tica/AnalisisVarios/MATCH CRM_SF/base_definitiva.xlsx")
 base_2210_sf <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/202210_Match.xlsx")
 
 #Cambio de nombres para append y limpieza de bases
@@ -334,31 +338,31 @@ base_2210_sf <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/Pro
 names(base_def)
 base_def <- rename(base_def, etapa = 'Etapa')
 base_def <- rename(base_def, cons_cierre = 'Propietario de oportunidad')
-base_def <- rename(base_def, f_mod = 'Fecha de modificación')
+base_def <- rename(base_def, f_mod = 'Fecha de modificaciÃ³n')
 
 base_def <- base_def %>% dplyr::select(id, etapa, carrera, cons_cierre, f_mod)
 
 #BASE 2210 SALESFORCE
 
 names(base_2210_sf)
-base_2210_sf <- rename(base_2210_sf, id = 'Identificación')
-base_2210_sf <- rename(base_2210_sf, f_creacion = 'Fecha de creación...2')
+base_2210_sf <- rename(base_2210_sf, id = 'IdentificaciÃ³n')
+base_2210_sf <- rename(base_2210_sf, f_creacion = 'Fecha de creaciÃ³n...2')
 base_2210_sf <- rename(base_2210_sf, etapa = 'Etapa')
 base_2210_sf <- rename(base_2210_sf, cons_cierre = 'Propietario de oportunidad: Nombre completo')
 base_2210_sf <- rename(base_2210_sf, carrera = 'Plan de Programa: Nombre del plan del programa')
-base_2210_sf <- rename(base_2210_sf, f_mod = 'Fecha de la última modificación de Etapa')
+base_2210_sf <- rename(base_2210_sf, f_mod = 'Fecha de la Ãºltima modificaciÃ³n de Etapa')
 base_2210_sf <- rename(base_2210_sf, edad = 'Edad')
 base_2210_sf <- rename(base_2210_sf, f_cierre = 'Fecha de cierre') #partir en 2 dependiendo tipo de cierre
-base_2210_sf <- rename(base_2210_sf, f_aflu = 'Fecha de creación...8')
+base_2210_sf <- rename(base_2210_sf, f_aflu = 'Fecha de creaciÃ³n...8')
 base_2210_sf <- rename(base_2210_sf, ciudad = 'Ciudad: Ciudad Name')
-base_2210_sf <- rename(base_2210_sf, sexo = 'Género')
+base_2210_sf <- rename(base_2210_sf, sexo = 'GÃ©nero')
 base_2210_sf <- rename(base_2210_sf, etnia = 'Etnia')
 base_2210_sf <- rename(base_2210_sf, subetapa = 'Subetapa')
 base_2210_sf <- rename(base_2210_sf, col = 'Colegio: Nombre de la cuenta')
 base_2210_sf <- rename(base_2210_sf, origen = 'Origen del candidato')
-base_2210_sf <- rename(base_2210_sf, linea = 'Línea de negocio')
+base_2210_sf <- rename(base_2210_sf, linea = 'LÃ­nea de negocio')
 base_2210_sf <- rename(base_2210_sf, prov = 'Provincia: Provincia Name')
-base_2210_sf <- rename(base_2210_sf, cod_col = 'Colegio: Código banner Colegio')
+base_2210_sf <- rename(base_2210_sf, cod_col = 'Colegio: CÃ³digo banner Colegio')
 
 #Vamos a generar las entidades de fecha de doc y fecha de perdido para generar el ciclo, luego los borro
 
@@ -592,7 +596,7 @@ names(base_total)
 
 count(base_total$etapa)
 base_total$etapa[base_total$etapa == "Abierto" | base_total$etapa == "Afluente" | base_total$etapa == "Inscrito"
-                 | base_total$etapa == "Matrícula" | base_total$etapa == "Perdido" | base_total$etapa == "Test"] <- "Perdido"   
+                 | base_total$etapa == "MatrÃ­cula" | base_total$etapa == "Perdido" | base_total$etapa == "Test"] <- "Perdido"   
 
 base_total$etapa[base_total$etapa == "Cerrada Ganada" | base_total$etapa == "Ganado"] <- "Ganado"   
 
@@ -696,18 +700,18 @@ base_total$sexo[base_total$sexo == "Otro"] <- "Masculino"
 #Etnia
 
 count(base_total$etnia)
-base_total$etnia[base_total$etnia == "Indígena - Achuar" | base_total$etnia == "Indígena - Al Cofan"
-                 | base_total$etnia == "Indígena - Chachi" | base_total$etnia == "Indígena - Chibuleo"
-                 | base_total$etnia == "Indígena - Kañari"  | base_total$etnia == "Indígena - Karanki"
-                 | base_total$etnia == "Indígena - Kayambi"  | base_total$etnia == "Indígena - Kichwa"
-                 | base_total$etnia == "Indígena - Kisapincha"  | base_total$etnia == "Indígena - Kitukara"
-                 | base_total$etnia == "Indígena - No aplica"  | base_total$etnia == "Indígena - Otavalo"
-                 | base_total$etnia == "Indígena - Paltas"  | base_total$etnia == "Indígena - Panzaleo"
-                 | base_total$etnia == "Indígena - Puruha"  | base_total$etnia == "Indígena - Salasaka"
-                 | base_total$etnia == "Indígena - Saraguro"  | base_total$etnia == "Indígena - Shuar"
-                 | base_total$etnia == "Indígena - Tomabela"  | base_total$etnia == "Indígena - Tsachila"
-                 | base_total$etnia == "Indígena - Waorani"  | base_total$etnia == "Indígena - Waranka" 
-                 | base_total$etnia == "Indígena - Zapara"] <- "Indigena"
+base_total$etnia[base_total$etnia == "IndÃ­gena - Achuar" | base_total$etnia == "IndÃ­gena - Al Cofan"
+                 | base_total$etnia == "IndÃ­gena - Chachi" | base_total$etnia == "IndÃ­gena - Chibuleo"
+                 | base_total$etnia == "IndÃ­gena - KaÃ±ari"  | base_total$etnia == "IndÃ­gena - Karanki"
+                 | base_total$etnia == "IndÃ­gena - Kayambi"  | base_total$etnia == "IndÃ­gena - Kichwa"
+                 | base_total$etnia == "IndÃ­gena - Kisapincha"  | base_total$etnia == "IndÃ­gena - Kitukara"
+                 | base_total$etnia == "IndÃ­gena - No aplica"  | base_total$etnia == "IndÃ­gena - Otavalo"
+                 | base_total$etnia == "IndÃ­gena - Paltas"  | base_total$etnia == "IndÃ­gena - Panzaleo"
+                 | base_total$etnia == "IndÃ­gena - Puruha"  | base_total$etnia == "IndÃ­gena - Salasaka"
+                 | base_total$etnia == "IndÃ­gena - Saraguro"  | base_total$etnia == "IndÃ­gena - Shuar"
+                 | base_total$etnia == "IndÃ­gena - Tomabela"  | base_total$etnia == "IndÃ­gena - Tsachila"
+                 | base_total$etnia == "IndÃ­gena - Waorani"  | base_total$etnia == "IndÃ­gena - Waranka" 
+                 | base_total$etnia == "IndÃ­gena - Zapara"] <- "Indigena"
 
 
 
@@ -730,43 +734,43 @@ base_total$subetapa[base_total$subetapa == "Datos incorrectos de contactabilidad
                     | base_total$subetapa == "Existe contacto correcto pero no son del postulante" | base_total$subetapa == "Incontactable"
                     | base_total$subetapa == "Por incontactabilidad" | base_total$subetapa == "Datos incorrectos de contactabilidad"] <- "Incontactable"
 
-base_total$subetapa[base_total$subetapa == "Seleccionó otra universidad" | base_total$subetapa == "Seleccionó otra Universidad"] <- "Otra Universidad"
+base_total$subetapa[base_total$subetapa == "SeleccionÃ³ otra universidad" | base_total$subetapa == "SeleccionÃ³ otra Universidad"] <- "Otra Universidad"
 
-base_total$subetapa[base_total$subetapa == "Académico" | base_total$subetapa == "Incompatibilidad de malla académica"  
+base_total$subetapa[base_total$subetapa == "AcadÃ©mico" | base_total$subetapa == "Incompatibilidad de malla acadÃ©mica"  
                     | base_total$subetapa == "Infraestructura no acorde a lo esperado" | base_total$subetapa == "Modalidad del curso"
-                    | base_total$subetapa == "Oferta de interés no disponible" | base_total$subetapa == "UDLA no dispone de la carrera de interés del postulante"
+                    | base_total$subetapa == "Oferta de interÃ©s no disponible" | base_total$subetapa == "UDLA no dispone de la carrera de interÃ©s del postulante"
                     | base_total$subetapa == "UDLA no es de preferencia del postulante"
                     | base_total$subetapa == "Incompatibilidad con horario"] <- "UDLA Incompatible"
 
-base_total$subetapa[base_total$subetapa == "Examen de admisión no aprobado" | base_total$subetapa == "No cumple con requisitos de carrera UDLA"  
+base_total$subetapa[base_total$subetapa == "Examen de admisiÃ³n no aprobado" | base_total$subetapa == "No cumple con requisitos de carrera UDLA"  
                     | base_total$subetapa == "Postulante no cumple con requisitos de carrera UDLA" | base_total$subetapa == "Modalidad del curso" 
-                    | base_total$subetapa == "Postulante no cumple con requisitos de convalidación UDLA"
+                    | base_total$subetapa == "Postulante no cumple con requisitos de convalidaciÃ³n UDLA"
                     | base_total$subetapa == "Reprobado" | base_total$subetapa == "Test Reprobado"] <- "Reprobado"
 
 base_total$subetapa[base_total$subetapa == "Existe un proceso previo para el mismo periodo" | base_total$subetapa == "Periodo Futuro"  
                     | base_total$subetapa == "Postulante para periodo futuro"] <- "Periodo Incorrecto"
 
-base_total$subetapa[base_total$subetapa == "Cerrado por migración" | base_total$subetapa == "Indica que no postuló"  
+base_total$subetapa[base_total$subetapa == "Cerrado por migraciÃ³n" | base_total$subetapa == "Indica que no postulÃ³"  
                     | base_total$subetapa == "Motivos Personales" | base_total$subetapa == "No Aplica"
-                    | base_total$subetapa == "No colabora con información" | base_total$subetapa == "Por fallecimiento"
-                    | base_total$subetapa == "No hay cupos" | base_total$subetapa == "Postulante no emitió sus datos a UDLA"
+                    | base_total$subetapa == "No colabora con informaciÃ³n" | base_total$subetapa == "Por fallecimiento"
+                    | base_total$subetapa == "No hay cupos" | base_total$subetapa == "Postulante no emitiÃ³ sus datos a UDLA"
                     | base_total$subetapa == "Ya es alumno UDLA"] <- "Otros"
 
-base_total$subetapa[base_total$subetapa == "Geográficamente distante" | base_total$subetapa == "UDLA geográficamente distante" ] <- "UDLA Distante"
+base_total$subetapa[base_total$subetapa == "GeogrÃ¡ficamente distante" | base_total$subetapa == "UDLA geogrÃ¡ficamente distante" ] <- "UDLA Distante"
 
 #Origen
 count(base_total$origen)
 
 base_total$origen[base_total$origen == "Bing Natural Search" | base_total$origen == "Google Natural Search"] <- "Busqueda Natural"
 
-base_total$origen[base_total$origen == "Career Cruising" | base_total$origen == "Simulador Homologación"
-                  |base_total$origen == "Prospección Corporativa" | base_total$origen == "Prospección Alianzas educativas"
-                  |base_total$origen == "Prospección" | base_total$origen == "Colegios" | base_total$origen == "Referidos"] <- "Prospeccion"
+base_total$origen[base_total$origen == "Career Cruising" | base_total$origen == "Simulador HomologaciÃ³n"
+                  |base_total$origen == "ProspecciÃ³n Corporativa" | base_total$origen == "ProspecciÃ³n Alianzas educativas"
+                  |base_total$origen == "ProspecciÃ³n" | base_total$origen == "Colegios" | base_total$origen == "Referidos"] <- "Prospeccion"
 
-base_total$origen[base_total$origen == "Chat en línea" | base_total$origen == "Chatbot"
+base_total$origen[base_total$origen == "Chat en lÃ­nea" | base_total$origen == "Chatbot"
                   |base_total$origen == "Correo" | base_total$origen == "Llamada"
-                  |base_total$origen == "Whatsapp" | base_total$origen == "Datos antiguos" | base_total$origen == "Datos de período anterior"
-                  |base_total$origen == "Datos del período anterior" | base_total$origen == "Datos importados"
+                  |base_total$origen == "Whatsapp" | base_total$origen == "Datos antiguos" | base_total$origen == "Datos de perÃ­odo anterior"
+                  |base_total$origen == "Datos del perÃ­odo anterior" | base_total$origen == "Datos importados"
                   |base_total$origen == "Whatsapp"] <- "CallCenter"
 
 base_total$origen[base_total$origen == "Eventos" | base_total$origen == "Facebook"
@@ -820,12 +824,12 @@ base_total$prof_p[base_total$prof_p == "ACTIV.LUCR.PERM.LEY" | base_total$prof_p
 base_total$prof_m[base_total$prof_m == "ADMINISTRADOR" | base_total$prof_m == "ADMINISTRADORA"
                   | base_total$prof_m == "ADMR. DE  HOTEL" | base_total$prof_m == "ADMR. DE EMPRESAS"
                   | base_total$prof_m == "ADMR. EDUCATIVO" | base_total$prof_m == "ADMR. EN  COMERCIO"
-                  | base_total$prof_m == "ADMR. GASTRONËMICO"] <- "Administrador"
+                  | base_total$prof_m == "ADMR. GASTRONÃ‹MICO"] <- "Administrador"
 
 base_total$prof_p[base_total$prof_p == "ADMINISTRADOR" | base_total$prof_p == "ADMINISTRADORA"
                   | base_total$prof_p == "ADMR. DE  HOTEL" | base_total$prof_p == "ADMR. DE EMPRESAS"
                   | base_total$prof_p == "ADMR. EDUCATIVO" | base_total$prof_p == "ADMR. EN  COMERCIO"
-                  | base_total$prof_p == "ADMR. GASTRONËMICO"] <- "Administrador"
+                  | base_total$prof_p == "ADMR. GASTRONÃ‹MICO"] <- "Administrador"
 
 base_total$prof_m[base_total$prof_m == "AGENTE DE SEGUROS" | base_total$prof_m == "AGENTE DE TURISMO"
                   |base_total$prof_m == "AGENTE ESPECIAL" | base_total$prof_m == "AGENTE VENDEDOR"
@@ -835,12 +839,12 @@ base_total$prof_p[base_total$prof_p == "AGENTE DE SEGUROS" | base_total$prof_p =
                   |base_total$prof_p == "AGENTE ESPECIAL" | base_total$prof_p == "AGENTE VENDEDOR"
                   |base_total$prof_p == "AGENTE VIAJERO"] <- "Vendedor"
 
-base_total$prof_m[base_total$prof_m == "ANESTESIËLOGO" | base_total$prof_m == "DOCTOR -M+DICOáá"
+base_total$prof_m[base_total$prof_m == "ANESTESIÃ‹LOGO" | base_total$prof_m == "DOCTOR -M+DICOÃ¡Ã¡"
                   |base_total$prof_m == "DOCTORA - M+DICO" | base_total$prof_m == "DR EN FISIOTERAPIA"
                   |base_total$prof_m == "DR LAB/CLIN/ADM/SER" |base_total$prof_m == "DR PSIC/EDU/ORTC/VOC"
                   |base_total$prof_m == "DR PSIC/EDU/ORTC/VOC"] <- "Dr.Med"
 
-base_total$prof_p[base_total$prof_p == "ANESTESIËLOGO" | base_total$prof_p == "DOCTOR -M+DICOáá"
+base_total$prof_p[base_total$prof_p == "ANESTESIÃ‹LOGO" | base_total$prof_p == "DOCTOR -M+DICOÃ¡Ã¡"
                   |base_total$prof_p == "DOCTORA - M+DICO" | base_total$prof_p == "DR EN FISIOTERAPIA"
                   |base_total$prof_p == "DR LAB/CLIN/ADM/SER" |base_total$prof_p == "DR PSIC/EDU/ORTC/VOC"
                   |base_total$prof_p == "DR PSIC/EDU/ORTC/VOC"] <- "Dr.Med"
@@ -927,24 +931,24 @@ base_total <- rename(base_total, cluster = 'cluster1')
 #            + `periodo_2013-10`+`periodo_2013-20` + + `periodo_2014-10`+`periodo_2014-20` + `periodo_2015-10` + `periodo_2015-20`+
 #            `periodo_2016-10`+ `periodo_2016-20` + `periodo_2017-10` + `periodo_2017-20`+ `periodo_2018-10`+`periodo_2018-20` +
 #            `periodo_2019-10`+ `periodo_2019-20`+ `periodo_2020-10`+ `periodo_2020-20`+ `periodo_2021-10`+ `periodo_2022-10` +
-#            `etapa_Ganado`+`etapa_Perdido`+`carr_ARQUITECTURA`+`carr_CIENCIAS POLITICAS`+`carr_DERECHO-H`+`carr_DISEÑO DE INTERIORES`+
-#            `carr_DISEÑO GRAFICO`+`carr_ENFERMERIA`+`carr_FISIOTERAPIA`+`carr_HOSPITALIDAD Y HOTELERÍA`+`carr_ING. AMBIENTAL`+`carr_ING. EN ELECTRONICA Y AUTOMATIZACION`+
-#            `carr_ING. SONIDO Y ACUSTICA`+`carr_ING. TECNOLOGIAS DE LA INFORMACION-H`+`carr_INGENIERÍA DE SOFTWARE`+`carr_LIC. ADMINISTRACION EMPRESAS-DUAL`+
-#            `carr_LIC. ADMINISTRACION EMPRESAS-S`+`carr_LIC. COMUNICACIÓN-D`+`carr_LIC. FINANZAS`+`carr_LIC. GASTRONOMIA`+`carr_LIC. MARKETING-D`+
+#            `etapa_Ganado`+`etapa_Perdido`+`carr_ARQUITECTURA`+`carr_CIENCIAS POLITICAS`+`carr_DERECHO-H`+`carr_DISEÃ‘O DE INTERIORES`+
+#            `carr_DISEÃ‘O GRAFICO`+`carr_ENFERMERIA`+`carr_FISIOTERAPIA`+`carr_HOSPITALIDAD Y HOTELERÃA`+`carr_ING. AMBIENTAL`+`carr_ING. EN ELECTRONICA Y AUTOMATIZACION`+
+#            `carr_ING. SONIDO Y ACUSTICA`+`carr_ING. TECNOLOGIAS DE LA INFORMACION-H`+`carr_INGENIERÃA DE SOFTWARE`+`carr_LIC. ADMINISTRACION EMPRESAS-DUAL`+
+#            `carr_LIC. ADMINISTRACION EMPRESAS-S`+`carr_LIC. COMUNICACIÃ“N-D`+`carr_LIC. FINANZAS`+`carr_LIC. GASTRONOMIA`+`carr_LIC. MARKETING-D`+
 #            `carr_LIC. MARKETING-N`+`carr_LIC. NEGOCIOS INTERNACIONALES-N`+`carr_LIC. PUBLICIDAD`+`carr_LICENCIADO EN RELACIONES INTERNACIONALES`+
-#            `carr_MEDICINA`+`carr_MULTIMEDIA Y PRODUCCIÓN AUDIOVISUAL`+`carr_NEGOCIOS INTERNACIONALES`+`carr_ODONTOLOGIA`+`carr_PSICOLOGÍA-H`+`carr_TURISMO`+
-#            `carr_ARTES MUSICALES`+`carr_DERECHO-D`+`carr_DERECHO-N`+`carr_DISEÑO DE PRODUCTOS`+`carr_ECONOMIA`+`carr_ENFERMERIA MODALIDAD ESTUDIO TRABAJO`+
+#            `carr_MEDICINA`+`carr_MULTIMEDIA Y PRODUCCIÃ“N AUDIOVISUAL`+`carr_NEGOCIOS INTERNACIONALES`+`carr_ODONTOLOGIA`+`carr_PSICOLOGÃA-H`+`carr_TURISMO`+
+#            `carr_ARTES MUSICALES`+`carr_DERECHO-D`+`carr_DERECHO-N`+`carr_DISEÃ‘O DE PRODUCTOS`+`carr_ECONOMIA`+`carr_ENFERMERIA MODALIDAD ESTUDIO TRABAJO`+
 #            `carr_GESTION DEPORTIVA`+`carr_GESTION DEPORTIVA`+`carr_ING. AGROINDUSTRIA`+`carr_ING. BIOTECNOLOGIA`+`carr_ING. INDUSTRIAL`+`carr_ING. TECNOLOGIAS DE LA INFORMACION`+
 #            `carr_ING.TELECOMUNICACIONES`+`carr_LIC. ADMINISTRACION EMPRESAS-D`+`carr_LIC. ADMINISTRACION EMPRESAS-N`+`carr_LIC. CINE`+
-#            `carr_LIC. COMUNICACIÓN-H`+`carr_LIC. FISIOTERAPIA`+`carr_LIC. GASTRONOMIA-N`+`carr_LIC. MARKETING-H`+`carr_LIC. NEGOCIOS INTERNACIONALES-D`+
-#            `carr_LIC. PERIODISMO`+`carr_LIC.COMUNICACIÓN-N`+`carr_LICENCIATURA EN EDUCACION-H`+`carr_MEDICINA VETERINARIA`+`carr_NEGOCIOS DIGITALES`+
-#            `carr_NEGOCIOS INTERNACIONALES-H`+`carr_PSICOLOGÍA-D`+`carr_PSICOLOGÍA-N`+`sexo_Femenino`+`sexo_Masculino`+`etnia_Blanco`+`etnia_Mestizo`+
-#            `etnia_Afroecuatoriano`+`etnia_Indigena`+`etnia_Otro`+`etnia_NA`+`subetapa_Factores económicos`+`origen_Marketing`+`subetapa_Incontactable`+`subetapa_Otra Universidad`+
+#            `carr_LIC. COMUNICACIÃ“N-H`+`carr_LIC. FISIOTERAPIA`+`carr_LIC. GASTRONOMIA-N`+`carr_LIC. MARKETING-H`+`carr_LIC. NEGOCIOS INTERNACIONALES-D`+
+#            `carr_LIC. PERIODISMO`+`carr_LIC.COMUNICACIÃ“N-N`+`carr_LICENCIATURA EN EDUCACION-H`+`carr_MEDICINA VETERINARIA`+`carr_NEGOCIOS DIGITALES`+
+#            `carr_NEGOCIOS INTERNACIONALES-H`+`carr_PSICOLOGÃA-D`+`carr_PSICOLOGÃA-N`+`sexo_Femenino`+`sexo_Masculino`+`etnia_Blanco`+`etnia_Mestizo`+
+#            `etnia_Afroecuatoriano`+`etnia_Indigena`+`etnia_Otro`+`etnia_NA`+`subetapa_Factores econÃ³micos`+`origen_Marketing`+`subetapa_Incontactable`+`subetapa_Otra Universidad`+
 #            `subetapa_Periodo Incorrecto`+ `origen_Busqueda Natural`+`origen_Walk-in`+`subetapa_Cambio Carrera` +`subetapa_Ganado` +`subetapa_No Gestionado`+
 #            `subetapa_Otros`+ `subetapa_Reprobado` + `subetapa_UDLA Incompatible`+`origen_CallCenter`+`origen_Prospeccion`+`prov_BOLIVAR`+`prov_CARCHI`+
 #            `prov_COTOPAXI`+`prov_ESMERALDAS`+`prov_GUAYAS`+`prov_LOJA`+`prov_MANABI`+`prov_NAPO`+`prov_PASTAZA`+`prov_Region Extrangera`+`prov_SANTO DOMINGO DE LOS TSACHILAS`+
 #            `prov_TUNGURAHUA`+`prov_ZONA NO DELIMITADA`+`prov_ZAMORA CHINCHIPE`+ `prov_SUCUMBIOS`+ `prov_SANTA ELENA`+`prov_PICHINCHA`+`prov_ORELLANA`+`prov_MORONA SANTIAGO`+
-#            `prov_LOS RIOS`+`prov_IMBABURA` +`prov_GALAPAGOS`+`prov_EL ORO` +`prov_CHIMBORAZO` + `prov_CAÑAR`+`prov_AZUAY`+`ocu_m_Independiente Dependiente`+
+#            `prov_LOS RIOS`+`prov_IMBABURA` +`prov_GALAPAGOS`+`prov_EL ORO` +`prov_CHIMBORAZO` + `prov_CAÃ‘AR`+`prov_AZUAY`+`ocu_m_Independiente Dependiente`+
 #            `ocu_m_Independiente Informal` +`niv_est_m_Ninguna`+`niv_est_m_Secundaria`+`niv_est_m_NA`+`ocu_p_Independiente Dependiente`+ `ocu_p_Independiente Informal` +
 #            `niv_est_p_Ninguna`+ `niv_est_p_Secundaria`+`niv_est_p_NA`+`ocu_m_Dependiente`+`ocu_m_Independiente Formal`+`ocu_m_NA`+
 #            `niv_est_m_Primaria`+`niv_est_m_Superior`+`ocu_p_Dependiente`+`ocu_p_Independiente Formal`+`ocu_p_NA`+`niv_est_p_Primaria`+
@@ -1177,6 +1181,7 @@ iv
 
 
 #Weight of Evidence (WoE)
+#AQUI
 
 bins <- woebin(base_logit_sept, y = "ganado", save_breaks_list = TRUE)
 woebin_plot(bins)
@@ -1945,7 +1950,7 @@ completa <- completa %>% dplyr::select(id,ganado,origen,prov,sexo,ciclo,
 #Distribucuion de presupuesto vs deficit 
 
 graph <- completa %>% dplyr::select(id,p30_gasto,p25_gasto,p20_gasto,pago_mens,d_30,d_25,d_20)
-
+graph
 
 summary(completa$p30_gasto)
 summary(completa$p25_gasto)
@@ -2117,14 +2122,10 @@ graph10 <- graph10 %>% dplyr::select(id,Deficit,BecaOtorgada)
 
 # Hexbin chart with default option
 ggplot(graph10, aes(x=BecaOtorgada, y=Deficit) ) +
+        scale_fill_continuous(type = "viridis") +
         geom_hex() +
         theme_bw()
 
-# Bin size control + color palette
-ggplot(graph10, aes(x=BecaOtorgada, y=Deficit) ) +
-        geom_hex(bins = 70) +
-        scale_fill_continuous(type = "viridis") +
-        theme_bw()
 
 
 
@@ -2194,7 +2195,7 @@ ggplotly(b2, hoverinfo = "text")
 
 
 #Correlacion Score con Pago y con Deficit medio esperado 
-graph13 <- completa %>% dplyr::select(id, pago_mens, score_ctrl, deficit_20, deficit_25, deficit_30)
+graph13 <- completa %>% dplyr::select(id, pago_mens, score_ctrl, deficit_20, deficit_25, deficit_30, beca_p, b_prom)
 
 
 graph13 <- graph13 %>% mutate(deficit_m = rowMeans(graph13[,c(4:6)]))
@@ -2204,17 +2205,63 @@ graph13 <- graph13 %>% dplyr::select(pago_mens, score_ctrl, deficit_m)
 corr_plot2 <- ggpairs(graph13)
 corr_plot2
 
+graph14 <- graph13 %>% dplyr::select(score_ctrl, beca_p, b_prom)
+
+corr_plot3 <- ggpairs(graph14)
+corr_plot3
+
+
+#Scatter beca recibida vs beca media 
+
+
+graph15 <- ggplot(completa, aes(x=b_prom, y=beca_p)) +
+        geom_point() +
+        geom_abline(intercept = 0, slope = 1, size = 1, color="red", fill="#69b3a2") +
+       labs(y="Beca Recibida", x = "Beca Promedio Carrera")+
+        theme_ipsum()
+graph15
+
+ggplotly(graph15, hoverinfo = "text")
+
 
 summary(res_final_sept$score_ctrl)
+
 
 
                         ###Modelamiento para encontrar relaciones###
 
 
 library(ggpubr)
-completa <- completa %>% mutate(pago_m = rowMeans(completa[,c(33:35)]))
+completa <- completa %>% mutate(presupuesto_medio = rowMeans(completa[,c(33:35)]))
 
-completa$deficit_m <- (completa$pago_mens)/completa$pago_m
+completa$deficit_m <- (completa$pago_mens)/completa$presupuesto_medio
+
+#Normalizacion
+library(normalr)
+norm <- function(x) {x / sqrt(sum(x^2))}
+completa$score_ctrl_norm <- norm(completa$score_ctrl)
+
+#Escala
+completa$score_ctrl_esc <- resca(
+        data = completa,
+        values = completa$score_ctrl,
+        new_min = 0,
+        new_max = 100,
+        na.rm = TRUE,
+        keep = TRUE
+)
+
+
+hist(completa$score_ctrl_esc)
+
+#Logaritmo
+
+completa$score_ctrl_ln <- log(completa$score_ctrl)
+
+summary(completa$score_ctrl)
+summary(completa$score_ctrl_norm)
+summary(completa$score_ctrl_esc)
+summary(completa$score_ctrl_ln)
 
 
 #Deficit en funcion de Score
@@ -2224,26 +2271,134 @@ summary(reg1) #Beta 0: -5.6602192, Beta 1:0.0154483
 summary(reg1.res) #Media cercana a 0
 sum(reg1.res) #cercano a 0
 
+
 reg2 <- lm(pago_mens ~ score_ctrl, data=completa)
 reg2.res = resid(reg2)
 summary(reg2) #Beta 0: 552.66535, Beta 1:-0.19747
 summary(reg2.res) #Media cercana a 0
 sum(reg2.res) #cercano a 0
 
-
+#Prediccion de beca frente a varios escenarios de score
+#Normal
 reg3 <- lm(beca_p ~ score_ctrl, data=completa)
 reg3.res = resid(reg3)
 summary(reg3) #Beta 0: 3.699e-02, Beta 1: 3.357e-04
 summary(reg3.res) #Media cercana a 0
 sum(reg3.res) #cercano a 0
 
+#Normalizado
+reg3.1 <- lm(beca_p ~ score_ctrl_norm, data=completa)
+reg3.1.res = resid(reg3.1)
+summary(reg3.1) #Beta 0: 0.03699, Beta 1: 10.93262
+summary(reg3.1.res) #Media cercana a 0
+sum(reg3.1.res) #cercano a 0
+
+#Reescalado entre 0 y 100
+reg3.2 <- lm(beca_p ~ score_ctrl_esc, data=completa)
+reg3.2.res = resid(reg3.2)
+summary(reg3.2) #Beta 0: 0.1500552, Beta 1: 0.0010645
+summary(reg3.2.res) #Media cercana a 0
+sum(reg3.2.res) #cercano a 0
+
+#Logaritmo 
+reg3.3 <- lm(beca_p ~ score_ctrl_ln, data=completa)
+reg3.3.res = resid(reg3.3)
+summary(reg3.3) #Beta 0: -0.72216, Beta 1: 0.14909
+summary(reg3.3.res) #Media cercana a 0
+sum(reg3.3.res) #cercano a 0
+
+
 #Predichos
 
-completa$defi_pred <- -5.6602192 + (0.0154483*completa$score_ctrl)
-completa$pago_pred <- 552.66535 - 0.19747*completa$score_ctrl
-completa$beca_pred <- 3.699e-02 + 3.357e-04*completa$score_ctrl
+completa$defi_pred <- predict(reg1, newdata = completa, type = "response")
+completa$pago_pred <- predict(reg2, newdata = completa, type = "response")
+completa$beca_pred <- predict(reg3, newdata = completa, type = "response")
+completa$beca_pred.1 <- predict(reg3.1, newdata = completa, type = "response")
+completa$beca_pred.2 <- predict(reg3.2, newdata = completa, type = "response")
+completa$beca_pred.3 <- predict(reg3.3, newdata = completa, type = "response")
+
+#Predichos Becas
+hist(completa$beca_pred)
+hist(completa$beca_pred.1)
+hist(completa$beca_pred.2)
+hist(completa$beca_pred.3)
+hist(completa$beca_p)
 
 
+summary(completa$beca_pred)
+summary(completa$beca_pred.1)
+summary(completa$beca_pred.2)
+summary(completa$beca_pred.3)
+summary(completa$beca_p)
+
+#Predichos Pagos
+
+completa$arancel_mens <- completa$arancel/6
+
+hist(completa$arancel_mens)
+hist(completa$pago_pred)
+hist(completa$pago_mens)
+
+summary(completa$arancel_mens)
+summary(completa$pago_pred)
+summary(completa$pago_mens)
+
+###Sensibilidad del pago 
+
+completa$sens_pago <- 1 - (completa$pago_pred/completa$arancel_mens)
+summary(completa$sens_pago)
+hist(completa$sens_pago)
+
+
+###Sensibilidad de la beca
+
+completa$sens_beca <- completa$beca_pred
+summary(completa$sens_beca)
+hist(completa$sens_beca)
+
+        ###Sensibilidad cliente
+
+ponderadores <- lm(ganado ~ sens_pago + sens_beca, data=completa)
+
+summary(ponderadores)
+#intercepto 1.25018
+#Sensibilidad pago 0.03717
+#Sensibilidad Beca -2.93778
+
+completa$sens_cliente <- predict(ponderadores, newdata = completa, type = "response")
+
+completa$sens_cliente <- 1 - completa$sens_cliente
+
+#completa$sens_cliente <- 0.03717*completa$sens_pago -2.93778*completa$sens_beca
+summary(completa$sens_cliente)
+hist(completa$sens_cliente)
+
+#Diferencias 
+
+completa$dif_deficit <- completa$defi_pred - completa$deficit_m
+completa$dif_pago <- completa$pago_pred  - completa$pago_mens
+completa$dif_beca <- completa$beca_pred - completa$beca_p
+
+
+sum(completa$dif_deficit)
+sum(completa$dif_pago)
+sum(completa$dif_beca)
+
+mean(completa$dif_deficit)
+mean(completa$dif_pago)
+mean(completa$dif_beca)
+
+summary(completa$dif_deficit)
+summary(completa$dif_pago)
+summary(completa$dif_beca)
+
+a <- plot(completa$dif_deficit)
+b <- plot(completa$dif_pago)
+c <- plot(completa$dif_beca)
+
+d <- plot(completa$sens_pago)
+e <- plot(completa$sens_beca)
+f <- plot(completa$sens_cliente)
 
 #Graficos
 #Deficit
@@ -2271,36 +2426,194 @@ abline(0, 0)
 
 
 
+#Scatter con beca recomendada 
 
-                        #PROBABILIDAD DE DOCUMENTAR LOGIT CON SCORE Y PREDICHOS ###
+graph16 <- ggplot(completa, aes(x=beca_p, y=sens_cliente)) +
+        geom_point() +
+        geom_abline(intercept = 0, slope = 1, size = 1, color="red", fill="#69b3a2") +
+        labs(y="Beca Recomendada", x = "Sensibilidad Cliente")+
+        theme_ipsum()
+graph16
 
-#Comparar con aquellos que si documentaron 
+ggplotly(graph16, hoverinfo = "text")
 
+#Heat map con beca recomendada
 
-reg4 <- glm(ganado ~ score_ctrl, data=completa, family = "binomial")
-summary(reg4) 
+ggplot(completa, aes(x=beca_p, y=sens_cliente) ) +
+        scale_fill_continuous(type = "viridis") +
+        geom_hex() +
+        labs(y="Sensibilidad Cliente", x = "Beca Recibida")+
+        theme_bw()
 
-logitmfx(ganado ~ score_ctrl, data=completa) #Coeficiente -0.00094503 
-
-
-completa$ganado_pred <-(-0.00094503*completa$score_ctrl)
-
-summary(completa$ganado_pred)
-
-
-reg5 <- lm(ganado ~ score_ctrl, data=completa)
-reg5.res = resid(reg5)
-summary(reg5) #Beta 0: 3.699e-02, Beta 1: 3.357e-04
-summary(reg5.res) #Media cercana a 0
-sum(reg5.res) #cercano a 0
-
-
-completa$ganado_pred <- 1.1425530 + (-0.0009740*completa$score_ctrl)
-
-summary(completa$ganado_pred)
+summary(completa$beca_pred)
+summary(completa$beca_p)
 
 
-summary(completa$score_ctrl)
+#3D scatter de Becas, sensibilidad y score
+library(rgl)
+library(magick)
+
+graph17<- plot3d( 
+        x=completa$sens_cliente, y=completa$beca_p, z=completa$score_ctrl, 
+        type = 's', 
+        radius = 1,
+        xlab="Sensibilidad Cliente", ylab="Beca Otorgada", zlab="Score")
+
+graph17
+
+play3d( spin3d( axis = c(0, 0, 1), rpm = 7), duration = 100)
+
+# Save like gif
+movie3d(
+        movie="3DScatter", 
+        spin3d( axis = c(0, 0, 1), rpm = 7),
+        duration = 100, 
+        dir = "C:/Users/ritaz/Documents",
+        type = "gif", 
+        clean = TRUE
+)
+
+###
+
+completa_2 <- completa %>% dplyr :: select(!c(b_201920,b_202010,b_202020,b_202110,b_202120,b_202210,d_25,d_20,
+                                              d_30,d_25,d_20,d_20,d_25,d_30, deficit_20, deficit_25, deficit_30,p20_gasto,p25_gasto,p30_gasto,score_ctrl_norm,
+                                              score_ctrl_esc,score_ctrl_ln,beca_pred.1,beca_pred.2,beca_pred.3))
+
+#Quintil de ingreso familiar                                
+
+completa_2$ing_f_c <- quantcut(completa_2$ing_f, q = 5, na.rm = TRUE)
+
+#Quintil de score    
+completa_2$score_ctrl_c <- quantcut(completa_2$score_ctrl, q = 5, na.rm = TRUE)
+
+
+#-------------------------------------------------------------------------------
+#                       SENSIBILIDAD DEL CLIENTE
+#-------------------------------------------------------------------------------
+#Sensibilidad cliente por qunitil de score
+
+graph18 <- completa_2 %>% dplyr :: select(id,sens_cliente,score_ctrl_c)
+
+graph18 <- melt(graph18, idvars = "id")
+names(graph18)[4] <- "Sensibilidad"
+
+
+
+# Plot Sensibilidad vs Quintil de Score
+ggplot(graph18, aes(x = Sensibilidad, y = score_ctrl_c, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Score", option = "D") +
+        labs(title = 'Sensibilidad vs Quintil de Score') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+# Plot Sensibilidad vs Quintil de ingreso famiiliar
+
+graph19 <- completa_2 %>% dplyr :: select(id,sens_cliente,ing_f_c)
+
+graph19 <- melt(graph19, idvars = "id")
+names(graph19)[4] <- "Sensibilidad"
+
+
+ggplot(graph19, aes(x = Sensibilidad, y = ing_f_c, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Quintil", option = "D") +
+        labs(title = 'Sensibilidad vs Quintil Ingreso Familiar') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+# Plot Sensibilidad vs Cluster Colegio
+
+graph20 <- completa_2 %>% dplyr :: select(id,sens_cliente,cluster)
+
+graph20 <- melt(graph20, idvars = "id")
+names(graph20)[4] <- "Sensibilidad"
+
+
+ggplot(graph20, aes(x = Sensibilidad, y = cluster, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Sensibilidad vs Cluster') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+# Plot Sensibilidad  vs Carrera ???
+
+graph21 <- completa_2 %>% dplyr :: select(id,sens_cliente,carr)
+names(graph21)[2] <- "SensibilidadMedia"
+
+
+ggplot(graph21, aes(x=SensibilidadMedia, color=carr, fill=carr)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~carr)
+
+#Scatter con beca entregada vs sensibilidad cliente
+
+graph18 <- ggplot(completa, aes(x=beca_p, y=sens_cliente)) +
+        geom_point() +
+        geom_abline(intercept = 0, slope = 1, size = 1, color="red", fill="#69b3a2") +
+        labs(y="Sensibilidad cliente", x = "Beca Recibida")+
+        theme_ipsum()
+graph18
+
+ggplotly(graph18, hoverinfo = "text")
+
+#Heat map con beca entregada vs sensibilidad cliente
+
+ggplot(completa, aes(x=beca_p, y=sens_cliente) ) +
+        scale_fill_continuous(type = "viridis") +
+        geom_hex() +
+        labs(y="Sensibilidad cliente", x = "Beca Recibida")+
+        theme_bw()
+
+
+
+
+
+
+#                         #PROBABILIDAD DE DOCUMENTAR LOGIT CON SCORE Y PREDICHOS ###
+# 
+# #Comparar con aquellos que si documentaron
+# 
+# modbase <- completa %>% dplyr::select(ganado,score_ctrl,pago_pred,beca_pred)
+# 
+# reg4 <- glm(ganado ~ score_ctrl + pago_pred + beca_pred, data=modbase, family = "binomial")
+# summary(reg4) 
+# 
+# completa$ganadoP <- predict(reg4, newdata = completa, type = "response")
+# 
+# summary(completa$ganadoP)
+# 
+# 
+
+
+
+
+
 
 #-------------------------------------------------------------------------------
 #                       RESULTADOS EN BASE COMPLETA DE SCORE
@@ -2308,30 +2621,275 @@ summary(completa$score_ctrl)
 
 #APLICAR A res_final_sept
 
+res_final_sept <- data.table(res_final_sept, arancel, by = "carr")
+
+names(res_final_sept)
+res_final_sept <- res_final_sept[,-28] 
+res_final_sept <- res_final_sept[,-29] 
+res_final_sept <- res_final_sept[,-29] 
+res_final_sept <- res_final_sept[,-29] 
+res_final_sept <- res_final_sept[,-29] 
+res_final_sept <- res_final_sept[,-29] 
+res_final_sept <- res_final_sept[,-29] 
+res_final_sept <- res_final_sept[,-30] 
+
+res_final_sept$arancel_mens <- res_final_sept$arancel/6
 
 #Predichos
+res_final_sept$defi_pred <- predict(reg1, newdata = res_final_sept, type = "response")
+res_final_sept$pago_pred <- predict(reg2, newdata = res_final_sept, type = "response")
+res_final_sept$beca_pred <- predict(reg3, newdata = res_final_sept, type = "response")
 
-res_final_sept$defi_pred <- -5.6602192 + (0.0154483*res_final_sept$score_ctrl)
-res_final_sept$pago_pred <- 552.66535 - 0.19747*res_final_sept$score_ctrl
-res_final_sept$beca_pred <- 3.699e-02 + 3.357e-04*res_final_sept$score_ctrl
-
-#Probabilidad Docum
-
-res_final_sept$ganado_pred <- 1.1425530 + (-0.0009740*res_final_sept$score_ctrl)
+###Sensibilidad del pago 
 
 
+res_final_sept$sens_pago <- 1 - (res_final_sept$pago_pred/res_final_sept$arancel_mens)
+summary(res_final_sept$sens_pago)
+hist(res_final_sept$sens_pago)
 
-count(res_final_sept$ganado, res_final_sept$ganado_pred)
 
-res_final_sept$estado <- 0
-res_final_sept$estado[res_final_sept$ganado == 1] <- "Ganado"
-res_final_sept$estado[res_final_sept$ganado == 0] <- "Perdido"
+###Sensibilidad de la beca
 
-gnd <- res_final_sept %>%
-        ggplot( aes(x=ganado_pred, fill=estado)) +
-        geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
-        scale_fill_manual(values=c("#69b3a2", "#404080")) +
+res_final_sept$sens_beca <- res_final_sept$beca_pred
+summary(res_final_sept$sens_beca)
+hist(res_final_sept$sens_beca)
+
+###Sensibilidad cliente
+
+ponderadores <- lm(ganado ~ sens_pago + sens_beca, data=res_final_sept)
+
+summary(ponderadores)
+#intercepto 2.773
+#Sensibilidad pago 1.039
+#Sensibilidad Beca -13.706
+
+res_final_sept$sens_cliente <- predict(ponderadores, newdata = res_final_sept, type = "response")
+
+res_final_sept$sens_cliente <- 1 - res_final_sept$sens_cliente
+
+#completa$sens_cliente <- 0.03717*completa$sens_pago -2.93778*completa$sens_beca
+summary(res_final_sept$sens_cliente)
+hist(res_final_sept$sens_cliente)
+
+#Reescalo entre 0 y 1 la sensibilidad del cliente 
+
+library(scales)    
+res_final_sept$sens_cliente_norm <- rescale(res_final_sept$sens_cliente)                       
+
+hist(res_final_sept$sens_cliente_norm)
+
+
+#Estadisticas descriptivas
+
+summary(res_final_sept$score_ctrl)
+summary(res_final_sept$sens_cliente)
+
+#Quintil de score    
+res_final_sept$score_ctrl_c <- quantcut(res_final_sept$score_ctrl, q = 5, na.rm = TRUE)
+
+
+#Score vs Q Ingreso
+
+graph22 <- res_final_sept %>% dplyr :: select(id,score_ctrl,ing_m_f)
+
+graph22 <- melt(graph22, idvars = "id")
+names(graph22)[4] <- "Score"
+
+
+ggplot(graph22, aes(x = Score, y = ing_m_f, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Score vs Quintil') +
         theme_ipsum() +
-        labs(fill="")
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
 
-gnd
+
+#Score vs Cluster
+
+graph23 <- res_final_sept %>% dplyr :: select(id,score_ctrl,cluster)
+
+graph23 <- melt(graph23, idvars = "id")
+names(graph23)[4] <- "Score"
+
+
+ggplot(graph23, aes(x = Score, y = cluster, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Score vs Cluster') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Score vs Origen
+
+graph28 <- res_final_sept %>% dplyr :: select(id,score_ctrl,origen)
+
+graph28 <- melt(graph28, idvars = "id")
+names(graph28)[4] <- "Score"
+
+
+ggplot(graph28, aes(x = Score, y = origen, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Origen", option = "D") +
+        labs(title = 'Score vs Origen') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+#Score vs Estado
+
+graph29 <- res_final_sept %>% dplyr :: select(id,score_ctrl,estado)
+
+graph29 <- melt(graph29, idvars = "id")
+names(graph29)[4] <- "Score"
+
+
+ggplot(graph29, aes(x = Score, y = estado, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Estado", option = "D") +
+        labs(title = 'Score vs Estado') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+#Quintil score vs Sensibilidad
+
+graph24 <- res_final_sept %>% dplyr :: select(id,score_ctrl_c,sens_cliente)
+graph24 <- melt(graph24, idvars = "id")
+
+names(graph24)[4] <- "Sensibilidad"
+
+
+ggplot(graph24, aes(x = Sensibilidad, y = score_ctrl_c, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Score", option = "D") +
+        labs(title = 'Quintil Score vs Sensibilidad') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+
+#Sensibilidad vs Q Ingreso
+
+graph25 <- res_final_sept %>% dplyr :: select(id,sens_cliente,ing_m_f)
+
+graph25 <- melt(graph25, idvars = "id")
+names(graph25)[4] <- "Sensibilidad"
+
+
+ggplot(graph25, aes(x = Sensibilidad, y = ing_m_f, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Sensibilidad vs Quintil') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Sensibilidad vs Cluster
+
+graph26 <- res_final_sept %>% dplyr :: select(id,sens_cliente,cluster)
+
+graph26 <- melt(graph26, idvars = "id")
+names(graph26)[4] <- "Sensibilidad"
+
+
+ggplot(graph26, aes(x = Sensibilidad, y = cluster, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Sensibilidad vs Cluster') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Sensibilidad vs Origen
+
+graph27 <- res_final_sept %>% dplyr :: select(id,sens_cliente,origen)
+
+graph27 <- melt(graph27, idvars = "id")
+names(graph27)[4] <- "Sensibilidad"
+
+
+ggplot(graph27, aes(x = Sensibilidad, y = origen, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Origen", option = "D") +
+        labs(title = 'Sensibilidad vs Origen') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+
+#Sensibilidad vs Estado
+
+graph28 <- res_final_sept %>% dplyr :: select(id,sens_cliente,estado)
+
+graph28 <- melt(graph28, idvars = "id")
+names(graph28)[4] <- "Sensibilidad"
+
+
+ggplot(graph28, aes(x = Sensibilidad, y = estado, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Estado", option = "D") +
+        labs(title = 'Sensibilidad vs Estado') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#3D scatter de Becas, sensibilidad y score
+library(rgl)
+library(magick)
+
+graph27<- plot3d( 
+        x=res_final_sept$sens_cliente, y=res_final_sept$beca_pred, z=res_final_sept$score_ctrl, 
+        type = 's', 
+        radius = 2,
+        xlab="Sensibilidad Cliente", ylab="Beca Predicha", zlab="Score")
+
+graph27
+
+play3d( spin3d( axis = c(0, 0, 1), rpm = 7), duration = 100)
+
+
+
+### 
+
+write_xlsx(res_f,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc///base_prob_modelo.xlsx")
+
+
+
+
+
+
