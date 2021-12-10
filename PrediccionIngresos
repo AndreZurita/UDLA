@@ -1,0 +1,1317 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(heatmaply)
+library(normalr)
+library(DataExplorer)
+library(fuzzyjoin)
+library(aod)
+library(mfx)
+library(data.table)
+library(sjmisc)
+library(mice)
+library(VIM)
+library(fastDummies)
+library(lifecycle)
+library(stable)
+library(metan)
+library(margins)
+
+
+#------------------------------------------------------------------------------
+                                #MODELO DE PREDICCION DE INGRESOS
+                                #COORDINACION DE PROYECTOS
+                                #INTELIGENCIA DE LA INFORMACION 
+                                #UDLA
+#------------------------------------------------------------------------------
+
+
+base_cruda <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/base_cruda.xlsx")
+base_cruda <- base_cruda %>% drop_na(new_periodoname)
+base_cruda$new_periodoname <- str_replace(base_cruda$new_periodoname, "-A", "-10" )
+base_cruda$new_periodoname <- str_replace(base_cruda$new_periodoname, "-S", "-20" )
+
+#Solo para pregrado
+base_cruda <- base_cruda[- grep("Educación continua", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
+base_cruda <- base_cruda[- grep("Graduate", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
+base_cruda <- base_cruda[- grep("Linea negocio no definida", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
+base_cruda <- base_cruda[- grep("Technology", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
+
+#Trabajo de homologacion de periodos
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2019-20 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2019-20 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2019-20 Semipresencial"] <- "2019-20"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2020-10 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2020-10 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2020-10 Semipresencial"] <- "2020-10"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2020-20 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2020-20 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2020-20 Semipresencial"] <- "2020-20"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2021-10 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2021-10 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2021-10 Semipresencial"] <- "2021-10"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2021-20 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2021-20 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2021-20 Semipresencial"] <- "2021-20"
+
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2022-10 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2022-10 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2022-10 Semipresencial"] <- "2022-10"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2018-10 Pregrado Diurno"] <- "2018-10"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2002-10"] <- "2009-10"
+
+table(base_cruda$new_estadodelprocesodeadmisionname, base_cruda$new_periodoname)
+
+
+#Match con bases de Voldemort 
+
+padre <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/base_prob2MATRICULACION.xlsx", sheet = "PAD")
+madre <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/base_prob2MATRICULACION.xlsx", sheet = "MAD")
+estudiante <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/base_prob2MATRICULACION.xlsx", sheet = "AFLU")
+
+base_cruda <- rename(base_cruda, id = 'new_cedula')
+madre <- rename(madre, id = 'CEDULA_N')
+padre <- rename(padre, id = 'CEDULA_N')
+estudiante <- rename(estudiante, id = 'CEDULA')
+
+#Predictive Mean Matching
+
+madre$Ingresos_MAD <- as.numeric(gsub(",", ".", gsub("\\.", "", madre$Ingresos_MAD)))
+padre$Ingresos_PAD <- as.numeric(gsub(",", ".", gsub("\\.", "", padre$Ingresos_PAD)))
+
+summary(madre)
+
+
+base_cruda <- join(base_cruda, madre, by = "id")
+base_cruda <- join(base_cruda, padre, by = "id")
+base_cruda <- join(base_cruda, estudiante, by = "id")
+
+base_cruda <- base_cruda[, !duplicated(colnames(base_cruda))]
+base_cruda <- base_cruda %>% distinct()
+
+
+names(base_cruda)
+base_cruda <- base_cruda %>% dplyr::select(id,customeridname, new_periodoname, createdon, statecodename, new_consultordecierrename,
+                                           new_carrera_acuerdoname, new_estadodelprocesodeadmisionname, new_edad, new_documentacion,
+                                           new_afluente, new_ciudad_direccion1name,new_sexoname, new_dequetniaseconsideraname,modifiedon,
+                                           statuscodename,new_colegiooempresaname,new_origendedatosdelregistroname, a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname,
+                                           a_6e112325ddf5e111894b00155d042f00.new_provincianame,a_8a0f2325ddf5e111894b00155d042f00.new_codigobanner,
+                                           FECHA_NACIM_MAD, DES_NIV_ESTUD_MAD, DES_PROFESION_MAD, Ingresos_MAD, Ocupacion_MAD,
+                                           FECHA_NACIM_PAD, DES_NIV_ESTUD_PAD, DES_PROFESION_PAD, Ingresos_PAD, Ocupacion_PAD, FECHA_NACIM)
+#Manejo de Fechas 
+
+base_cruda$new_afluente <- as.Date(base_cruda$new_afluente, format= "%d/%m/%Y")
+base_cruda$new_documentacion <- as.Date(base_cruda$new_documentacion, format= "%d/%m/%Y")
+base_cruda$modifiedon <- as.Date(base_cruda$modifiedon, format= "%d/%m/%Y")
+base_cruda$FECHA_NACIM_MAD <- as.Date(base_cruda$FECHA_NACIM_MAD, format= "%d/%m/%Y")
+base_cruda$FECHA_NACIM_PAD <- as.Date(base_cruda$FECHA_NACIM_PAD, format= "%d/%m/%Y")
+base_cruda$FECHA_NACIM <- as.Date(base_cruda$FECHA_NACIM, format= "%d/%m/%Y")
+
+#EDADES
+
+#ESTUDIANTES
+
+base_cruda$edad <- round(as.numeric(difftime(as.Date(base_cruda$new_afluente), as.Date(base_cruda$FECHA_NACIM), unit="weeks"))/52.25,0)
+
+count(base_cruda$edad)
+
+base_cruda$new_edad[is.na(base_cruda$new_edad)] <- base_cruda$edad 
+base_cruda$new_edad[is.na(base_cruda$new_edad)] <- 22
+base_cruda$new_edad[base_cruda$new_edad >= 65] <- 65
+base_cruda$new_edad[base_cruda$new_edad <= 16] <- 16
+
+
+count(base_cruda$new_edad)
+
+
+#PADRES
+
+base_cruda$edad_pad <- round(as.numeric(difftime(as.Date(base_cruda$new_afluente), as.Date(base_cruda$FECHA_NACIM_PAD), unit="weeks"))/52.25,0)
+base_cruda$edad_mad <- round(as.numeric(difftime(as.Date(base_cruda$new_afluente), as.Date(base_cruda$FECHA_NACIM_MAD), unit="weeks"))/52.25,0)
+
+base_cruda$edad_pad[is.na(base_cruda$edad_pad)] <- 42
+base_cruda$edad_mad[is.na(base_cruda$edad_mad)] <- 42
+base_cruda$edad_pad[base_cruda$edad_pad <= 33] <- 33
+base_cruda$edad_mad[base_cruda$edad_mad <= 33] <- 33
+
+
+count(base_cruda$edad_pad)
+count(base_cruda$edad_mad)
+
+table(base_cruda$new_carrera_acuerdoname, base_cruda$statecodename)
+table(base_cruda$statecodename, base_cruda$new_periodoname)
+
+##
+
+base_cruda <- base_cruda[- grep("911 - CURSO AUXILIAR EN ENFERMERIA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA1P000-CARRERA NO DEFINIDA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA1P001 - PSICOLOGÍA CLÍNICA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA2P000-CARRERA NO DEFINIDA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA2P001 - PSICOLOGÍA CLÍNICA", base_cruda$new_carrera_acuerdoname),]
+
+table(base_cruda$statecodename, base_cruda$new_periodoname)
+table(base_cruda$new_carrera_acuerdoname,base_cruda$statecodename)
+
+#Otros arreglos
+
+count(base_cruda$new_sexoname)
+base_cruda$new_sexoname[is.na(base_cruda$new_sexoname)] <- "Masculino"
+
+#fILL A MANO DE AQUELLAS PROVINCIAS VACIAS!
+cod_prov <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/cod_prov.xlsx")
+
+count(base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame)
+
+base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame[is.na(base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame)] <- "PICHINCHA"
+base_cruda <- base_cruda[- grep("No Definida", base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame),]
+base_cruda <- base_cruda[- grep("ZONA NO DELIMITADA", base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame),]
+
+table(base_cruda$statecodename, base_cruda$new_periodoname)
+
+#DIVERSAS COMPROBACIONES
+count(base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame)
+count(base_cruda$new_sexoname)
+count(base_cruda$new_origendedatosdelregistroname)
+count(base_cruda$new_periodoname)
+
+count(base_cruda$new_estadodelprocesodeadmisionname)
+
+base_cruda$estado[base_cruda$new_estadodelprocesodeadmisionname == "Afluente" 
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Documentado"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Documentos Entregados"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Gestionado"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Inscrito"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Matriculado"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Test"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Test Aprobado"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Test Reprobado"] <- "Afluente"
+
+base_cruda$estado[base_cruda$new_estadodelprocesodeadmisionname == "Documentado"] <- "Documentado"
+
+base_cruda$estado[is.na(base_cruda$estado)] <- "Afluente"
+
+
+
+count(base_cruda$estado)
+
+
+table(base_cruda$estado, base_cruda$new_periodoname)
+
+
+#Estatus Ganados, perdidos
+
+base_cruda$perdido <- 0
+base_cruda$perdido[base_cruda$statuscodename == "Perdido"] <- 1
+base_cruda$ganado <- 0
+base_cruda$ganado[base_cruda$statuscodename == "Ganado"] <- 1
+
+
+sum(base_cruda$ganado)
+
+table(base_cruda$ganado, base_cruda$new_periodoname)
+#Genero 
+
+base_cruda$genero <- 0 
+base_cruda$genero[base_cruda$new_sexoname == "Femenino"] <- 1 
+
+
+#Tiempo en gestion
+
+base_cruda$tiempo_doc <- base_cruda$new_documentacion - base_cruda$new_afluente
+base_cruda$tiempo_per <- base_cruda$modifiedon - base_cruda$new_afluente
+
+base_cruda$ciclo_doc <- str_split(base_cruda$tiempo_doc, " " , n = Inf, simplify = FALSE)
+base_cruda$ciclo_per <- str_split(base_cruda$tiempo_per, " " , n = Inf, simplify = FALSE)
+
+base_cruda$ciclo_doc <- ifelse(is.na(base_cruda$ciclo_doc), base_cruda$tiempo_per, base_cruda$ciclo_doc)
+
+base_cruda$ciclo <- base_cruda$ciclo_doc
+
+base_cruda$ciclo <- as.numeric(base_cruda$ciclo)
+
+#Provincia 
+
+base_cruda$pichincha <- 0
+base_cruda$pichincha[base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame == "PICHINCHA"] <- 1 
+
+
+#Origen
+
+base_cruda$origen <- 0
+base_cruda$origen[base_cruda$new_origendedatosdelregistroname == "Career Cruising" 
+                  | base_cruda$new_origendedatosdelregistroname == "Datos importados"
+                  | base_cruda$new_origendedatosdelregistroname == "Llamada"
+                  | base_cruda$new_origendedatosdelregistroname == "Prospección"
+                  | base_cruda$new_origendedatosdelregistroname == "Prospección Alianzas educativas"
+                  | base_cruda$new_origendedatosdelregistroname == "Prospección Corporativa"
+                  | base_cruda$new_origendedatosdelregistroname == "Walk-in"] <- 1
+
+base_cruda$ing_f <- (base_cruda$Ingresos_MAD + base_cruda$Ingresos_PAD)/1.73
+
+
+#BASE TRABAJADA
+
+table(base_cruda$statecodename, base_cruda$new_periodoname)
+count(base_cruda$new_colegiooempresaname)
+
+
+##Match para pensiones 
+# pensiones <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/colegios_join.xlsx")
+names(base_cruda)[21] <- 'cod'
+# 
+# pensiones <- pensiones %>% dplyr::select(cod, pension)
+# pensiones$pension <- as.numeric(pensiones$pension)
+# pensiones$pension[is.na(pensiones$pension)] <- 0
+# 
+# base_cruda <- join(base_cruda, pensiones, by = "cod")
+
+
+#Base utilizable
+write_xlsx(base_cruda,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc///base_prob_doc.xlsx")
+
+#TRABAJO Y SUBIDA DE BASES DE: PAGOS, BECAS Y AÑO DE GRADUACION
+
+
+count(base_cruda$new_estadodelprocesodeadmisionname)
+count(base_cruda$statecodename)
+count(base_cruda$new_edad)
+count(base_cruda$new_consultordecierrename)
+count(base_cruda$new_carrera_acuerdoname)
+count(base_cruda$new_ciudad_direccion1name)
+count(base_cruda$new_sexoname)
+count(base_cruda$new_dequetniaseconsideraname)
+count(base_cruda$statuscodename)
+count(base_cruda$new_sexoname)
+
+
+
+base_cruda <- base_cruda %>% dplyr::select(id, new_periodoname, createdon, statecodename, new_consultordecierrename,
+                                           new_carrera_acuerdoname, new_edad, new_documentacion,
+                                           new_afluente, new_ciudad_direccion1name,new_sexoname, new_dequetniaseconsideraname,modifiedon,
+                                           statuscodename,new_colegiooempresaname,new_origendedatosdelregistroname, a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname,
+                                           a_6e112325ddf5e111894b00155d042f00.new_provincianame,cod,
+                                           FECHA_NACIM_MAD, DES_NIV_ESTUD_MAD, DES_PROFESION_MAD, Ingresos_MAD, Ocupacion_MAD,
+                                           FECHA_NACIM_PAD, DES_NIV_ESTUD_PAD, DES_PROFESION_PAD, Ingresos_PAD, Ocupacion_PAD, FECHA_NACIM, edad_mad, edad_pad, ing_f,ganado, ciclo,
+                                           tiempo_per, tiempo_doc, pichincha, origen)
+
+# APPEND CON VARIABLES DE 202210 QUE ESTAN EN SALESFORCE
+
+
+base_def <- read_excel("C:/Users/ritaz/Desktop/CONSULTOR CIERRE/Analítica/AnalisisVarios/MATCH CRM_SF/base_definitiva.xlsx")
+base_2210_sf <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/202210_Match.xlsx")
+
+#Cambio de nombres para append y limpieza de bases
+
+#BASE DEFINITIVA
+names(base_def)
+base_def <- rename(base_def, etapa = 'Etapa')
+base_def <- rename(base_def, cons_cierre = 'Propietario de oportunidad')
+base_def <- rename(base_def, f_mod = 'Fecha de modificación')
+
+base_def <- base_def %>% dplyr::select(id, etapa, carrera, cons_cierre, f_mod)
+
+#BASE 2210 SALESFORCE
+
+names(base_2210_sf)
+base_2210_sf <- rename(base_2210_sf, id = 'Identificación')
+base_2210_sf <- rename(base_2210_sf, f_creacion = 'Fecha de creación...2')
+base_2210_sf <- rename(base_2210_sf, etapa = 'Etapa')
+base_2210_sf <- rename(base_2210_sf, cons_cierre = 'Propietario de oportunidad: Nombre completo')
+base_2210_sf <- rename(base_2210_sf, carrera = 'Plan de Programa: Nombre del plan del programa')
+base_2210_sf <- rename(base_2210_sf, f_mod = 'Fecha de la última modificación de Etapa')
+base_2210_sf <- rename(base_2210_sf, edad = 'Edad')
+base_2210_sf <- rename(base_2210_sf, f_cierre = 'Fecha de cierre') #partir en 2 dependiendo tipo de cierre
+base_2210_sf <- rename(base_2210_sf, f_aflu = 'Fecha de creación...8')
+base_2210_sf <- rename(base_2210_sf, ciudad = 'Ciudad: Ciudad Name')
+base_2210_sf <- rename(base_2210_sf, sexo = 'Género')
+base_2210_sf <- rename(base_2210_sf, etnia = 'Etnia')
+base_2210_sf <- rename(base_2210_sf, subetapa = 'Subetapa')
+base_2210_sf <- rename(base_2210_sf, col = 'Colegio: Nombre de la cuenta')
+base_2210_sf <- rename(base_2210_sf, origen = 'Origen del candidato')
+base_2210_sf <- rename(base_2210_sf, linea = 'Línea de negocio')
+base_2210_sf <- rename(base_2210_sf, prov = 'Provincia: Provincia Name')
+base_2210_sf <- rename(base_2210_sf, cod = 'Colegio: Código banner Colegio')
+
+#Vamos a generar las entidades de fecha de doc y fecha de perdido para generar el ciclo, luego los borro
+
+base_2210_sf$f_doc <- 0 
+base_2210_sf$f_doc[base_2210_sf$etapa == "Cerrada Ganada"] <- base_2210_sf$f_cierre
+
+base_2210_sf$f_per <- 0 
+base_2210_sf$f_per[base_2210_sf$etapa == "Cerrada Perdida"] <- base_2210_sf$f_cierre
+
+#Tiempo en gestion
+base_2210_sf$f_creacion <- as.Date(base_2210_sf$f_creacion, format= "%d/%m/%Y")
+base_2210_sf$f_cierre <- as.Date(base_2210_sf$f_cierre, format= "%d/%m/%Y")
+base_2210_sf$f_aflu <- as.Date(base_2210_sf$f_aflu, format= "%d/%m/%Y")
+base_2210_sf$f_mod <- as.Date(base_2210_sf$f_mod, format= "%d/%m/%Y")
+base_2210_sf$f_doc <- as.Date(base_2210_sf$f_doc, format= "%d/%m/%Y")
+base_2210_sf$f_per <- as.Date(base_2210_sf$f_per, format= "%d/%m/%Y")
+
+base_2210_sf$tiempo_doc <- base_2210_sf$f_doc -  base_2210_sf$f_aflu
+base_2210_sf$tiempo_per <- base_2210_sf$f_mod - base_2210_sf$f_aflu
+
+base_2210_sf$ciclo_doc <- str_split(base_2210_sf$tiempo_doc, " " , n = Inf, simplify = FALSE)
+base_2210_sf$ciclo_per <- str_split(base_2210_sf$tiempo_per, " " , n = Inf, simplify = FALSE)
+
+base_2210_sf$ciclo_doc <- ifelse(is.na(base_2210_sf$ciclo_doc), base_2210_sf$tiempo_per, base_2210_sf$ciclo_doc)
+
+base_2210_sf$ciclo <- base_2210_sf$ciclo_doc
+
+base_2210_sf$ciclo <- as.numeric(base_2210_sf$ciclo)
+
+base_2210_sf <- base_2210_sf %>% dplyr::select(id, f_creacion, etapa, cons_cierre, carrera, edad, f_cierre, f_aflu, 
+                                               ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, cod, 
+                                               f_doc, f_per, tiempo_doc, tiempo_per, ciclo)
+
+
+names(base_2210_sf)[18] <- 'cod'
+
+#BASE_CRUDA
+
+names(base_cruda)
+base_cruda <- rename(base_cruda, periodo = 'new_periodoname') 
+base_cruda <- rename(base_cruda, f_creacion = 'createdon')
+base_cruda <- rename(base_cruda, etapa = 'statecodename')
+base_cruda <- rename(base_cruda, cons_cierre = 'new_consultordecierrename')
+base_cruda <- rename(base_cruda, carrera = 'new_carrera_acuerdoname')
+base_cruda <- rename(base_cruda, edad = 'new_edad')
+base_cruda <- rename(base_cruda, f_doc = 'new_documentacion')
+base_cruda <- rename(base_cruda, f_aflu = 'new_afluente')
+base_cruda <- rename(base_cruda, ciudad = 'new_ciudad_direccion1name')
+base_cruda <- rename(base_cruda, sexo = 'new_sexoname')
+base_cruda <- rename(base_cruda, etnia = 'new_dequetniaseconsideraname')
+base_cruda <- rename(base_cruda, f_mod = 'modifiedon')
+base_cruda <- rename(base_cruda, subetapa = 'statuscodename')
+base_cruda <- rename(base_cruda, col = 'new_colegiooempresaname')
+base_cruda <- rename(base_cruda, origen_adm = 'origen')
+base_cruda <- rename(base_cruda, origen = 'new_origendedatosdelregistroname')
+base_cruda <- rename(base_cruda, linea = 'a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname')
+base_cruda <- rename(base_cruda, prov = 'a_6e112325ddf5e111894b00155d042f00.new_provincianame')
+base_cruda <- rename(base_cruda, cod = 'a_8a0f2325ddf5e111894b00155d042f00.new_codigobanner')
+base_cruda <- rename(base_cruda, f_nac_m = 'FECHA_NACIM_MAD')
+base_cruda <- rename(base_cruda, niv_est_m = 'DES_NIV_ESTUD_MAD')
+base_cruda <- rename(base_cruda, prof_m = 'DES_PROFESION_MAD')
+base_cruda <- rename(base_cruda, ing_m = 'Ingresos_MAD')
+base_cruda <- rename(base_cruda, ocu_m = 'Ocupacion_MAD')
+base_cruda <- rename(base_cruda, f_nac_p = 'FECHA_NACIM_PAD')
+base_cruda <- rename(base_cruda, niv_est_p = 'DES_NIV_ESTUD_PAD')
+base_cruda <- rename(base_cruda, prof_p = 'DES_PROFESION_PAD')
+base_cruda <- rename(base_cruda, ing_p = 'Ingresos_PAD')
+base_cruda <- rename(base_cruda, ocu_p = 'Ocupacion_PAD')
+base_cruda <- rename(base_cruda, f_nac = 'FECHA_NACIM')
+
+
+sub_base_cruda <- filter(base_cruda, periodo == "2022-10")
+
+###MERGE GENERADOR DE BASE 202210 EN FORMATO DE BASE CRUDA PARA LUEGO APPEND
+
+names(base_def)
+names(base_2210_sf)
+names(sub_base_cruda)
+
+##Bases auxiliares para el match adecuado 
+
+base_2210_sf_aux <- base_2210_sf %>% dplyr::select(id, cons_cierre, edad, f_cierre, f_aflu, 
+                                                   ciudad, sexo, etnia, subetapa, col, origen, linea, prov, cod, 
+                                                   f_doc, f_per, tiempo_doc, tiempo_per, ciclo)
+
+
+base_def_match <- data.table(base_def, base_2210_sf_aux, by ='id')
+
+names(base_def_match)
+names(sub_base_cruda)
+
+sub_base_cruda_aux <- sub_base_cruda %>% dplyr::select(id,periodo, f_creacion,  f_nac_m, 
+                                                       niv_est_m,prof_m,ing_m, ocu_m,f_nac_p, niv_est_p,
+                                                       prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado, ing_f, pichincha, origen_adm )
+
+base_def_match <- data.table(base_def_match, sub_base_cruda_aux, by ='id')
+names(base_def_match)
+base_def_match <- base_def_match[,-6] #quito id extras
+base_def_match <- base_def_match[,-24] #quito by extras
+base_def_match <- base_def_match[,-24] #quito id extras
+base_def_match <- base_def_match[,-43] #quito id extras
+base_def_match <- base_def_match[,-6] #quito consultor extra
+
+names(base_def_match)
+
+#Trabajo para las NAS
+
+count(base_def_match$edad)
+base_def_match$edad[is.na(base_def_match$edad)] <- 17
+
+count(base_def_match$f_aflu)
+base_def_match$f_aflu[base_def_match$f_aflu == "1970-01-18"] <- "2021-05-16"
+
+count(base_def_match$ciudad)
+base_def_match$ciudad[is.na(base_def_match$ciudad)] <- "QUITO"
+
+count(base_def_match$sexo)
+base_def_match$sexo[is.na(base_def_match$sexo)] <- base_2210_sf$sexo
+base_def_match$sexo[is.na(base_def_match$sexo)] <- base_cruda$sexo
+base_def_match$sexo[is.na(base_def_match$sexo)] <- sub_base_cruda$sexo
+base_def_match$sexo[base_def_match$sexo == "No identifica nada"] <- "Masculino"
+base_def_match$sexo[base_def_match$sexo == 17] <- "Masculino"
+
+count(base_def_match$etnia)
+base_def_match$etnia[is.na(base_def_match$etnia)] <- base_2210_sf$etnia
+base_def_match$sexo[base_def_match$etnia == "No registra"] <- "Otro"
+base_def_match$sexo[base_def_match$etnia == 17] <- "Otro"
+
+count(base_def_match$subetapa)
+base_def_match$subetapa[is.na(base_def_match$subetapa)] <- base_2210_sf$subetapa
+base_def_match$subetapa[is.na(base_def_match$subetapa)] <- base_cruda$subetapa
+base_def_match$subetapa[base_def_match$subetapa == 17] <- "Incontactable"
+
+count(base_def_match$col)
+base_def_match$col[is.na(base_def_match$col)] <- base_2210_sf$col
+base_def_match$col[is.na(base_def_match$col)] <- base_cruda$col
+base_def_match$col[base_def_match$col == 17] <- "24 DE MAYO, QUITO"
+
+count(base_def_match$origen)
+base_def_match$origen[is.na(base_def_match$origen)] <- base_2210_sf$origen
+base_def_match$origen[base_def_match$origen == 17] <- "Facebook"
+
+count(base_def_match$linea)
+base_def_match$origen[base_def_match$origen == 17] <- "Pregrado"
+
+count(base_def_match$prov)
+base_def_match$prov[is.na(base_def_match$prov)] <- base_2210_sf$prov
+base_def_match$prov[base_def_match$prov == 17] <- "PICHINCHA"
+
+count(base_def_match$cod)
+base_def_match$cod[is.na(base_def_match$cod)] <- base_2210_sf$cod
+base_def_match$cod[is.na(base_def_match$cod)] <- base_cruda$cod
+base_def_match$cod[base_def_match$cod == 17] <- "C02644"
+
+count(base_def_match$f_doc)
+base_def_match$f_doc[is.na(base_def_match$f_doc)] <- base_2210_sf$f_doc
+base_def_match$f_doc[is.na(base_def_match$f_doc)] <- sub_base_cruda$f_doc
+base_def_match$f_doc[base_def_match$f_doc == 17] <- "2021-07-30"
+
+count(base_def_match$f_per)
+base_def_match$f_per[is.na(base_def_match$f_per)] <- base_2210_sf$f_per
+base_def_match$f_per[is.na(base_def_match$f_per)] <- sub_base_cruda$f_per
+base_def_match$f_per[base_def_match$f_per == 17] <- "2021-07-30"
+
+count(base_def_match$tiempo_doc)
+base_def_match$tiempo_doc[is.na(base_def_match$tiempo_doc)] <- base_2210_sf$tiempo_doc
+base_def_match$tiempo_doc[is.na(base_def_match$tiempo_doc)] <- sub_base_cruda$tiempo_doc
+base_def_match$tiempo_doc[base_def_match$tiempo_doc == 17] <- "32"
+
+count(base_def_match$tiempo_per)
+base_def_match$tiempo_per[is.na(base_def_match$tiempo_per)] <- base_2210_sf$tiempo_per
+base_def_match$tiempo_per[is.na(base_def_match$tiempo_per)] <- sub_base_cruda$tiempo_per
+base_def_match$tiempo_per[base_def_match$tiempo_per == 17] <- "26 days"
+
+count(base_def_match$ciclo)
+base_def_match$ciclo[is.na(base_def_match$ciclo)] <- base_2210_sf$ciclo
+base_def_match$ciclo[is.na(base_def_match$ciclo)] <- sub_base_cruda$ciclo
+base_def_match$ciclo[base_def_match$ciclo < 0] <- 0
+
+count(base_def_match$f_creacion)
+base_def_match$f_creacion[is.na(base_def_match$f_creacion)] <- base_2210_sf$f_creacion
+base_def_match$f_creacion[is.na(base_def_match$f_creacion)] <- sub_base_cruda$f_creacion
+base_def_match$f_creacion[base_def_match$f_creacion == 17] <- "2021-02-30"
+
+
+base_def_match$ganado <-0 
+base_def_match$ganado[base_def_match$etapa == "Cerrada Ganada"] <- 1
+
+base_def_match$pichincha <-0 
+base_def_match$pichincha[base_def_match$prov == "PICHINCHA"] <- 1
+
+###LISTOS PARA EL APPEND
+
+
+base <- filter(base_cruda, periodo != "2022-10")
+names(base_def_match)
+names(base)
+
+base_def_match  <- base_def_match %>% dplyr:: select(id,periodo,f_creacion,etapa,cons_cierre,carrera,edad, f_doc, f_aflu, 
+                                                     ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, 
+                                                     cod, f_nac_m, niv_est_m, prof_m, ing_m, ocu_m, f_nac_p, niv_est_p, 
+                                                     prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado,ing_f, ciclo, pichincha, origen_adm)
+
+base  <- base %>% dplyr:: select(id,periodo,f_creacion,etapa,cons_cierre,carrera,edad, f_doc, f_aflu, 
+                                 ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, 
+                                 cod, f_nac_m, niv_est_m, prof_m, ing_m, ocu_m, f_nac_p, niv_est_p, 
+                                 prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado,ing_f,ciclo, pichincha, origen_adm)
+
+names(base_def_match)
+names(base)
+
+#Base append
+str(base)
+str(base_def_match)
+
+base_def_match$f_mod <- as.Date(base_def_match$f_mod, format= "%d/%m/%Y")
+
+sapply(base, class)
+sapply(base_def_match, class)
+
+base_total <- bind_rows(base, base_def_match)
+
+base_total <- base_total %>% distinct()
+
+table(base_total$etapa, base_total$periodo)
+
+
+#trabajo variable a variable en la base para homologar todos los criterios
+
+names(base_total)
+
+count(base_total$etapa)
+base_total$etapa[base_total$etapa == "Abierto" | base_total$etapa == "Afluente" | base_total$etapa == "Inscrito"
+                 | base_total$etapa == "Matrícula" | base_total$etapa == "Perdido" | base_total$etapa == "Test"] <- "Perdido"   
+
+base_total$etapa[base_total$etapa == "Cerrada Ganada" | base_total$etapa == "Ganado"] <- "Ganado"   
+
+count(base_total$carrera)
+
+
+###Eliminar aquellos exactamente repetidos
+
+base_total <- base_total %>% distinct()
+
+table(base_total$etapa, base_total$periodo)
+
+#Trabajo para ubicar los codigos de carrera y posteriormente ejecutar el match
+base_total$carrera <- gsub(" ", "", base_total$carrera, fixed = TRUE)
+
+base_total <- base_total %>%
+        separate(carrera, c("carrera", "col2", "col3"), "-")
+
+base_total$carrera_aux1 <-gsub("UDLA1P","", base_total$carrera, fixed = TRUE)
+base_total$carrera_aux2 <-gsub("UDLA2P","", base_total$carrera_aux1, fixed = TRUE)
+base_total$carrera_aux3 <-gsub("UDLA1","", base_total$carrera_aux2, fixed = TRUE)
+base_total$carrera_aux4 <-gsub("UDLA2S","", base_total$carrera_aux3, fixed = TRUE)
+base_total$cod_carr <-gsub("UDLA1U","", base_total$carrera_aux4, fixed = TRUE)
+
+
+count(base_total$cod_carr)
+
+
+base_total$cod_carr [base_total$cod_carr == "003"] <- "H003"
+
+
+base_total <- filter(base_total, !is.na(cod_carr))
+
+
+
+base_total  <- base_total %>% dplyr:: select(id,periodo,f_creacion,etapa,cons_cierre,cod_carr,carrera,edad, f_doc, f_aflu, 
+                                             ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, 
+                                             cod, f_nac_m, niv_est_m, prof_m, ing_m, ocu_m, f_nac_p, niv_est_p, 
+                                             prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado, ing_f, ciclo, pichincha, origen_adm)
+
+base_total <- base_total %>% distinct()
+table(base_total$etapa, base_total$periodo)
+
+
+base_total <- filter(base_total, cod_carr != 958)
+
+base_total <- base_total %>% distinct()
+table(base_total$etapa, base_total$periodo)
+
+
+
+cod_carr <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/lista_codnom.xlsx", sheet = "Hist")
+base_total <- data.table(base_total, cod_carr, by = "cod_carr")
+
+base_total <- base_total[,-39] 
+names(base_total)
+
+base_total <- base_total %>% distinct()
+table(base_total$etapa, base_total$periodo)
+
+base_total <- filter(base_total, !is.na(carr))
+
+
+count(base_total$carr)
+
+table(base_total$carr, base_total$periodo)
+
+base_total <- base_total %>% distinct()
+table(base_total$etapa, base_total$periodo)
+
+#HOMOLOGADO DE CARRERAS OK
+
+
+base_total  <- base_total %>% dplyr:: select(id,periodo,f_creacion,etapa,cons_cierre,cod_carr,carr,edad, f_doc, f_aflu, 
+                                             ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, 
+                                             cod, f_nac_m, niv_est_m, prof_m, ing_m, ocu_m, f_nac_p, niv_est_p, 
+                                             prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado, ing_f, ciclo, pichincha, origen_adm)
+
+
+table(base_total$etapa, base_total$periodo)
+
+###Eliminar aquellos exactamente repetidos
+
+base_total <- base_total %>% distinct()
+
+
+table(base_total$periodo, base_total$etapa)
+
+#OTROS TRABAJOS DE VARIABLES
+names(base_total)
+count(base_total$ciudad)
+
+#Ciudad
+base_total$ciudad[is.na(base_total$ciudad)] <- "QUITO"
+
+
+#Sexo
+count(base_total$sexo)
+base_total$sexo[base_total$sexo == "Otro"] <- "Masculino"
+
+#Etnia
+
+count(base_total$etnia)
+base_total$etnia[base_total$etnia == "Indígena - Achuar" | base_total$etnia == "Indígena - Al Cofan"
+                 | base_total$etnia == "Indígena - Chachi" | base_total$etnia == "Indígena - Chibuleo"
+                 | base_total$etnia == "Indígena - Kañari"  | base_total$etnia == "Indígena - Karanki"
+                 | base_total$etnia == "Indígena - Kayambi"  | base_total$etnia == "Indígena - Kichwa"
+                 | base_total$etnia == "Indígena - Kisapincha"  | base_total$etnia == "Indígena - Kitukara"
+                 | base_total$etnia == "Indígena - No aplica"  | base_total$etnia == "Indígena - Otavalo"
+                 | base_total$etnia == "Indígena - Paltas"  | base_total$etnia == "Indígena - Panzaleo"
+                 | base_total$etnia == "Indígena - Puruha"  | base_total$etnia == "Indígena - Salasaka"
+                 | base_total$etnia == "Indígena - Saraguro"  | base_total$etnia == "Indígena - Shuar"
+                 | base_total$etnia == "Indígena - Tomabela"  | base_total$etnia == "Indígena - Tsachila"
+                 | base_total$etnia == "Indígena - Waorani"  | base_total$etnia == "Indígena - Waranka" 
+                 | base_total$etnia == "Indígena - Zapara"] <- "Indigena"
+
+
+
+base_total$etnia[base_total$etnia == "Afroecuatoriano" | base_total$etnia == "Montubio" |
+                         base_total$etnia == "Mulato" | base_total$etnia == "Negro"] <- "Afroecuatoriano"
+
+
+base_total$etnia[base_total$etnia == "Otro" | base_total$etnia == "No registra"] <- "Otro"
+
+
+#Subetapa
+count(base_total$subetapa)
+base_total$subetapa[base_total$subetapa == "Abierto" | base_total$subetapa == "Contactado"
+                    | base_total$subetapa == "No contactado" | base_total$subetapa == "Aprobado"] <- "No Gestionado"
+
+base_total$subetapa[base_total$subetapa == "Admitido cambio carrera" | base_total$subetapa == "Admitido retirado"
+                    | base_total$subetapa == "Cambio de carrera" | base_total$subetapa == "Cambio de Programa"] <- "Cambio Carrera"
+
+base_total$subetapa[base_total$subetapa == "Datos incorrectos de contactabilidad" | base_total$subetapa == "Datos que no son de un postulante"
+                    | base_total$subetapa == "Existe contacto correcto pero no son del postulante" | base_total$subetapa == "Incontactable"
+                    | base_total$subetapa == "Por incontactabilidad" | base_total$subetapa == "Datos incorrectos de contactabilidad"] <- "Incontactable"
+
+base_total$subetapa[base_total$subetapa == "Seleccionó otra universidad" | base_total$subetapa == "Seleccionó otra Universidad"] <- "Otra Universidad"
+
+base_total$subetapa[base_total$subetapa == "Académico" | base_total$subetapa == "Incompatibilidad de malla académica"  
+                    | base_total$subetapa == "Infraestructura no acorde a lo esperado" | base_total$subetapa == "Modalidad del curso"
+                    | base_total$subetapa == "Oferta de interés no disponible" | base_total$subetapa == "UDLA no dispone de la carrera de interés del postulante"
+                    | base_total$subetapa == "UDLA no es de preferencia del postulante"
+                    | base_total$subetapa == "Incompatibilidad con horario"] <- "UDLA Incompatible"
+
+base_total$subetapa[base_total$subetapa == "Examen de admisión no aprobado" | base_total$subetapa == "No cumple con requisitos de carrera UDLA"  
+                    | base_total$subetapa == "Postulante no cumple con requisitos de carrera UDLA" | base_total$subetapa == "Modalidad del curso" 
+                    | base_total$subetapa == "Postulante no cumple con requisitos de convalidación UDLA"
+                    | base_total$subetapa == "Reprobado" | base_total$subetapa == "Test Reprobado"] <- "Reprobado"
+
+base_total$subetapa[base_total$subetapa == "Existe un proceso previo para el mismo periodo" | base_total$subetapa == "Periodo Futuro"  
+                    | base_total$subetapa == "Postulante para periodo futuro"] <- "Periodo Incorrecto"
+
+base_total$subetapa[base_total$subetapa == "Cerrado por migración" | base_total$subetapa == "Indica que no postuló"  
+                    | base_total$subetapa == "Motivos Personales" | base_total$subetapa == "No Aplica"
+                    | base_total$subetapa == "No colabora con información" | base_total$subetapa == "Por fallecimiento"
+                    | base_total$subetapa == "No hay cupos" | base_total$subetapa == "Postulante no emitió sus datos a UDLA"
+                    | base_total$subetapa == "Ya es alumno UDLA"] <- "Otros"
+
+base_total$subetapa[base_total$subetapa == "Geográficamente distante" | base_total$subetapa == "UDLA geográficamente distante" ] <- "UDLA Distante"
+
+#Origen
+count(base_total$origen)
+
+base_total$origen[base_total$origen == "Bing Natural Search" | base_total$origen == "Google Natural Search"] <- "Busqueda Natural"
+
+base_total$origen[base_total$origen == "Career Cruising" | base_total$origen == "Simulador Homologación"
+                  |base_total$origen == "Prospección Corporativa" | base_total$origen == "Prospección Alianzas educativas"
+                  |base_total$origen == "Prospección" | base_total$origen == "Colegios" | base_total$origen == "Referidos"] <- "Prospeccion"
+
+base_total$origen[base_total$origen == "Chat en línea" | base_total$origen == "Chatbot"
+                  |base_total$origen == "Correo" | base_total$origen == "Llamada"
+                  |base_total$origen == "Whatsapp" | base_total$origen == "Datos antiguos" | base_total$origen == "Datos de período anterior"
+                  |base_total$origen == "Datos del período anterior" | base_total$origen == "Datos importados"
+                  |base_total$origen == "Whatsapp"] <- "CallCenter"
+
+base_total$origen[base_total$origen == "Eventos" | base_total$origen == "Facebook"
+                  |base_total$origen == "Formulario web" | base_total$origen == "Formulario Web"
+                  |base_total$origen == "Google Ad"] <- "Marketing"
+
+base_total$origen[is.na(base_total$origen)] <- "Prospeccion"  
+
+#Datos de padres
+#Nivel de instruccion
+count(base_total$niv_est_m)
+
+base_total$niv_est_m[base_total$niv_est_m == "ELEMENTAL" | base_total$niv_est_m == "ESPECIAL"
+                     |base_total$niv_est_m == "NINGUNA"] <- "Ninguna"
+
+base_total$niv_est_p[base_total$niv_est_p == "ELEMENTAL" | base_total$niv_est_p == "ESPECIAL"
+                     |base_total$niv_est_p == "NINGUNA"] <- "Ninguna"
+
+base_total$niv_est_m[base_total$niv_est_m == "BASICA" | base_total$niv_est_m == "INICIAL"
+                     |base_total$niv_est_m == "PRIMARIA"] <- "Primaria"
+
+base_total$niv_est_p[base_total$niv_est_p == "BASICA" | base_total$niv_est_p == "INICIAL"
+                     |base_total$niv_est_p == "PRIMARIA"] <- "Primaria"
+
+base_total$niv_est_m[base_total$niv_est_m == "BACHILLER" | base_total$niv_est_m == "SECUNDARIA"] <- "Secundaria"
+
+base_total$niv_est_p[base_total$niv_est_p == "BACHILLER" | base_total$niv_est_p == "SECUNDARIA"] <- "Secundaria"
+
+base_total$niv_est_m[base_total$niv_est_m == "SUPERIOR"] <- "Superior"
+
+base_total$niv_est_p[base_total$niv_est_p == "SUPERIOR"] <- "Superior"
+
+
+#Profesion
+count(base_total$prof_m)
+
+base_total$prof_m[base_total$prof_m == "AB.TRIB.JUSTI.REPUBL" | base_total$prof_m == "AB.TRIB.JUZGADO.REP."
+                  |base_total$prof_m == "ABOGADA" |base_total$prof_m == "ABOGADO" |base_total$prof_m == "DOCTOR - LEYES"
+                  |base_total$prof_m == "DOCTORA - LEYES" |base_total$prof_m == "DR. JURISPRUDENCIA"
+                  |base_total$prof_m == "DR JURI/ABG/JUZ"] <- "Abogado"
+
+base_total$prof_p[base_total$prof_p == "AB.TRIB.JUSTI.REPUBL" | base_total$prof_p == "AB.TRIB.JUZGADO.REP."
+                  |base_total$prof_p == "ABOGADA" |base_total$prof_p == "ABOGADO"|base_total$prof_p == "DOCTOR - LEYES"
+                  |base_total$prof_p == "DOCTORA - LEYES" |base_total$prof_p == "DR. JURISPRUDENCIA"
+                  |base_total$prof_p == "DR JURI/ABG/JUZ"] <- "Abogado"
+
+base_total$prof_m[base_total$prof_m == "ACTIV.LUCR.PERM.LEY" | base_total$prof_m == "ACTIVIDAD PROPIA"] <- "Act.Propia"
+
+base_total$prof_p[base_total$prof_p == "ACTIV.LUCR.PERM.LEY" | base_total$prof_p == "ACTIVIDAD PROPIA"] <- "Act.Propia"
+
+base_total$prof_m[base_total$prof_m == "ADMINISTRADOR" | base_total$prof_m == "ADMINISTRADORA"
+                  | base_total$prof_m == "ADMR. DE  HOTEL" | base_total$prof_m == "ADMR. DE EMPRESAS"
+                  | base_total$prof_m == "ADMR. EDUCATIVO" | base_total$prof_m == "ADMR. EN  COMERCIO"
+                  | base_total$prof_m == "ADMR. GASTRONËMICO"] <- "Administrador"
+
+base_total$prof_p[base_total$prof_p == "ADMINISTRADOR" | base_total$prof_p == "ADMINISTRADORA"
+                  | base_total$prof_p == "ADMR. DE  HOTEL" | base_total$prof_p == "ADMR. DE EMPRESAS"
+                  | base_total$prof_p == "ADMR. EDUCATIVO" | base_total$prof_p == "ADMR. EN  COMERCIO"
+                  | base_total$prof_p == "ADMR. GASTRONËMICO"] <- "Administrador"
+
+base_total$prof_m[base_total$prof_m == "AGENTE DE SEGUROS" | base_total$prof_m == "AGENTE DE TURISMO"
+                  |base_total$prof_m == "AGENTE ESPECIAL" | base_total$prof_m == "AGENTE VENDEDOR"
+                  |base_total$prof_m == "AGENTE VIAJERO"] <- "Vendedor"
+
+base_total$prof_p[base_total$prof_p == "AGENTE DE SEGUROS" | base_total$prof_p == "AGENTE DE TURISMO"
+                  |base_total$prof_p == "AGENTE ESPECIAL" | base_total$prof_p == "AGENTE VENDEDOR"
+                  |base_total$prof_p == "AGENTE VIAJERO"] <- "Vendedor"
+
+base_total$prof_m[base_total$prof_m == "ANESTESIËLOGO" | base_total$prof_m == "DOCTOR -M+DICOáá"
+                  |base_total$prof_m == "DOCTORA - M+DICO" | base_total$prof_m == "DR EN FISIOTERAPIA"
+                  |base_total$prof_m == "DR LAB/CLIN/ADM/SER" |base_total$prof_m == "DR PSIC/EDU/ORTC/VOC"
+                  |base_total$prof_m == "DR PSIC/EDU/ORTC/VOC"] <- "Dr.Med"
+
+base_total$prof_p[base_total$prof_p == "ANESTESIËLOGO" | base_total$prof_p == "DOCTOR -M+DICOáá"
+                  |base_total$prof_p == "DOCTORA - M+DICO" | base_total$prof_p == "DR EN FISIOTERAPIA"
+                  |base_total$prof_p == "DR LAB/CLIN/ADM/SER" |base_total$prof_p == "DR PSIC/EDU/ORTC/VOC"
+                  |base_total$prof_p == "DR PSIC/EDU/ORTC/VOC"] <- "Dr.Med"
+
+
+###TOO MUCH
+
+#Dependientes e Independientes Dependientes en una misma categoria 
+
+base_total$ocu_m[base_total$ocu_m == "Independiente Dependiente"] <- "Dependiente"
+base_total$ocu_p[base_total$ocu_p == "Independiente Dependiente"] <- "Dependiente"
+
+##Join de colegios, clusters y pensiones
+
+colegios <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/colegios_join.xlsx")
+
+colegios_2 <- colegios %>% dplyr::select(cod,nom_sf.x,nom_dyn,cluster, pension)
+
+#MAtch 
+base_total <- data.table(base_total, colegios_2, by = 'cod')
+
+
+base_total <- base_total[,-39] 
+
+base_total$pension <- as.numeric(base_total$pension)
+base_total$pension[is.na(base_total$pension)] <- 0
+
+
+base_total$cluster[base_total$cluster == "B"] <- "Otros"
+
+
+base_total  <- base_total %>% dplyr:: select(id,periodo,f_creacion,etapa,cons_cierre,cod_carr,carr,edad, f_doc, f_aflu, 
+                                             ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, 
+                                             cod, f_nac_m, niv_est_m, prof_m, ing_m, ocu_m, f_nac_p, niv_est_p, 
+                                             prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado, ing_f, ciclo, 
+                                             pichincha, origen_adm, cluster, pension)
+
+
+names(base_total)
+
+base_total <- base_total %>% distinct()
+
+#Un solo cluster
+
+
+
+
+summary(base_total$ing_m)
+hist(base_total$ing_m)
+
+summary(base_total$ing_p)
+hist(base_total$ing_p)
+
+base_total$ing_fam <- base_total$ing_p + base_total$ing_m
+summary(base_total$ing_fam)
+hist(base_total$ing_fam)
+
+#Edades
+base_total$edad_mad <- as.numeric(base_total$edad_mad)
+summary(base_total$edad_mad)
+hist(base_total$edad_mad)
+
+base_total$edad_pad <- as.numeric(base_total$edad_pad)
+summary(base_total$edad_pad)
+hist(base_total$edad_pad)
+
+#DISTINTAS BASES
+
+base_perdidos <- filter(base_total, ganado == 0)
+base_ganados <- filter(base_total, ganado == 1)
+
+#Descriptive statistics
+#Por periodos
+
+base_prob <- base_total
+
+
+sept15 <- filter(base_prob, periodo == "2015-10")
+sept16 <- filter(base_prob, periodo == "2016-10")
+sept17 <- filter(base_prob, periodo == "2017-10")
+sept18 <- filter(base_prob, periodo == "2018-10")
+sept19 <- filter(base_prob, periodo == "2019-10")
+sept20 <- filter(base_prob, periodo == "2020-10")
+sept21 <- filter(base_prob, periodo == "2021-10")
+sept22 <- filter(base_prob, periodo == "2022-10")
+
+sept <- rbind(sept15,sept16,sept17,sept18,sept19,sept20,sept21,sept22)
+
+mar15 <- filter(base_prob, periodo == "2015-20")
+mar16 <- filter(base_prob, periodo == "2016-20")
+mar17 <- filter(base_prob, periodo == "2017-20")
+mar18 <- filter(base_prob, periodo == "2018-20")
+mar19 <- filter(base_prob, periodo == "2019-20")
+mar20 <- filter(base_prob, periodo == "2020-20")
+mar21 <- filter(base_prob, periodo == "2021-20")
+
+mar <- rbind(mar15,mar16,mar17,mar18,mar19,mar20,mar21)
+
+
+library(vtable)
+st(base_prob, out = 'return')
+
+####### BASE ########
+
+names(base_prob)
+
+base_prob2 <- base_prob %>% dplyr::select(id,ganado, origen, prov,sexo,ciclo,edad,carr,etnia,cluster, pension,
+                                           ocu_m, ocu_p , edad_mad , edad_pad , niv_est_m , niv_est_p, ing_f)
+
+base_prob2 <- base_prob2 %>% distinct()
+base_prob2 <- na.omit(base_prob2)
+
+
+
+################################################################################
+
+                        #MODELO DE PREDICCION DE INGRESOS
+
+                        #REGRESION LOGISTICA MULTINOMIAL 
+
+################################################################################
+
+
+library(corrplot)
+library(RColorBrewer)
+library(gtools)
+
+#
+
+base_resum <- base_prob2 %>% dplyr::select(id,ganado, origen, prov,sexo,ciclo,edad,carr,etnia,cluster, pension,
+                                           ocu_m, ocu_p , edad_mad , edad_pad , niv_est_m , niv_est_p, ing_f)
+
+base_resum$ing_f_c <- quantcut(base_resum$ing_f, q = 5, na.rm = TRUE)
+
+base_resum$ing_f_c2 <- 0 
+base_resum$ing_f_c2[base_resum$ing_f < 897] <- "[0,897)"
+base_resum$ing_f_c2[base_resum$ing_f >= 897  & base_resum$ing_f < 1635] <- "[897,1635)"
+base_resum$ing_f_c2[base_resum$ing_f >= 1635 & base_resum$ing_f < 2440] <- "[1635,2440)"
+base_resum$ing_f_c2[base_resum$ing_f >= 2440 & base_resum$ing_f < 4447] <- "[2440,4447)"
+base_resum$ing_f_c2[base_resum$ing_f >= 4447] <- "[4447,o mas)"
+
+
+
+names(base_resum)
+base_resum <- na.omit(base_resum)
+
+base_modelo <- base_resum %>% dplyr::select(ing_f, ing_f_c2, ganado, origen, prov,sexo,ciclo,edad,carr,etnia,cluster, pension,
+                                           ocu_m, ocu_p , edad_mad , edad_pad , niv_est_m , niv_est_p)
+
+
+ggplot(base_modelo, aes(x = ing_f_c2, y = ganado)) +
+        geom_boxplot(size = .75) +
+        geom_jitter(alpha = .5) +
+        facet_grid(origen ~ cluster, margins = TRUE) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+base_modelo$ing_f_c2 <- as.factor(base_modelo$ing_f_c2)
+
+#Base utilizable
+write_xlsx(base_modelo,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc///base_modelo_ingfam.xlsx")
+
+
+
+#Modelo de prediccion de ingesos
+
+#Factores y niveles 
+
+base_modelo$origen
+
+
+library(nnet)
+
+#Modelo OLS
+
+ols <- lm(ing_f ~ origen + prov + sexo + ciclo + edad + carr + etnia + cluster + pension +
+                  ocu_m + ocu_p + edad_mad + edad_pad + niv_est_m + niv_est_p, data=base_modelo)
+
+ols.res = resid(ols)
+summary(ols) 
+summary(ols.res) #Media cercana a 0
+sum(ols.res) #cercano a 0
+plot(ols.res)
+
+
+
+
+#Modelo LOGIT MULTINOMIAL 
+
+
+                #Baseline de comparacion para el modelo [0,897)
+
+base_modelo$ing_f_c2_2 <- relevel(base_modelo$ing_f_c2, ref = "[0,897)")
+test <- multinom(ing_f_c2_2 ~ origen + prov + sexo + ciclo + edad + carr + etnia + cluster + pension +
+                         ocu_m + ocu_p + edad_mad + edad_pad + niv_est_m + niv_est_p, data = base_modelo)
+
+summary(test)
+
+z <- summary(test)$coefficients/summary(test)$standard.errors
+z
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
+p
+
+## extract the coefficients from the model and exponentiate
+exp(coef(test))
+
+#Probabilidades predichas
+head(fit.bl1 <- fitted(test))
+
+fit.bl1 <- as.data.frame(fit.bl1)
+
+fit.bl1 <- predict(test, base_modelo, type='probs')
+fit.bl1
+
+
+fit.class.bl1 <- predict(test, base_modelo, type='class')
+fit.class.bl1
+
+base_resum <- cbind(base_resum, fit.bl1, fit.class.bl1)
+
+
+                        #Baseline de comparacion para el modelo [897,1635)
+
+base_modelo$ing_f_c2_3 <- relevel(base_modelo$ing_f_c2, ref = "[897,1635)")
+test2 <- multinom(ing_f_c2_3 ~ origen + prov + sexo + ciclo + edad + carr + etnia + cluster + pension +
+                         ocu_m + ocu_p + edad_mad + edad_pad + niv_est_m + niv_est_p, data = base_modelo)
+
+summary(test2)
+
+z2 <- summary(test2)$coefficients/summary(test2)$standard.errors
+z2
+p2 <- (1 - pnorm(abs(z2), 0, 1)) * 2
+p2
+
+## extract the coefficients from the model and exponentiate
+exp(coef(test2))
+
+#Probabilidades predichas
+head(fit.bl2 <- fitted(test2))
+
+fit.bl2 <- as.data.frame(fit.bl2)
+
+fit.bl2 <- predict(test2, base_modelo, type='probs')
+fit.bl2
+
+
+fit.class.bl2 <- predict(test2, base_modelo, type='class')
+fit.class.bl2
+
+base_resum <- cbind(base_resum, fit.bl2, fit.class.bl2)
+
+
+
+                        #Baseline de comparacion para el modelo [1635,2440)
+
+base_modelo$ing_f_c2_4 <- relevel(base_modelo$ing_f_c2, ref = "[1635,2440)")
+test3 <- multinom(ing_f_c2_4 ~ origen + prov + sexo + ciclo + edad + carr + etnia + cluster + pension +
+                          ocu_m + ocu_p + edad_mad + edad_pad + niv_est_m + niv_est_p, data = base_modelo)
+
+summary(test3)
+
+z3 <- summary(test3)$coefficients/summary(test3)$standard.errors
+z3
+p3 <- (1 - pnorm(abs(z3), 0, 1)) * 2
+p3
+
+## extract the coefficients from the model and exponentiate
+exp(coef(test3))
+
+#Probabilidades predichas
+head(fit.bl3 <- fitted(test3))
+
+fit.bl3 <- as.data.frame(fit.bl3)
+
+fit.bl3 <- predict(test3, base_modelo, type='probs')
+fit.bl3
+
+
+fit.class.bl3 <- predict(test3, base_modelo, type='class')
+fit.class.bl3
+
+base_resum <- cbind(base_resum, fit.bl3, fit.class.bl3)
+
+
+                        #Baseline de comparacion para el modelo [2440,4447)
+
+base_modelo$ing_f_c2_5 <- relevel(base_modelo$ing_f_c2, ref = "[2440,4447)")
+test4 <- multinom(ing_f_c2_5 ~ origen + prov + sexo + ciclo + edad + carr + etnia + cluster + pension +
+                          ocu_m + ocu_p + edad_mad + edad_pad + niv_est_m + niv_est_p, data = base_modelo)
+
+summary(test4)
+
+z4 <- summary(test4)$coefficients/summary(test4)$standard.errors
+z4
+p4 <- (1 - pnorm(abs(z4), 0, 1)) * 2
+p4
+
+## extract the coefficients from the model and exponentiate
+exp(coef(test4))
+
+#Probabilidades predichas
+head(fit.bl4 <- fitted(test4))
+
+fit.bl4 <- as.data.frame(fit.bl4)
+
+fit.bl4 <- predict(test4, base_modelo, type='probs')
+fit.bl4
+
+
+fit.class.bl4 <- predict(test4, base_modelo, type='class')
+fit.class.bl4
+
+base_resum <- cbind(base_resum, fit.bl4, fit.class.bl4)
+
+                #Baseline de comparacion para el modelo [4447,o mas)
+
+base_modelo$ing_f_c2_6 <- relevel(base_modelo$ing_f_c2, ref = "[4447,o mas)")
+test5 <- multinom(ing_f_c2_6 ~ origen + prov + sexo + ciclo + edad + carr + etnia + cluster + pension +
+                          ocu_m + ocu_p + edad_mad + edad_pad + niv_est_m + niv_est_p, data = base_modelo)
+
+summary(test5)
+
+z5 <- summary(test5)$coefficients/summary(test5)$standard.errors
+z5
+p5 <- (1 - pnorm(abs(z5), 0, 1)) * 2
+p5
+
+## extract the coefficients from the model and exponentiate
+exp(coef(test5))
+
+#Probabilidades predichas
+head(fit.bl5 <- fitted(test5))
+
+fit.bl5 <- as.data.frame(fit.bl5)
+
+fit.bl5 <- predict(test5, base_modelo, type='probs')
+fit.bl5
+
+
+fit.class.bl5 <- predict(test5, base_modelo, type='class')
+fit.class.bl5
+
+base_resum <- cbind(base_resum, fit.bl5, fit.class.bl5)
+
+base_resum <- base_resum %>% dplyr::select(id, ganado, origen, prov,sexo,ciclo,edad,carr,etnia,cluster, pension,
+                                            ocu_m, ocu_p , edad_mad , edad_pad , niv_est_m , niv_est_p, ing_f, ing_f_c2, '[0,897)',
+                                           '[897,1635)', '[1635,2440)', '[2440,4447)',  '[4447,o mas)')
+
+test$fitted.values
+marginal_effects(test)
+
+#Cummulative Prob
+
+base_resum$a <- base_resum$`[0,897)`
+base_resum$b <- base_resum$a + base_resum$`[897,1635)`
+base_resum$c <- base_resum$b + base_resum$`[1635,2440)`
+base_resum$d <- base_resum$c + base_resum$`[2440,4447)`
+base_resum$e <- base_resum$d + base_resum$`[4447,o mas)`
+
+summary(base_resum$a)
+summary(base_resum$b)
+summary(base_resum$c)
+summary(base_resum$d)
+summary(base_resum$e)
+
+
+plot(as.factor(base_resum$ing_f_c2), base_resum$a)
+
+
+
+plot(ecdf(base_resum[base_resum$ing_f_c2=="[0,897)",]$`[0,897)`),
+     col="green")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[897,1635)",]$a),
+      col="blue")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[1635,2440)",]$a),
+      col="red")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[2440,4447)",]$a),
+      col="violet")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[4447,o mas)",]$a),
+      col="yellow")
+
+
+
+plot(ecdf(base_resum[base_resum$ing_f_c2=="[0,897)",]$b),
+     col="green")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[897,1635)",]$b),
+      col="blue")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[1635,2440)",]$b),
+      col="red")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[2440,4447)",]$b),
+      col="violet")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[4447,o mas)",]$b),
+      col="yellow")
+
+
+
+plot(ecdf(base_resum[base_resum$ing_f_c2=="[0,897)",]$c),
+     col="green")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[897,1635)",]$c),
+      col="blue")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[1635,2440)",]$c),
+      col="red")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[2440,4447)",]$c),
+      col="violet")
+lines(ecdf(base_resum[base_resum$ing_f_c2=="[4447,o mas)",]$c),
+      col="yellow")
+
+
+plot(base_resum$`[0,897)`)
+plot(base_resum$`[897,1635)`)
+
+
+
+base_resum <- base_resum %>% dplyr::select(id, ganado, origen, prov,sexo,ciclo,edad,carr,etnia,cluster, pension,
+                                           ocu_m, ocu_p , edad_mad , edad_pad , niv_est_m , niv_est_p, ing_f, ing_f_c2, '[0,897)',
+                                           '[897,1635)', '[1635,2440)', '[2440,4447)',  '[4447,o mas)', a, b, c, d)
+
+
+base_resum$max <- colnames(base_resum[,20:24])[apply(base_resum[,20:24],1,which.max)]
+
+base_resum$comp <- base_resum$max == base_resum$ing_f_c2
+count(base_resum$comp)
+
+tabla <- as.data.frame(table(base_resum$max,base_resum$ing_f_c2 ))
+
+3576/8781
+(1023+40+1554+932+27+309+11+685+710+12)/8781
+
+
+#OLS
+
+base_resum$ing_f <- as.numeric(base_resum$ing_f)
+base_resum$l.ing_f <- log(base_resum$ing_f)
+
+base_resum$pension <- as.numeric(base_resum$pension)
+base_resum$l.pension <- log(base_resum$pension)
+base_resum$l.pension[base_resum$l.pension == "-Inf"] <- 0
+
+
+test2 <- lm(l.ing_f ~ origen + prov + sexo + ciclo + edad + carr + etnia + cluster + l.pension +
+                         ocu_m + ocu_p + edad_mad + edad_pad + niv_est_m + niv_est_p, data = base_resum)
+summary(test2)
+
+test2.res = resid(test2)
+summary(test2.res) #Media cercana a 0
+sum(test2.res) #cercano a 0
+plot(test2.res)
+
+
+base_resum$l.ingfam_pred <- predict(test2, newdata = base_resum, type = "response")
+
+base_resum$ingfam_pred  <- exp(base_resum$l.ingfam_pred)
+
+summary(base_resum$ingfam_pred)
+
+
+
+
+
