@@ -1,0 +1,3218 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(heatmaply)
+library(normalr)
+library(DataExplorer)
+library(fuzzyjoin)
+library(aod)
+library(mfx)
+library(data.table)
+library(sjmisc)
+library(mice)
+library(VIM)
+library(fastDummies)
+library(lifecycle)
+library(stable)
+library(metan)
+library(epiDisplay)
+
+#------------------------------------------------------------------------------
+#PROBABLIDAD DE DOCUMENTAR
+#COORDINACION DE PROYECTOS
+#INTELIGENCIA DE LA INFORMACION 
+#UDLA
+#------------------------------------------------------------------------------
+
+
+base_cruda <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/base_cruda.xlsx")
+base_cruda <- base_cruda %>% drop_na(new_periodoname)
+base_cruda$new_periodoname <- str_replace(base_cruda$new_periodoname, "-A", "-10" )
+base_cruda$new_periodoname <- str_replace(base_cruda$new_periodoname, "-S", "-20" )
+
+#Solo para pregrado
+base_cruda <- base_cruda[- grep("Educación continua", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
+base_cruda <- base_cruda[- grep("Graduate", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
+base_cruda <- base_cruda[- grep("Linea negocio no definida", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
+base_cruda <- base_cruda[- grep("Technology", base_cruda$a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname),]
+
+#Trabajo de homologacion de periodos
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2019-20 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2019-20 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2019-20 Semipresencial"] <- "2019-20"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2020-10 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2020-10 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2020-10 Semipresencial"] <- "2020-10"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2020-20 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2020-20 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2020-20 Semipresencial"] <- "2020-20"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2021-10 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2021-10 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2021-10 Semipresencial"] <- "2021-10"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2021-20 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2021-20 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2021-20 Semipresencial"] <- "2021-20"
+
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2022-10 Pregrado Diurno" 
+                           | base_cruda$new_periodoname == "2022-10 Pregrado Nocturno"
+                           | base_cruda$new_periodoname == "2022-10 Semipresencial"] <- "2022-10"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2018-10 Pregrado Diurno"] <- "2018-10"
+
+base_cruda$new_periodoname[base_cruda$new_periodoname == "2002-10"] <- "2009-10"
+
+table(base_cruda$new_estadodelprocesodeadmisionname, base_cruda$new_periodoname)
+
+
+#Match con bases de Voldemort 
+
+padre <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/base_prob2MATRICULACION.xlsx", sheet = "PAD")
+madre <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/base_prob2MATRICULACION.xlsx", sheet = "MAD")
+estudiante <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/base_prob2MATRICULACION.xlsx", sheet = "AFLU")
+
+base_cruda <- rename(base_cruda, id = 'new_cedula')
+madre <- rename(madre, id = 'CEDULA_N')
+padre <- rename(padre, id = 'CEDULA_N')
+estudiante <- rename(estudiante, id = 'CEDULA')
+
+#Predictive Mean Matching
+
+madre$Ingresos_MAD <- as.numeric(gsub(",", ".", gsub("\\.", "", madre$Ingresos_MAD)))
+padre$Ingresos_PAD <- as.numeric(gsub(",", ".", gsub("\\.", "", padre$Ingresos_PAD)))
+
+summary(madre)
+
+
+base_cruda <- join(base_cruda, madre, by = "id")
+base_cruda <- join(base_cruda, padre, by = "id")
+base_cruda <- join(base_cruda, estudiante, by = "id")
+
+base_cruda <- base_cruda[, !duplicated(colnames(base_cruda))]
+base_cruda <- base_cruda %>% distinct()
+
+
+names(base_cruda)
+base_cruda <- base_cruda %>% dplyr::select(id,customeridname, new_periodoname, createdon, statecodename, new_consultordecierrename,
+                                           new_carrera_acuerdoname, new_estadodelprocesodeadmisionname, new_edad, new_documentacion,
+                                           new_afluente, new_ciudad_direccion1name,new_sexoname, new_dequetniaseconsideraname,modifiedon,
+                                           statuscodename,new_colegiooempresaname,new_origendedatosdelregistroname, a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname,
+                                           a_6e112325ddf5e111894b00155d042f00.new_provincianame,a_8a0f2325ddf5e111894b00155d042f00.new_codigodecolegiooempresa,
+                                           FECHA_NACIM_MAD, DES_NIV_ESTUD_MAD, DES_PROFESION_MAD, Ingresos_MAD, Ocupacion_MAD,
+                                           FECHA_NACIM_PAD, DES_NIV_ESTUD_PAD, DES_PROFESION_PAD, Ingresos_PAD, Ocupacion_PAD, FECHA_NACIM)
+#Manejo de Fechas 
+
+base_cruda$new_afluente <- as.Date(base_cruda$new_afluente, format= "%d/%m/%Y")
+base_cruda$new_documentacion <- as.Date(base_cruda$new_documentacion, format= "%d/%m/%Y")
+base_cruda$modifiedon <- as.Date(base_cruda$modifiedon, format= "%d/%m/%Y")
+base_cruda$FECHA_NACIM_MAD <- as.Date(base_cruda$FECHA_NACIM_MAD, format= "%d/%m/%Y")
+base_cruda$FECHA_NACIM_PAD <- as.Date(base_cruda$FECHA_NACIM_PAD, format= "%d/%m/%Y")
+base_cruda$FECHA_NACIM <- as.Date(base_cruda$FECHA_NACIM, format= "%d/%m/%Y")
+
+#EDADES
+
+#ESTUDIANTES
+
+base_cruda$edad <- round(as.numeric(difftime(as.Date(base_cruda$new_afluente), as.Date(base_cruda$FECHA_NACIM), unit="weeks"))/52.25,0)
+
+count(base_cruda$edad)
+
+base_cruda$new_edad[is.na(base_cruda$new_edad)] <- base_cruda$edad 
+base_cruda$new_edad[is.na(base_cruda$new_edad)] <- 22
+base_cruda$new_edad[base_cruda$new_edad >= 65] <- 65
+base_cruda$new_edad[base_cruda$new_edad <= 16] <- 16
+
+
+count(base_cruda$new_edad)
+
+
+#PADRES
+
+base_cruda$edad_pad <- round(as.numeric(difftime(as.Date(base_cruda$new_afluente), as.Date(base_cruda$FECHA_NACIM_PAD), unit="weeks"))/52.25,0)
+base_cruda$edad_mad <- round(as.numeric(difftime(as.Date(base_cruda$new_afluente), as.Date(base_cruda$FECHA_NACIM_MAD), unit="weeks"))/52.25,0)
+
+base_cruda$edad_pad[is.na(base_cruda$edad_pad)] <- 42
+base_cruda$edad_mad[is.na(base_cruda$edad_mad)] <- 42
+base_cruda$edad_pad[base_cruda$edad_pad <= 33] <- 33
+base_cruda$edad_mad[base_cruda$edad_mad <= 33] <- 33
+
+
+count(base_cruda$edad_pad)
+count(base_cruda$edad_mad)
+
+table(base_cruda$new_carrera_acuerdoname, base_cruda$statecodename)
+table(base_cruda$statecodename, base_cruda$new_periodoname)
+
+##
+
+base_cruda <- base_cruda[- grep("911 - CURSO AUXILIAR EN ENFERMERIA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA1P000-CARRERA NO DEFINIDA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA1P001 - PSICOLOGÍA CLÍNICA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA2P000-CARRERA NO DEFINIDA", base_cruda$new_carrera_acuerdoname),]
+base_cruda <- base_cruda[- grep("UDLA2P001 - PSICOLOGÍA CLÍNICA", base_cruda$new_carrera_acuerdoname),]
+
+table(base_cruda$statecodename, base_cruda$new_periodoname)
+table(base_cruda$new_carrera_acuerdoname,base_cruda$statecodename)
+
+#Otros arreglos
+
+count(base_cruda$new_sexoname)
+base_cruda$new_sexoname[is.na(base_cruda$new_sexoname)] <- "Masculino"
+
+#fILL A MANO DE AQUELLAS PROVINCIAS VACIAS!
+cod_prov <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/cod_prov.xlsx")
+
+count(base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame)
+
+base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame[is.na(base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame)] <- "PICHINCHA"
+base_cruda <- base_cruda[- grep("No Definida", base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame),]
+base_cruda <- base_cruda[- grep("ZONA NO DELIMITADA", base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame),]
+
+table(base_cruda$statecodename, base_cruda$new_periodoname)
+
+#DIVERSAS COMPROBACIONES
+count(base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame)
+count(base_cruda$new_sexoname)
+count(base_cruda$new_origendedatosdelregistroname)
+count(base_cruda$new_periodoname)
+
+count(base_cruda$new_estadodelprocesodeadmisionname)
+
+base_cruda$estado[base_cruda$new_estadodelprocesodeadmisionname == "Afluente" 
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Documentado"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Documentos Entregados"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Gestionado"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Inscrito"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Matriculado"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Test"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Test Aprobado"
+                  | base_cruda$new_estadodelprocesodeadmisionname == "Test Reprobado"] <- "Afluente"
+
+base_cruda$estado[base_cruda$new_estadodelprocesodeadmisionname == "Documentado"] <- "Documentado"
+
+base_cruda$estado[is.na(base_cruda$estado)] <- "Afluente"
+
+
+
+count(base_cruda$estado)
+
+
+table(base_cruda$estado, base_cruda$new_periodoname)
+
+
+#Estatus Ganados, perdidos
+
+base_cruda$perdido <- 0
+base_cruda$perdido[base_cruda$statuscodename == "Perdido"] <- 1
+base_cruda$ganado <- 0
+base_cruda$ganado[base_cruda$statuscodename == "Ganado"] <- 1
+
+
+sum(base_cruda$ganado)
+
+table(base_cruda$ganado, base_cruda$new_periodoname)
+#Genero 
+
+base_cruda$genero <- 0 
+base_cruda$genero[base_cruda$new_sexoname == "Femenino"] <- 1 
+
+
+#Tiempo en gestion
+
+base_cruda$tiempo_doc <- base_cruda$new_documentacion - base_cruda$new_afluente
+base_cruda$tiempo_per <- base_cruda$modifiedon - base_cruda$new_afluente
+
+base_cruda$ciclo_doc <- str_split(base_cruda$tiempo_doc, " " , n = Inf, simplify = FALSE)
+base_cruda$ciclo_per <- str_split(base_cruda$tiempo_per, " " , n = Inf, simplify = FALSE)
+
+base_cruda$ciclo_doc <- ifelse(is.na(base_cruda$ciclo_doc), base_cruda$tiempo_per, base_cruda$ciclo_doc)
+
+base_cruda$ciclo <- base_cruda$ciclo_doc
+
+base_cruda$ciclo <- as.numeric(base_cruda$ciclo)
+
+#Provincia 
+
+base_cruda$pichincha <- 0
+base_cruda$pichincha[base_cruda$a_6e112325ddf5e111894b00155d042f00.new_provincianame == "PICHINCHA"] <- 1 
+
+
+#Origen
+
+base_cruda$origen <- 0
+base_cruda$origen[base_cruda$new_origendedatosdelregistroname == "Career Cruising" 
+                  | base_cruda$new_origendedatosdelregistroname == "Datos importados"
+                  | base_cruda$new_origendedatosdelregistroname == "Llamada"
+                  | base_cruda$new_origendedatosdelregistroname == "Prospección"
+                  | base_cruda$new_origendedatosdelregistroname == "Prospección Alianzas educativas"
+                  | base_cruda$new_origendedatosdelregistroname == "Prospección Corporativa"
+                  | base_cruda$new_origendedatosdelregistroname == "Walk-in"] <- 1
+
+base_cruda$ing_f <- (base_cruda$Ingresos_MAD + base_cruda$Ingresos_PAD)/1.73
+
+
+#BASE TRABAJADA
+
+table(base_cruda$statecodename, base_cruda$new_periodoname)
+count(base_cruda$new_colegiooempresaname)
+
+#Base utilizable
+write_xlsx(base_cruda,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc///base_prob_doc.xlsx")
+
+#TRABAJO Y SUBIDA DE BASES DE: PAGOS, BECAS Y AÑO DE GRADUACION
+
+#FALTA RESPUESTA DE CRIS 
+
+count(base_cruda$new_estadodelprocesodeadmisionname)
+count(base_cruda$statecodename)
+count(base_cruda$new_edad)
+count(base_cruda$new_consultordecierrename)
+count(base_cruda$new_carrera_acuerdoname)
+count(base_cruda$new_ciudad_direccion1name)
+count(base_cruda$new_sexoname)
+count(base_cruda$new_dequetniaseconsideraname)
+count(base_cruda$statuscodename)
+count(base_cruda$new_sexoname)
+
+
+
+base_cruda <- base_cruda %>% dplyr::select(id, new_periodoname, createdon, statecodename, new_consultordecierrename,
+                                           new_carrera_acuerdoname, new_edad, new_documentacion,
+                                           new_afluente, new_ciudad_direccion1name,new_sexoname, new_dequetniaseconsideraname,modifiedon,
+                                           statuscodename,new_colegiooempresaname,new_origendedatosdelregistroname, a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname,
+                                           a_6e112325ddf5e111894b00155d042f00.new_provincianame,a_8a0f2325ddf5e111894b00155d042f00.new_codigodecolegiooempresa,
+                                           FECHA_NACIM_MAD, DES_NIV_ESTUD_MAD, DES_PROFESION_MAD, Ingresos_MAD, Ocupacion_MAD,
+                                           FECHA_NACIM_PAD, DES_NIV_ESTUD_PAD, DES_PROFESION_PAD, Ingresos_PAD, Ocupacion_PAD, FECHA_NACIM, edad_mad, edad_pad, ing_f,ganado, ciclo,
+                                           tiempo_per, tiempo_doc, pichincha, origen)
+
+# APPEND CON VARIABLES DE 202210 QUE ESTAN EN SALESFORCE
+
+
+base_def <- read_excel("C:/Users/ritaz/Desktop/CONSULTOR CIERRE/Analítica/AnalisisVarios/MATCH CRM_SF/base_definitiva.xlsx")
+base_2210_sf <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/202210_Match.xlsx")
+
+#Cambio de nombres para append y limpieza de bases
+
+#BASE DEFINITIVA
+names(base_def)
+base_def <- rename(base_def, etapa = 'Etapa')
+base_def <- rename(base_def, cons_cierre = 'Propietario de oportunidad')
+base_def <- rename(base_def, f_mod = 'Fecha de modificación')
+
+base_def <- base_def %>% dplyr::select(id, etapa, carrera, cons_cierre, f_mod)
+
+#BASE 2210 SALESFORCE
+
+names(base_2210_sf)
+base_2210_sf <- rename(base_2210_sf, id = 'Identificación')
+base_2210_sf <- rename(base_2210_sf, f_creacion = 'Fecha de creación...2')
+base_2210_sf <- rename(base_2210_sf, etapa = 'Etapa')
+base_2210_sf <- rename(base_2210_sf, cons_cierre = 'Propietario de oportunidad: Nombre completo')
+base_2210_sf <- rename(base_2210_sf, carrera = 'Plan de Programa: Nombre del plan del programa')
+base_2210_sf <- rename(base_2210_sf, f_mod = 'Fecha de la última modificación de Etapa')
+base_2210_sf <- rename(base_2210_sf, edad = 'Edad')
+base_2210_sf <- rename(base_2210_sf, f_cierre = 'Fecha de cierre') #partir en 2 dependiendo tipo de cierre
+base_2210_sf <- rename(base_2210_sf, f_aflu = 'Fecha de creación...8')
+base_2210_sf <- rename(base_2210_sf, ciudad = 'Ciudad: Ciudad Name')
+base_2210_sf <- rename(base_2210_sf, sexo = 'Género')
+base_2210_sf <- rename(base_2210_sf, etnia = 'Etnia')
+base_2210_sf <- rename(base_2210_sf, subetapa = 'Subetapa')
+base_2210_sf <- rename(base_2210_sf, col = 'Colegio: Nombre de la cuenta')
+base_2210_sf <- rename(base_2210_sf, origen = 'Origen del candidato')
+base_2210_sf <- rename(base_2210_sf, linea = 'Línea de negocio')
+base_2210_sf <- rename(base_2210_sf, prov = 'Provincia: Provincia Name')
+base_2210_sf <- rename(base_2210_sf, cod_col = 'Colegio: Código banner Colegio')
+
+#Vamos a generar las entidades de fecha de doc y fecha de perdido para generar el ciclo, luego los borro
+
+base_2210_sf$f_doc <- 0 
+base_2210_sf$f_doc[base_2210_sf$etapa == "Cerrada Ganada"] <- base_2210_sf$f_cierre
+
+base_2210_sf$f_per <- 0 
+base_2210_sf$f_per[base_2210_sf$etapa == "Cerrada Perdida"] <- base_2210_sf$f_cierre
+
+#Tiempo en gestion
+base_2210_sf$f_creacion <- as.Date(base_2210_sf$f_creacion, format= "%d/%m/%Y")
+base_2210_sf$f_cierre <- as.Date(base_2210_sf$f_cierre, format= "%d/%m/%Y")
+base_2210_sf$f_aflu <- as.Date(base_2210_sf$f_aflu, format= "%d/%m/%Y")
+base_2210_sf$f_mod <- as.Date(base_2210_sf$f_mod, format= "%d/%m/%Y")
+base_2210_sf$f_doc <- as.Date(base_2210_sf$f_doc, format= "%d/%m/%Y")
+base_2210_sf$f_per <- as.Date(base_2210_sf$f_per, format= "%d/%m/%Y")
+
+base_2210_sf$tiempo_doc <- base_2210_sf$f_doc -  base_2210_sf$f_aflu
+base_2210_sf$tiempo_per <- base_2210_sf$f_mod - base_2210_sf$f_aflu
+
+base_2210_sf$ciclo_doc <- str_split(base_2210_sf$tiempo_doc, " " , n = Inf, simplify = FALSE)
+base_2210_sf$ciclo_per <- str_split(base_2210_sf$tiempo_per, " " , n = Inf, simplify = FALSE)
+
+base_2210_sf$ciclo_doc <- ifelse(is.na(base_2210_sf$ciclo_doc), base_2210_sf$tiempo_per, base_2210_sf$ciclo_doc)
+
+base_2210_sf$ciclo <- base_2210_sf$ciclo_doc
+
+base_2210_sf$ciclo <- as.numeric(base_2210_sf$ciclo)
+
+base_2210_sf <- base_2210_sf %>% dplyr::select(id, f_creacion, etapa, cons_cierre, carrera, edad, f_cierre, f_aflu, 
+                                               ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, cod_col, 
+                                               f_doc, f_per, tiempo_doc, tiempo_per, ciclo)
+
+
+names(base_2210_sf)
+
+#BASE_CRUDA
+
+names(base_cruda)
+base_cruda <- rename(base_cruda, periodo = 'new_periodoname') 
+base_cruda <- rename(base_cruda, f_creacion = 'createdon')
+base_cruda <- rename(base_cruda, etapa = 'statecodename')
+base_cruda <- rename(base_cruda, cons_cierre = 'new_consultordecierrename')
+base_cruda <- rename(base_cruda, carrera = 'new_carrera_acuerdoname')
+base_cruda <- rename(base_cruda, edad = 'new_edad')
+base_cruda <- rename(base_cruda, f_doc = 'new_documentacion')
+base_cruda <- rename(base_cruda, f_aflu = 'new_afluente')
+base_cruda <- rename(base_cruda, ciudad = 'new_ciudad_direccion1name')
+base_cruda <- rename(base_cruda, sexo = 'new_sexoname')
+base_cruda <- rename(base_cruda, etnia = 'new_dequetniaseconsideraname')
+base_cruda <- rename(base_cruda, f_mod = 'modifiedon')
+base_cruda <- rename(base_cruda, subetapa = 'statuscodename')
+base_cruda <- rename(base_cruda, col = 'new_colegiooempresaname')
+base_cruda <- rename(base_cruda, origen_adm = 'origen')
+base_cruda <- rename(base_cruda, origen = 'new_origendedatosdelregistroname')
+base_cruda <- rename(base_cruda, linea = 'a_04112325ddf5e111894b00155d042f00.new_lineadenegocioname')
+base_cruda <- rename(base_cruda, prov = 'a_6e112325ddf5e111894b00155d042f00.new_provincianame')
+base_cruda <- rename(base_cruda, cod_col = 'a_8a0f2325ddf5e111894b00155d042f00.new_codigodecolegiooempresa')
+base_cruda <- rename(base_cruda, f_nac_m = 'FECHA_NACIM_MAD')
+base_cruda <- rename(base_cruda, niv_est_m = 'DES_NIV_ESTUD_MAD')
+base_cruda <- rename(base_cruda, prof_m = 'DES_PROFESION_MAD')
+base_cruda <- rename(base_cruda, ing_m = 'Ingresos_MAD')
+base_cruda <- rename(base_cruda, ocu_m = 'Ocupacion_MAD')
+base_cruda <- rename(base_cruda, f_nac_p = 'FECHA_NACIM_PAD')
+base_cruda <- rename(base_cruda, niv_est_p = 'DES_NIV_ESTUD_PAD')
+base_cruda <- rename(base_cruda, prof_p = 'DES_PROFESION_PAD')
+base_cruda <- rename(base_cruda, ing_p = 'Ingresos_PAD')
+base_cruda <- rename(base_cruda, ocu_p = 'Ocupacion_PAD')
+base_cruda <- rename(base_cruda, f_nac = 'FECHA_NACIM')
+
+
+sub_base_cruda <- filter(base_cruda, periodo == "2022-10")
+
+###MERGE GENERADOR DE BASE 202210 EN FORMATO DE BASE CRUDA PARA LUEGO APPEND
+
+names(base_def)
+names(base_2210_sf)
+names(sub_base_cruda)
+
+##Bases auxiliares para el match adecuado 
+
+base_2210_sf_aux <- base_2210_sf %>% dplyr::select(id, cons_cierre, edad, f_cierre, f_aflu, 
+                                                   ciudad, sexo, etnia, subetapa, col, origen, linea, prov, cod_col, 
+                                                   f_doc, f_per, tiempo_doc, tiempo_per, ciclo)
+
+
+base_def_match <- data.table(base_def, base_2210_sf_aux, by ='id')
+
+names(base_def_match)
+names(sub_base_cruda)
+
+sub_base_cruda_aux <- sub_base_cruda %>% dplyr::select(id,periodo, f_creacion,  f_nac_m, 
+                                                       niv_est_m,prof_m,ing_m, ocu_m,f_nac_p, niv_est_p,
+                                                       prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado, ing_f, pichincha, origen_adm )
+
+base_def_match <- data.table(base_def_match, sub_base_cruda_aux, by ='id')
+names(base_def_match)
+base_def_match <- base_def_match[,-6] #quito id extras
+base_def_match <- base_def_match[,-24] #quito by extras
+base_def_match <- base_def_match[,-24] #quito id extras
+base_def_match <- base_def_match[,-43] #quito id extras
+base_def_match <- base_def_match[,-6] #quito consultor extra
+
+names(base_def_match)
+
+#Trabajo para las NAS
+
+count(base_def_match$edad)
+base_def_match$edad[is.na(base_def_match$edad)] <- 17
+
+count(base_def_match$f_aflu)
+base_def_match$f_aflu[base_def_match$f_aflu == "1970-01-18"] <- "2021-05-16"
+
+count(base_def_match$ciudad)
+base_def_match$ciudad[is.na(base_def_match$ciudad)] <- "QUITO"
+
+count(base_def_match$sexo)
+base_def_match$sexo[is.na(base_def_match$sexo)] <- base_2210_sf$sexo
+base_def_match$sexo[is.na(base_def_match$sexo)] <- base_cruda$sexo
+base_def_match$sexo[is.na(base_def_match$sexo)] <- sub_base_cruda$sexo
+base_def_match$sexo[base_def_match$sexo == "No identifica nada"] <- "Masculino"
+base_def_match$sexo[base_def_match$sexo == 17] <- "Masculino"
+
+count(base_def_match$etnia)
+base_def_match$etnia[is.na(base_def_match$etnia)] <- base_2210_sf$etnia
+base_def_match$sexo[base_def_match$etnia == "No registra"] <- "Otro"
+base_def_match$sexo[base_def_match$etnia == 17] <- "Otro"
+
+count(base_def_match$subetapa)
+base_def_match$subetapa[is.na(base_def_match$subetapa)] <- base_2210_sf$subetapa
+base_def_match$subetapa[is.na(base_def_match$subetapa)] <- base_cruda$subetapa
+base_def_match$subetapa[base_def_match$subetapa == 17] <- "Incontactable"
+
+count(base_def_match$col)
+base_def_match$col[is.na(base_def_match$col)] <- base_2210_sf$col
+base_def_match$col[is.na(base_def_match$col)] <- base_cruda$col
+base_def_match$col[base_def_match$col == 17] <- "24 DE MAYO, QUITO"
+
+count(base_def_match$origen)
+base_def_match$origen[is.na(base_def_match$origen)] <- base_2210_sf$origen
+base_def_match$origen[base_def_match$origen == 17] <- "Facebook"
+
+count(base_def_match$linea)
+base_def_match$origen[base_def_match$origen == 17] <- "Pregrado"
+
+count(base_def_match$prov)
+base_def_match$prov[is.na(base_def_match$prov)] <- base_2210_sf$prov
+base_def_match$prov[base_def_match$prov == 17] <- "PICHINCHA"
+
+count(base_def_match$cod_col)
+base_def_match$cod_col[is.na(base_def_match$cod_col)] <- base_2210_sf$cod_col
+base_def_match$cod_col[is.na(base_def_match$cod_col)] <- base_cruda$cod_col
+base_def_match$cod_col[base_def_match$cod_col == 17] <- "C02644"
+
+count(base_def_match$f_doc)
+base_def_match$f_doc[is.na(base_def_match$f_doc)] <- base_2210_sf$f_doc
+base_def_match$f_doc[is.na(base_def_match$f_doc)] <- sub_base_cruda$f_doc
+base_def_match$f_doc[base_def_match$f_doc == 17] <- "2021-07-30"
+
+count(base_def_match$f_per)
+base_def_match$f_per[is.na(base_def_match$f_per)] <- base_2210_sf$f_per
+base_def_match$f_per[is.na(base_def_match$f_per)] <- sub_base_cruda$f_per
+base_def_match$f_per[base_def_match$f_per == 17] <- "2021-07-30"
+
+count(base_def_match$tiempo_doc)
+base_def_match$tiempo_doc[is.na(base_def_match$tiempo_doc)] <- base_2210_sf$tiempo_doc
+base_def_match$tiempo_doc[is.na(base_def_match$tiempo_doc)] <- sub_base_cruda$tiempo_doc
+base_def_match$tiempo_doc[base_def_match$tiempo_doc == 17] <- "32"
+
+count(base_def_match$tiempo_per)
+base_def_match$tiempo_per[is.na(base_def_match$tiempo_per)] <- base_2210_sf$tiempo_per
+base_def_match$tiempo_per[is.na(base_def_match$tiempo_per)] <- sub_base_cruda$tiempo_per
+base_def_match$tiempo_per[base_def_match$tiempo_per == 17] <- "26 days"
+
+count(base_def_match$ciclo)
+base_def_match$ciclo[is.na(base_def_match$ciclo)] <- base_2210_sf$ciclo
+base_def_match$ciclo[is.na(base_def_match$ciclo)] <- sub_base_cruda$ciclo
+base_def_match$ciclo[base_def_match$ciclo < 0] <- 0
+
+count(base_def_match$f_creacion)
+base_def_match$f_creacion[is.na(base_def_match$f_creacion)] <- base_2210_sf$f_creacion
+base_def_match$f_creacion[is.na(base_def_match$f_creacion)] <- sub_base_cruda$f_creacion
+base_def_match$f_creacion[base_def_match$f_creacion == 17] <- "2021-02-30"
+
+
+base_def_match$ganado <-0 
+base_def_match$ganado[base_def_match$etapa == "Cerrada Ganada"] <- 1
+
+base_def_match$pichincha <-0 
+base_def_match$pichincha[base_def_match$prov == "PICHINCHA"] <- 1
+
+###LISTOS PARA EL APPEND
+
+
+base <- filter(base_cruda, periodo != "2022-10")
+names(base_def_match)
+names(base)
+
+base_def_match  <- base_def_match %>% dplyr:: select(id,periodo,f_creacion,etapa,cons_cierre,carrera,edad, f_doc, f_aflu, 
+                                                     ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, 
+                                                     cod_col, f_nac_m, niv_est_m, prof_m, ing_m, ocu_m, f_nac_p, niv_est_p, 
+                                                     prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado,ing_f, ciclo, pichincha, origen_adm)
+
+base  <- base %>% dplyr:: select(id,periodo,f_creacion,etapa,cons_cierre,carrera,edad, f_doc, f_aflu, 
+                                 ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, 
+                                 cod_col, f_nac_m, niv_est_m, prof_m, ing_m, ocu_m, f_nac_p, niv_est_p, 
+                                 prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado,ing_f,ciclo, pichincha, origen_adm)
+
+names(base_def_match)
+names(base)
+
+#Base append
+str(base)
+str(base_def_match)
+
+base_def_match$f_mod <- as.Date(base_def_match$f_mod, format= "%d/%m/%Y")
+
+sapply(base, class)
+sapply(base_def_match, class)
+
+base_total <- bind_rows(base, base_def_match)
+
+base_total <- base_total %>% distinct()
+
+table(base_total$etapa, base_total$periodo)
+
+
+#trabajo variable a variable en la base para homologar todos los criterios
+
+names(base_total)
+
+count(base_total$etapa)
+base_total$etapa[base_total$etapa == "Abierto" | base_total$etapa == "Afluente" | base_total$etapa == "Inscrito"
+                 | base_total$etapa == "Matrícula" | base_total$etapa == "Perdido" | base_total$etapa == "Test"] <- "Perdido"   
+
+base_total$etapa[base_total$etapa == "Cerrada Ganada" | base_total$etapa == "Ganado"] <- "Ganado"   
+
+count(base_total$carrera)
+
+
+###Eliminar aquellos exactamente repetidos
+
+base_total <- base_total %>% distinct()
+
+table(base_total$etapa, base_total$periodo)
+
+#Trabajo para ubicar los codigos de carrera y posteriormente ejecutar el match
+base_total$carrera <- gsub(" ", "", base_total$carrera, fixed = TRUE)
+
+base_total <- base_total %>%
+        separate(carrera, c("carrera", "col2", "col3"), "-")
+
+base_total$carrera_aux1 <-gsub("UDLA1P","", base_total$carrera, fixed = TRUE)
+base_total$carrera_aux2 <-gsub("UDLA2P","", base_total$carrera_aux1, fixed = TRUE)
+base_total$carrera_aux3 <-gsub("UDLA1","", base_total$carrera_aux2, fixed = TRUE)
+base_total$carrera_aux4 <-gsub("UDLA2S","", base_total$carrera_aux3, fixed = TRUE)
+base_total$cod_carr <-gsub("UDLA1U","", base_total$carrera_aux4, fixed = TRUE)
+
+
+count(base_total$cod_carr)
+
+
+base_total$cod_carr [base_total$cod_carr == "003"] <- "H003"
+
+
+base_total <- filter(base_total, !is.na(cod_carr))
+
+
+
+base_total  <- base_total %>% dplyr:: select(id,periodo,f_creacion,etapa,cons_cierre,cod_carr,carrera,edad, f_doc, f_aflu, 
+                                             ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, 
+                                             cod_col, f_nac_m, niv_est_m, prof_m, ing_m, ocu_m, f_nac_p, niv_est_p, 
+                                             prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado, ing_f, ciclo, pichincha, origen_adm)
+
+base_total <- base_total %>% distinct()
+table(base_total$etapa, base_total$periodo)
+
+
+base_total <- filter(base_total, cod_carr != 958)
+
+base_total <- base_total %>% distinct()
+table(base_total$etapa, base_total$periodo)
+
+
+
+cod_carr <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/lista_codnom.xlsx", sheet = "Hist")
+base_total <- data.table(base_total, cod_carr, by = "cod_carr")
+
+base_total <- base_total[,-39] 
+names(base_total)
+
+base_total <- base_total %>% distinct()
+table(base_total$etapa, base_total$periodo)
+
+base_total <- filter(base_total, !is.na(carr))
+
+
+count(base_total$carr)
+
+table(base_total$carr, base_total$periodo)
+
+base_total <- base_total %>% distinct()
+table(base_total$etapa, base_total$periodo)
+
+#HOMOLOGADO DE CARRERAS OK
+
+
+base_total  <- base_total %>% dplyr:: select(id,periodo,f_creacion,etapa,cons_cierre,cod_carr,carr,edad, f_doc, f_aflu, 
+                                             ciudad, sexo, etnia, f_mod, subetapa, col, origen, linea, prov, 
+                                             cod_col, f_nac_m, niv_est_m, prof_m, ing_m, ocu_m, f_nac_p, niv_est_p, 
+                                             prof_p, ing_p, ocu_p, f_nac, edad_mad, edad_pad, ganado, ing_f, ciclo, pichincha, origen_adm)
+
+
+table(base_total$etapa, base_total$periodo)
+
+###Eliminar aquellos exactamente repetidos
+
+base_total <- base_total %>% distinct()
+
+
+table(base_total$periodo, base_total$etapa)
+
+#OTROS TRABAJOS DE VARIABLES
+names(base_total)
+count(base_total$ciudad)
+
+#Ciudad
+base_total$ciudad[is.na(base_total$ciudad)] <- "QUITO"
+
+
+#Sexo
+count(base_total$sexo)
+base_total$sexo[base_total$sexo == "Otro"] <- "Masculino"
+
+#Etnia
+
+count(base_total$etnia)
+base_total$etnia[base_total$etnia == "Indígena - Achuar" | base_total$etnia == "Indígena - Al Cofan"
+                 | base_total$etnia == "Indígena - Chachi" | base_total$etnia == "Indígena - Chibuleo"
+                 | base_total$etnia == "Indígena - Kañari"  | base_total$etnia == "Indígena - Karanki"
+                 | base_total$etnia == "Indígena - Kayambi"  | base_total$etnia == "Indígena - Kichwa"
+                 | base_total$etnia == "Indígena - Kisapincha"  | base_total$etnia == "Indígena - Kitukara"
+                 | base_total$etnia == "Indígena - No aplica"  | base_total$etnia == "Indígena - Otavalo"
+                 | base_total$etnia == "Indígena - Paltas"  | base_total$etnia == "Indígena - Panzaleo"
+                 | base_total$etnia == "Indígena - Puruha"  | base_total$etnia == "Indígena - Salasaka"
+                 | base_total$etnia == "Indígena - Saraguro"  | base_total$etnia == "Indígena - Shuar"
+                 | base_total$etnia == "Indígena - Tomabela"  | base_total$etnia == "Indígena - Tsachila"
+                 | base_total$etnia == "Indígena - Waorani"  | base_total$etnia == "Indígena - Waranka" 
+                 | base_total$etnia == "Indígena - Zapara"] <- "Indigena"
+
+
+
+base_total$etnia[base_total$etnia == "Afroecuatoriano" | base_total$etnia == "Montubio" |
+                         base_total$etnia == "Mulato" | base_total$etnia == "Negro"] <- "Afroecuatoriano"
+
+
+base_total$etnia[base_total$etnia == "Otro" | base_total$etnia == "No registra"] <- "Otro"
+
+
+#Subetapa
+count(base_total$subetapa)
+base_total$subetapa[base_total$subetapa == "Abierto" | base_total$subetapa == "Contactado"
+                    | base_total$subetapa == "No contactado" | base_total$subetapa == "Aprobado"] <- "No Gestionado"
+
+base_total$subetapa[base_total$subetapa == "Admitido cambio carrera" | base_total$subetapa == "Admitido retirado"
+                    | base_total$subetapa == "Cambio de carrera" | base_total$subetapa == "Cambio de Programa"] <- "Cambio Carrera"
+
+base_total$subetapa[base_total$subetapa == "Datos incorrectos de contactabilidad" | base_total$subetapa == "Datos que no son de un postulante"
+                    | base_total$subetapa == "Existe contacto correcto pero no son del postulante" | base_total$subetapa == "Incontactable"
+                    | base_total$subetapa == "Por incontactabilidad" | base_total$subetapa == "Datos incorrectos de contactabilidad"] <- "Incontactable"
+
+base_total$subetapa[base_total$subetapa == "Seleccionó otra universidad" | base_total$subetapa == "Seleccionó otra Universidad"] <- "Otra Universidad"
+
+base_total$subetapa[base_total$subetapa == "Académico" | base_total$subetapa == "Incompatibilidad de malla académica"  
+                    | base_total$subetapa == "Infraestructura no acorde a lo esperado" | base_total$subetapa == "Modalidad del curso"
+                    | base_total$subetapa == "Oferta de interés no disponible" | base_total$subetapa == "UDLA no dispone de la carrera de interés del postulante"
+                    | base_total$subetapa == "UDLA no es de preferencia del postulante"
+                    | base_total$subetapa == "Incompatibilidad con horario"] <- "UDLA Incompatible"
+
+base_total$subetapa[base_total$subetapa == "Examen de admisión no aprobado" | base_total$subetapa == "No cumple con requisitos de carrera UDLA"  
+                    | base_total$subetapa == "Postulante no cumple con requisitos de carrera UDLA" | base_total$subetapa == "Modalidad del curso" 
+                    | base_total$subetapa == "Postulante no cumple con requisitos de convalidación UDLA"
+                    | base_total$subetapa == "Reprobado" | base_total$subetapa == "Test Reprobado"] <- "Reprobado"
+
+base_total$subetapa[base_total$subetapa == "Existe un proceso previo para el mismo periodo" | base_total$subetapa == "Periodo Futuro"  
+                    | base_total$subetapa == "Postulante para periodo futuro"] <- "Periodo Incorrecto"
+
+base_total$subetapa[base_total$subetapa == "Cerrado por migración" | base_total$subetapa == "Indica que no postuló"  
+                    | base_total$subetapa == "Motivos Personales" | base_total$subetapa == "No Aplica"
+                    | base_total$subetapa == "No colabora con información" | base_total$subetapa == "Por fallecimiento"
+                    | base_total$subetapa == "No hay cupos" | base_total$subetapa == "Postulante no emitió sus datos a UDLA"
+                    | base_total$subetapa == "Ya es alumno UDLA"] <- "Otros"
+
+base_total$subetapa[base_total$subetapa == "Geográficamente distante" | base_total$subetapa == "UDLA geográficamente distante" ] <- "UDLA Distante"
+
+#Origen
+count(base_total$origen)
+
+base_total$origen[base_total$origen == "Bing Natural Search" | base_total$origen == "Google Natural Search"] <- "Busqueda Natural"
+
+base_total$origen[base_total$origen == "Career Cruising" | base_total$origen == "Simulador Homologación"
+                  |base_total$origen == "Prospección Corporativa" | base_total$origen == "Prospección Alianzas educativas"
+                  |base_total$origen == "Prospección" | base_total$origen == "Colegios" | base_total$origen == "Referidos"] <- "Prospeccion"
+
+base_total$origen[base_total$origen == "Chat en línea" | base_total$origen == "Chatbot"
+                  |base_total$origen == "Correo" | base_total$origen == "Llamada"
+                  |base_total$origen == "Whatsapp" | base_total$origen == "Datos antiguos" | base_total$origen == "Datos de período anterior"
+                  |base_total$origen == "Datos del período anterior" | base_total$origen == "Datos importados"
+                  |base_total$origen == "Whatsapp"] <- "CallCenter"
+
+base_total$origen[base_total$origen == "Eventos" | base_total$origen == "Facebook"
+                  |base_total$origen == "Formulario web" | base_total$origen == "Formulario Web"
+                  |base_total$origen == "Google Ad"] <- "Marketing"
+
+base_total$origen[is.na(base_total$origen)] <- "Prospeccion"  
+
+#Datos de padres
+#Nivel de instruccion
+count(base_total$niv_est_m)
+
+base_total$niv_est_m[base_total$niv_est_m == "ELEMENTAL" | base_total$niv_est_m == "ESPECIAL"
+                     |base_total$niv_est_m == "NINGUNA"] <- "Ninguna"
+
+base_total$niv_est_p[base_total$niv_est_p == "ELEMENTAL" | base_total$niv_est_p == "ESPECIAL"
+                     |base_total$niv_est_p == "NINGUNA"] <- "Ninguna"
+
+base_total$niv_est_m[base_total$niv_est_m == "BASICA" | base_total$niv_est_m == "INICIAL"
+                     |base_total$niv_est_m == "PRIMARIA"] <- "Primaria"
+
+base_total$niv_est_p[base_total$niv_est_p == "BASICA" | base_total$niv_est_p == "INICIAL"
+                     |base_total$niv_est_p == "PRIMARIA"] <- "Primaria"
+
+base_total$niv_est_m[base_total$niv_est_m == "BACHILLER" | base_total$niv_est_m == "SECUNDARIA"] <- "Secundaria"
+
+base_total$niv_est_p[base_total$niv_est_p == "BACHILLER" | base_total$niv_est_p == "SECUNDARIA"] <- "Secundaria"
+
+base_total$niv_est_m[base_total$niv_est_m == "SUPERIOR"] <- "Superior"
+
+base_total$niv_est_p[base_total$niv_est_p == "SUPERIOR"] <- "Superior"
+
+
+#Profesion
+count(base_total$prof_m)
+
+base_total$prof_m[base_total$prof_m == "AB.TRIB.JUSTI.REPUBL" | base_total$prof_m == "AB.TRIB.JUZGADO.REP."
+                  |base_total$prof_m == "ABOGADA" |base_total$prof_m == "ABOGADO" |base_total$prof_m == "DOCTOR - LEYES"
+                  |base_total$prof_m == "DOCTORA - LEYES" |base_total$prof_m == "DR. JURISPRUDENCIA"
+                  |base_total$prof_m == "DR JURI/ABG/JUZ"] <- "Abogado"
+
+base_total$prof_p[base_total$prof_p == "AB.TRIB.JUSTI.REPUBL" | base_total$prof_p == "AB.TRIB.JUZGADO.REP."
+                  |base_total$prof_p == "ABOGADA" |base_total$prof_p == "ABOGADO"|base_total$prof_p == "DOCTOR - LEYES"
+                  |base_total$prof_p == "DOCTORA - LEYES" |base_total$prof_p == "DR. JURISPRUDENCIA"
+                  |base_total$prof_p == "DR JURI/ABG/JUZ"] <- "Abogado"
+
+base_total$prof_m[base_total$prof_m == "ACTIV.LUCR.PERM.LEY" | base_total$prof_m == "ACTIVIDAD PROPIA"] <- "Act.Propia"
+
+base_total$prof_p[base_total$prof_p == "ACTIV.LUCR.PERM.LEY" | base_total$prof_p == "ACTIVIDAD PROPIA"] <- "Act.Propia"
+
+base_total$prof_m[base_total$prof_m == "ADMINISTRADOR" | base_total$prof_m == "ADMINISTRADORA"
+                  | base_total$prof_m == "ADMR. DE  HOTEL" | base_total$prof_m == "ADMR. DE EMPRESAS"
+                  | base_total$prof_m == "ADMR. EDUCATIVO" | base_total$prof_m == "ADMR. EN  COMERCIO"
+                  | base_total$prof_m == "ADMR. GASTRONËMICO"] <- "Administrador"
+
+base_total$prof_p[base_total$prof_p == "ADMINISTRADOR" | base_total$prof_p == "ADMINISTRADORA"
+                  | base_total$prof_p == "ADMR. DE  HOTEL" | base_total$prof_p == "ADMR. DE EMPRESAS"
+                  | base_total$prof_p == "ADMR. EDUCATIVO" | base_total$prof_p == "ADMR. EN  COMERCIO"
+                  | base_total$prof_p == "ADMR. GASTRONËMICO"] <- "Administrador"
+
+base_total$prof_m[base_total$prof_m == "AGENTE DE SEGUROS" | base_total$prof_m == "AGENTE DE TURISMO"
+                  |base_total$prof_m == "AGENTE ESPECIAL" | base_total$prof_m == "AGENTE VENDEDOR"
+                  |base_total$prof_m == "AGENTE VIAJERO"] <- "Vendedor"
+
+base_total$prof_p[base_total$prof_p == "AGENTE DE SEGUROS" | base_total$prof_p == "AGENTE DE TURISMO"
+                  |base_total$prof_p == "AGENTE ESPECIAL" | base_total$prof_p == "AGENTE VENDEDOR"
+                  |base_total$prof_p == "AGENTE VIAJERO"] <- "Vendedor"
+
+base_total$prof_m[base_total$prof_m == "ANESTESIËLOGO" | base_total$prof_m == "DOCTOR -M+DICOáá"
+                  |base_total$prof_m == "DOCTORA - M+DICO" | base_total$prof_m == "DR EN FISIOTERAPIA"
+                  |base_total$prof_m == "DR LAB/CLIN/ADM/SER" |base_total$prof_m == "DR PSIC/EDU/ORTC/VOC"
+                  |base_total$prof_m == "DR PSIC/EDU/ORTC/VOC"] <- "Dr.Med"
+
+base_total$prof_p[base_total$prof_p == "ANESTESIËLOGO" | base_total$prof_p == "DOCTOR -M+DICOáá"
+                  |base_total$prof_p == "DOCTORA - M+DICO" | base_total$prof_p == "DR EN FISIOTERAPIA"
+                  |base_total$prof_p == "DR LAB/CLIN/ADM/SER" |base_total$prof_p == "DR PSIC/EDU/ORTC/VOC"
+                  |base_total$prof_p == "DR PSIC/EDU/ORTC/VOC"] <- "Dr.Med"
+
+
+###TOO MUCH
+
+#Dependientes e Independientes Dependientes en una misma categoria 
+
+base_total$ocu_m[base_total$ocu_m == "Independiente Dependiente"] <- "Dependiente"
+base_total$ocu_p[base_total$ocu_p == "Independiente Dependiente"] <- "Dependiente"
+
+##Join de colegios y clusters
+
+colegios <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/colegios_join.xlsx")
+
+colegios_2 <- colegios %>% dplyr::select(cod,nom_sf.x,nom_dyn,cluster)
+
+#Match1
+colegios_3 <- colegios %>% dplyr::select(cod,cluster)
+colegios_3 <- rename(colegios_3, cod_col = 'cod')
+
+base_total <- join(base_total, colegios_3, by = 'cod_col')
+
+#Match2
+colegios_4 <- colegios %>% dplyr::select(nom_sf.x,cluster)
+colegios_4 <- rename(colegios_4, col = 'nom_sf.x')
+
+base_total <- join(base_total, colegios_4, by = 'col')
+
+
+#Match3
+colegios_5 <- colegios %>% dplyr::select(nom_dyn,cluster)
+colegios_5 <- rename(colegios_5, col = 'nom_dyn')
+
+base_total <- join(base_total, colegios_5, by = 'col')
+names(base_total)
+
+names(base_total)[39] <- 'cluster1'
+names(base_total)[40] <- 'cluster2'
+names(base_total)[41] <- 'cluster3'
+
+#base_total <- base_total[,-38] 
+
+names(base_total)
+
+base_total <- base_total %>% distinct()
+
+#Un solo cluster
+
+base_total$cluster1 <- fifelse(is.na(base_total$cluster1), base_total$cluster2, base_total$cluster1, na=NA)
+base_total$cluster1 <- fifelse(is.na(base_total$cluster1), base_total$cluster3, base_total$cluster1, na=NA)
+
+base_total$cluster1[base_total$cluster1 == "B"] <- "A"
+base_total$cluster1[is.na(base_total$cluster1)] <- "Otros"
+
+
+base_total <- rename(base_total, cluster = 'cluster1')
+
+# #Imputacion de variables de salario de padres
+# 
+# #Patron de missing values
+# md.pattern(base_total)
+# nhanes_miss = aggr(base_total, col=mdc(1:2), numbers=TRUE, sortVars=TRUE,
+#                    labels=names(base_total), cex.axis=.7, gap=3, ylab=c("Proportion of missingness","Missingness Pattern"))
+# 
+# #Variables Dummy para missing values
+# #Ingresos
+# 
+# base_total$ing_p_dummy <- 0
+# base_total$ing_m_dummy <- 0
+# 
+# base_total$ing_p_dummy[is.na(base_total$ing_p)] <-1
+# base_total$ing_m_dummy[is.na(base_total$ing_m)] <-1
+# 
+# ##Dummies de regresores
+# 
+# base_total <- fastDummies::dummy_cols(base_total, select_columns = c("periodo", "etapa", "carr", "ciudad", "sexo", "etnia", "subetapa",
+#                                                                      "origen", "prov","ocu_m", "niv_est_m","ocu_p", "niv_est_p"))
+# #Regresion
+# names(base_total)
+# 
+# modimp <- lm(ing_p ~ `periodo_2009-10` + `periodo_2009-20` + `periodo_2010-10`+ `periodo_2010-20`+ `periodo_2011-10`+ `periodo_2011-20`
+#            + `periodo_2013-10`+`periodo_2013-20` + + `periodo_2014-10`+`periodo_2014-20` + `periodo_2015-10` + `periodo_2015-20`+
+#            `periodo_2016-10`+ `periodo_2016-20` + `periodo_2017-10` + `periodo_2017-20`+ `periodo_2018-10`+`periodo_2018-20` +
+#            `periodo_2019-10`+ `periodo_2019-20`+ `periodo_2020-10`+ `periodo_2020-20`+ `periodo_2021-10`+ `periodo_2022-10` +
+#            `etapa_Ganado`+`etapa_Perdido`+`carr_ARQUITECTURA`+`carr_CIENCIAS POLITICAS`+`carr_DERECHO-H`+`carr_DISEÑO DE INTERIORES`+
+#            `carr_DISEÑO GRAFICO`+`carr_ENFERMERIA`+`carr_FISIOTERAPIA`+`carr_HOSPITALIDAD Y HOTELERÍA`+`carr_ING. AMBIENTAL`+`carr_ING. EN ELECTRONICA Y AUTOMATIZACION`+
+#            `carr_ING. SONIDO Y ACUSTICA`+`carr_ING. TECNOLOGIAS DE LA INFORMACION-H`+`carr_INGENIERÍA DE SOFTWARE`+`carr_LIC. ADMINISTRACION EMPRESAS-DUAL`+
+#            `carr_LIC. ADMINISTRACION EMPRESAS-S`+`carr_LIC. COMUNICACIÓN-D`+`carr_LIC. FINANZAS`+`carr_LIC. GASTRONOMIA`+`carr_LIC. MARKETING-D`+
+#            `carr_LIC. MARKETING-N`+`carr_LIC. NEGOCIOS INTERNACIONALES-N`+`carr_LIC. PUBLICIDAD`+`carr_LICENCIADO EN RELACIONES INTERNACIONALES`+
+#            `carr_MEDICINA`+`carr_MULTIMEDIA Y PRODUCCIÓN AUDIOVISUAL`+`carr_NEGOCIOS INTERNACIONALES`+`carr_ODONTOLOGIA`+`carr_PSICOLOGÍA-H`+`carr_TURISMO`+
+#            `carr_ARTES MUSICALES`+`carr_DERECHO-D`+`carr_DERECHO-N`+`carr_DISEÑO DE PRODUCTOS`+`carr_ECONOMIA`+`carr_ENFERMERIA MODALIDAD ESTUDIO TRABAJO`+
+#            `carr_GESTION DEPORTIVA`+`carr_GESTION DEPORTIVA`+`carr_ING. AGROINDUSTRIA`+`carr_ING. BIOTECNOLOGIA`+`carr_ING. INDUSTRIAL`+`carr_ING. TECNOLOGIAS DE LA INFORMACION`+
+#            `carr_ING.TELECOMUNICACIONES`+`carr_LIC. ADMINISTRACION EMPRESAS-D`+`carr_LIC. ADMINISTRACION EMPRESAS-N`+`carr_LIC. CINE`+
+#            `carr_LIC. COMUNICACIÓN-H`+`carr_LIC. FISIOTERAPIA`+`carr_LIC. GASTRONOMIA-N`+`carr_LIC. MARKETING-H`+`carr_LIC. NEGOCIOS INTERNACIONALES-D`+
+#            `carr_LIC. PERIODISMO`+`carr_LIC.COMUNICACIÓN-N`+`carr_LICENCIATURA EN EDUCACION-H`+`carr_MEDICINA VETERINARIA`+`carr_NEGOCIOS DIGITALES`+
+#            `carr_NEGOCIOS INTERNACIONALES-H`+`carr_PSICOLOGÍA-D`+`carr_PSICOLOGÍA-N`+`sexo_Femenino`+`sexo_Masculino`+`etnia_Blanco`+`etnia_Mestizo`+
+#            `etnia_Afroecuatoriano`+`etnia_Indigena`+`etnia_Otro`+`etnia_NA`+`subetapa_Factores económicos`+`origen_Marketing`+`subetapa_Incontactable`+`subetapa_Otra Universidad`+
+#            `subetapa_Periodo Incorrecto`+ `origen_Busqueda Natural`+`origen_Walk-in`+`subetapa_Cambio Carrera` +`subetapa_Ganado` +`subetapa_No Gestionado`+
+#            `subetapa_Otros`+ `subetapa_Reprobado` + `subetapa_UDLA Incompatible`+`origen_CallCenter`+`origen_Prospeccion`+`prov_BOLIVAR`+`prov_CARCHI`+
+#            `prov_COTOPAXI`+`prov_ESMERALDAS`+`prov_GUAYAS`+`prov_LOJA`+`prov_MANABI`+`prov_NAPO`+`prov_PASTAZA`+`prov_Region Extrangera`+`prov_SANTO DOMINGO DE LOS TSACHILAS`+
+#            `prov_TUNGURAHUA`+`prov_ZONA NO DELIMITADA`+`prov_ZAMORA CHINCHIPE`+ `prov_SUCUMBIOS`+ `prov_SANTA ELENA`+`prov_PICHINCHA`+`prov_ORELLANA`+`prov_MORONA SANTIAGO`+
+#            `prov_LOS RIOS`+`prov_IMBABURA` +`prov_GALAPAGOS`+`prov_EL ORO` +`prov_CHIMBORAZO` + `prov_CAÑAR`+`prov_AZUAY`+`ocu_m_Independiente Dependiente`+
+#            `ocu_m_Independiente Informal` +`niv_est_m_Ninguna`+`niv_est_m_Secundaria`+`niv_est_m_NA`+`ocu_p_Independiente Dependiente`+ `ocu_p_Independiente Informal` +
+#            `niv_est_p_Ninguna`+ `niv_est_p_Secundaria`+`niv_est_p_NA`+`ocu_m_Dependiente`+`ocu_m_Independiente Formal`+`ocu_m_NA`+
+#            `niv_est_m_Primaria`+`niv_est_m_Superior`+`ocu_p_Dependiente`+`ocu_p_Independiente Formal`+`ocu_p_NA`+`niv_est_p_Primaria`+
+#            `niv_est_p_Superior`, base_total)
+# 
+# summary(modimp)
+# 
+# #Imputar valores perdidos
+# 
+# for(i in 1:nrow(base_total))
+# {
+#         if(base_total$ing_p_dummy[i] == 1)
+#         {
+#                 base_total$ing_p[i] = 3594.404 + -167.663*base_total$`periodo_2014-20`[i] +
+#                         -190.110*base_total$`periodo_2014-20`[i] + -243.156*base_total$`periodo_2015-20`[i]
+#                                 + -193.019*base_total$`periodo_2016-10`[i] + -158.329*base_total$`periodo_2016-20`[i]
+#                                         + -114.933*base_total$`periodo_2017-10`[i] + -155.946*base_total$`periodo_2017-20`[i]
+#                                                  + -132.949*base_total$`periodo_2019-20`[i] + -195.817*base_total$`carr_LIC. FINANZAS`[i]
+#                                                         + -331.813*base_total$`carr_LIC. MARKETING-N`[i] + -229.760*base_total$`carr_ING. BIOTECNOLOGIA`[i]
+#         }
+# }
+# 
+# 
+# 
+# #Imputacion de valores
+# 
+# mice_imputes = mice(base_total, m=5, method = "norm.nob",maxit = 40)
+
+#Salario
+
+
+summary(base_total$ing_m)
+hist(base_total$ing_m)
+
+summary(base_total$ing_p)
+hist(base_total$ing_p)
+
+base_total$ing_fam <- base_total$ing_p + base_total$ing_m
+summary(base_total$ing_fam)
+hist(base_total$ing_fam)
+
+#Edades
+base_total$edad_mad <- as.numeric(base_total$edad_mad)
+summary(base_total$edad_mad)
+hist(base_total$edad_mad)
+
+base_total$edad_pad <- as.numeric(base_total$edad_pad)
+summary(base_total$edad_pad)
+hist(base_total$edad_pad)
+
+#DISTINTAS BASES
+
+base_perdidos <- filter(base_total, ganado == 0)
+base_ganados <- filter(base_total, ganado == 1)
+
+#Descriptive statistics
+#Por periodos
+
+base_prob <- base_total
+
+
+sept15 <- filter(base_prob, periodo == "2015-10")
+sept16 <- filter(base_prob, periodo == "2016-10")
+sept17 <- filter(base_prob, periodo == "2017-10")
+sept18 <- filter(base_prob, periodo == "2018-10")
+sept19 <- filter(base_prob, periodo == "2019-10")
+sept20 <- filter(base_prob, periodo == "2020-10")
+sept21 <- filter(base_prob, periodo == "2021-10")
+sept22 <- filter(base_prob, periodo == "2022-10")
+
+sept <- rbind(sept15,sept16,sept17,sept18,sept19,sept20,sept21,sept22)
+
+mar15 <- filter(base_prob, periodo == "2015-20")
+mar16 <- filter(base_prob, periodo == "2016-20")
+mar17 <- filter(base_prob, periodo == "2017-20")
+mar18 <- filter(base_prob, periodo == "2018-20")
+mar19 <- filter(base_prob, periodo == "2019-20")
+mar20 <- filter(base_prob, periodo == "2020-20")
+mar21 <- filter(base_prob, periodo == "2021-20")
+
+mar <- rbind(mar15,mar16,mar17,mar18,mar19,mar20,mar21)
+
+
+library(vtable)
+st(base_prob, out = 'return')
+
+
+#### MODELOS #####
+
+##MODELO LOGIT DUMMY 
+
+##
+
+base_total_dummies <- fastDummies::dummy_cols(base_total, select_columns = c("periodo", "etapa", "carr", "ciudad", "sexo", "etnia", "cluster", "subetapa",
+                                                                             "origen", "prov","ocu_m", "niv_est_m","ocu_p", "niv_est_p"))
+
+##BASE MODELO
+
+mylogit <- glm(ganado ~ origen + prov + sexo + ciclo + edad + carr + etnia + cluster + niv_est_m +
+                       ing_m + ocu_m + niv_est_p + ing_p + ocu_p + edad_mad 
+               + edad_pad + niv_est_m + niv_est_p, data = base_prob, x = T,family = "binomial")
+
+summary(mylogit)
+
+logitmfx(ganado ~ origen + prov + sexo + ciclo + edad + carr + etnia + cluster + niv_est_m +
+                 ing_m + ocu_m + niv_est_p + ing_p + ocu_p + edad_mad + edad_pad + niv_est_m + niv_est_p, data = base_prob)
+
+
+
+#######MODELO LOGIT Septiembre ########
+
+names(base_prob)
+
+base_prob2 <- base_prob %>% dplyr::select(id,ganado, origen, prov,sexo,ciclo,edad,carr,etnia,cluster, niv_est_m,
+                                          ing_m , ocu_m , niv_est_p , ing_p , ocu_p , edad_mad , edad_pad , niv_est_m , niv_est_p, ing_f)
+
+base_prob2 <- base_prob2 %>% distinct()
+base_prob2 <- na.omit(base_prob2)
+
+base_logit_sept <- base_prob2 %>% dplyr::select(ganado, origen, prov,sexo,ciclo,edad,carr,etnia,cluster, niv_est_m,
+                                                ing_m , ocu_m , niv_est_p , ing_p , ocu_p , edad_mad , edad_pad , niv_est_m , niv_est_p, ing_f)
+
+
+#Sin valores perdidos 
+base_logit_sept <- na.omit(base_logit_sept)
+
+base_logit_sept$ing_m <- log(base_logit_sept$ing_m)
+base_logit_sept$ing_p <- log(base_logit_sept$ing_p)
+base_logit_sept$ing_f <- log(base_logit_sept$ing_f)
+
+
+inTrain <- createDataPartition(y = base_logit_sept$ganado, p = .60, list = FALSE)
+training <- base_logit_sept[inTrain,]
+testing <- base_logit_sept[-inTrain,]
+
+
+#Modelo
+
+sept.fit = glm(ganado ~ origen+ prov+sexo+ciclo+edad+carr+etnia+cluster+ niv_est_m+
+                       ing_f + ocu_m + niv_est_p + ocu_p + edad_mad + edad_pad + niv_est_m + niv_est_p, data=training, family=binomial)
+
+summary(sept.fit)
+
+
+#Check de fit 
+
+sept.prob = predict(sept.fit, testing, type="response")
+summary(sept.prob)
+
+
+#Matriz de confusion
+sept.pred = rep("Perdido", dim(training)[1])
+sept.pred[sept.prob > .5] = "Ganado"
+table(sept.pred, training$ganado)
+
+
+ac <- (25345+623)/(1364+11313+25345+623)
+ac
+
+#Predicciones
+names(training)
+
+predict(sept.fit, newdata=data.frame(origen = 'Prospeccion', prov = 'Pichincha'), type="response")
+
+#===============================================================================
+#                       Scorecard model 
+#===============================================================================
+
+library(purrr)
+
+
+# # Funcion que nos listara todas las posibles combinaciones de variables
+# 
+# all_combinations <- function(your_predictors) {
+#         
+#         n <- length(your_predictors)
+#         map(1:n, function(x) {combn(variables, x)}) %>%  
+#                 map(as.data.frame) -> k
+#         
+#         all_vec <- c()
+#         
+#         for (i in 1:n) {
+#                 df <- k[[i]]
+#                 n_col <- ncol(base_logit_sept)
+#                 
+#                 for (j in 1:n_col) {
+#                         my_vec <- base_logit_sept[,..j] %>% as.character() %>% list()
+#                         all_vec <- c(all_vec, my_vec)
+#                 }
+#         }
+#         
+#         return(all_vec)
+#         
+# }
+# 
+# # Todas las variables potenciales seran almacenadas 
+# variables <- base_logit_sept %>% select(-ganado) %>% names()
+# 
+# 
+# #Modelos y todas las combinaciones 
+# system.time(
+#         all_combinations(variables) %>% 
+#                 map(function(x) {as.formula(paste("ganado ~", paste(x, collapse = " + ")))}) %>% 
+#                 map(function(formular) {glm(formular, family = binomial, data = base_logit_sept_train)}) %>% 
+#                 map_dbl("aic") -> aic_values
+# )
+#-------------------------------------------------------------------------------
+#                       SCORECARD MODEL TIPO I
+#-------------------------------------------------------------------------------
+
+##SOLO CORRO CON INGRESO FAMILIAR Y NO CON EL DE LA MADRE NI DEL PADRE
+
+base_logit_sept  <- base_logit_sept %>% dplyr:: select(ganado, origen, prov,sexo,ciclo,edad,carr,etnia,cluster, niv_est_m
+                                                       ,ocu_m , niv_est_p , ocu_p , edad_mad , edad_pad , niv_est_m , niv_est_p, ing_f)
+
+count(base_logit_sept$cluster)
+
+library(scorecard)
+library(stringr)
+
+#SELECCION DE DATOS POR CRITERIO IV 
+
+
+iv = iv(base_logit_sept, y = 'ganado') %>%
+        as_tibble() %>%
+        mutate( info_value = round(info_value, 3) ) %>%
+        arrange( desc(info_value) )
+
+iv
+
+
+#Weight of Evidence (WoE)
+#AQUI
+
+bins <- woebin(base_logit_sept, y = "ganado", save_breaks_list = TRUE)
+woebin_plot(bins)
+
+data_woe = woebin_ply(base_logit_sept, bins) %>% as_tibble() #Pasamos los woe bins a los datos
+
+#Regresion logistica 
+
+m <- glm(ganado ~ ., data_woe, family = binomial())
+summary(m)
+
+# Select a formula-based model by AIC (or by LASSO for large dataset)
+m_step <- step(m, direction = "both", trace = FALSE)
+m2 <- eval(m_step$call)
+m2
+
+
+#lOGIT Y ODDS
+
+pred = predict(m)
+resp = predict(m, type = 'response')
+
+res = tibble( logit = pred
+              , odds = exp(pred)
+              , prob = odds / (odds + 1)
+              , prob_ctrl = resp )
+
+res
+
+#ODDS A SCORE
+
+points0 = 600
+odds0 = 20
+pdo = 50
+
+card = scorecard(bins , m2
+                 , points0 = points0 
+                 , odds0 = 1/odds0
+                 , pdo = pdo 
+)
+
+card
+
+sc <- scorecard_ply(base_logit_sept, card, only_total_score = TRUE, print_step = 0L,
+                    replace_blank_na = TRUE, var_kp = NULL)
+
+sc
+
+#Calculo de score manual 
+
+
+factor = pdo / log(2)
+offset = points0 - factor * log( odds0 )
+
+res$score_ctrl = offset - factor * res$logit
+
+
+summary(res)
+
+#Logit vs Oddsm probabilidades y score
+
+# Filtramos valoes de control
+
+res <- res %>% dplyr::select(logit, odds, score_ctrl)
+
+res %>%
+        gather( key = 'key', value = 'value', - logit ) %>%
+        ggplot( aes( logit, value, color = key) ) +
+        geom_point() +
+        geom_line() +
+        facet_wrap(~key, scales = 'free_y')
+
+#Odds tiene una correlacion lineal perfecta con logit y con score 
+
+##Odds vs Scaled logit 
+
+res %>%
+        mutate( score_ctrl = score_ctrl * - 1 ) %>%
+        gather( key = 'key', value = 'value', - odds ) %>%
+        ggplot( aes( odds, value, color = key) ) +
+        geom_point() +
+        geom_line() +
+        facet_wrap(~key, scales = 'free_y')
+
+
+res %>%
+        mutate( score_ctrl = score_ctrl * - 1 ) %>%
+        mutate_at( vars(logit, odds, score_ctrl), scale ) %>%
+        gather( key = 'key', value = 'value', - odds ) %>%
+        ggplot( aes( odds, value, color = key) ) +
+        geom_point( alpha = 0.5 ) +
+        geom_line() 
+
+
+## La relacion es mas que identica entre odds y el score 
+
+
+
+##HISTOGRAMAS##
+
+res %>%
+        gather( key = 'key', value = 'value' ) %>%
+        ggplot( aes(value) ) +
+        geom_histogram( bins = 50
+                        , fill = 'aquamarine3'
+                        , color = 'black' ) +
+        geom_rug()+
+        facet_wrap(~key, scales = 'free')
+
+
+
+res %>%
+        mutate_all( scale, center = T ) %>%
+        mutate_all( as.vector ) %>%
+        gather( key = 'key', value = 'value' ) %>%
+        ggplot( )+
+        geom_histogram( aes( x = value, fill = key )
+                        , bins = 50
+                        , position="identity"
+                        , alpha = 0.5 )
+
+
+#sCORE Y LOGIT TIENEN CASI IDENTICAS DISTRIBUCIONES 
+
+#PREDICTORES INDIVIDUALES 
+
+data_relevant = data_woe[, names( coef(m) )[-1] ]
+
+data_mult_logit = as_tibble( data_relevant * coef(m)[-1] ) 
+
+
+#Ahora es cuestion de anadir a cada individuo su score
+
+data_mult_score = data_mult_logit %>%
+        mutate_all( function(x) - factor * x ) %>%
+        mutate( intercept = coef(m)[1]
+                , intercept = offset - factor * intercept )
+
+score = apply( data_mult_score, 1, sum ) 
+
+data_mult_score$score_ctrl = score
+
+data_mult_score$score_ctrl = res$score_ctrl
+
+#Correciones finales de forma y formato 
+
+# Noombres
+
+new_names_score = names(data_mult_score) %>%
+        str_replace_all( '_woe', '')
+
+new_names_data_relevant = names(data_relevant) %>%
+        str_replace_all( '_woe', '')
+
+
+names(data_mult_score) <- new_names_score
+
+names(data_relevant) <- new_names_data_relevant
+
+#Rbind con la base original 
+
+res2 <- res %>% dplyr::select(score_ctrl)
+
+res_final_sept <- cbind(base_prob2, res2)
+
+summary(res_final_sept$score_ctrl)
+
+
+#Base Score
+
+write_xlsx(res_final_sept,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc///base_res_score.xlsx")
+
+
+
+#Funcion para aplicar a cualquier entrada tipo TEST 
+
+test <- read_excel("C:/Users/ritaz/Desktop/test_score.xlsx")
+
+
+score_test <- scorecard_ply(test, card, only_total_score = TRUE, print_step = 0L,
+                            replace_blank_na = TRUE, var_kp = NULL)
+
+score_test
+
+
+### RESULTADOS DE INTERES ###
+
+#PUNTAJE 
+
+
+pu <- res_final_sept %>%
+        ggplot( aes(x=score_ctrl, fill=score_ctrl)) +
+        geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
+        scale_fill_manual(values=c("#69b3a2", "#404080")) +
+        theme_ipsum() +
+        labs(fill="")
+
+pu
+
+#EDAD
+
+library(gtools)
+res_final_sept$c_edad <- quantcut(res_final_sept$edad, q = 5, na.rm = TRUE)
+
+ed <- res_final_sept %>%
+        mutate(text = fct_reorder(c_edad, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=c_edad, fill=c_edad)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~c_edad)
+ed
+
+#EDAD PADRE
+
+res_final_sept$c_edad_p <- quantcut(res_final_sept$edad_pad, q = 5, na.rm = TRUE)
+
+edp <- res_final_sept %>%
+        mutate(text = fct_reorder(c_edad_p, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=c_edad_p, fill=c_edad_p)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~c_edad_p)
+edp
+
+#EDAD MADRE
+
+res_final_sept$c_edad_m <- quantcut(res_final_sept$edad_mad, q = 5, na.rm = TRUE)
+
+edm <- res_final_sept %>%
+        mutate(text = fct_reorder(c_edad_m, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=c_edad_m, fill=c_edad_m)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~c_edad_m)
+edm
+
+#ESTADO 
+
+res_final_sept$estado <- 0
+res_final_sept$estado[res_final_sept$ganado == 1] <- "Ganado"
+res_final_sept$estado[res_final_sept$ganado == 0] <- "Perdido"
+
+es <- res_final_sept %>%
+        ggplot( aes(x=score_ctrl, fill=estado)) +
+        geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
+        scale_fill_manual(values=c("#69b3a2", "#404080")) +
+        theme_ipsum() +
+        labs(fill="")
+
+es
+
+#INGRESOS PADRE
+
+res_final_sept$ing_p_c <- quantcut(res_final_sept$ing_p, q = 5, na.rm = TRUE)
+
+inp <- res_final_sept %>%
+        mutate(text = fct_reorder(ing_p_c, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=ing_p_c, fill=ing_p_c)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~ing_p_c)
+inp
+
+#INGRESOS MADRE
+
+res_final_sept$ing_m_c <- quantcut(res_final_sept$ing_m, q = 5, na.rm = TRUE)
+
+inm <- res_final_sept %>%
+        mutate(text = fct_reorder(ing_m_c, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=ing_m_c, fill=ing_m_c)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~ing_m_c)
+inm
+
+
+#GENEREO
+
+p <- res_final_sept %>%
+        ggplot( aes(x=score_ctrl, fill=sexo)) +
+        geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') +
+        scale_fill_manual(values=c("#69b3a2", "#404080")) +
+        theme_ipsum() +
+        labs(fill="")
+
+p
+
+#ORIGEN 
+
+o <- res_final_sept %>%
+        mutate(text = fct_reorder(origen, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=origen, fill=origen)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~origen)
+o
+
+
+#CARRERA
+
+carr <- res_final_sept %>%
+        mutate(text = fct_reorder(carr, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=carr, fill=carr)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~carr)
+carr
+
+
+#CLUSTER
+
+clu <- res_final_sept %>%
+        mutate(text = fct_reorder(cluster, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=cluster, fill=cluster)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~cluster)
+clu
+
+
+#NIV ESTUDIO MADRE
+
+nm <- res_final_sept %>%
+        mutate(text = fct_reorder(niv_est_m, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=niv_est_m, fill=niv_est_m)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~niv_est_m)
+nm
+
+
+#NIV ESTUDIO PADRE
+
+np <- res_final_sept %>%
+        mutate(text = fct_reorder(niv_est_p, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=niv_est_p, fill=niv_est_p)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~niv_est_p)
+np
+
+#OCUPACION MADRE 
+
+ocm <- res_final_sept %>%
+        mutate(text = fct_reorder(ocu_m, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=ocu_m, fill=ocu_m)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~ocu_m)
+ocm
+
+#OCUPACION PADRE 
+
+ocp <- res_final_sept %>%
+        mutate(text = fct_reorder(ocu_p, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=ocu_p, fill=ocu_p)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~ocu_p)
+ocp
+
+
+#INGRESOS FAMILIARES
+
+res_final_sept$ing_m_f <- quantcut(res_final_sept$ing_f, q = 5, na.rm = TRUE)
+
+inf <- res_final_sept %>%
+        mutate(text = fct_reorder(ing_m_f, score_ctrl)) %>%
+        ggplot( aes(x=score_ctrl, color=ing_m_f, fill=ing_m_f)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~ing_m_f)
+inf
+
+summary(res_final_sept$ing_f)
+
+names(res_final_sept)
+
+summary(res_final_sept$ing_f)
+summary(res_final_sept$score_ctrl)
+
+#-------------------------------------------------------------------------------
+#                       SCORECARD MODEL II
+#-------------------------------------------------------------------------------
+# library(scorecard)
+# library(stringr)
+# 
+# summary(base_logit_sept$ing_p)
+# 
+# #Solit en Train y Test 
+# 
+# 
+# dt_list <- split_df(base_logit_sept, y = "ganado", ratios = c(0.6, 0.4), seed = 30)
+# label_list <- lapply(dt_list, function(x) x$ganado)
+# 
+# 
+# #Weight of Evidence (WoE)
+# 
+# bins <- woebin(base_logit_sept, y = "ganado", save_breaks_list = TRUE)
+# break
+# woebin_plot(bins)
+# 
+# 
+# #WoE aplicacion tambien para los set training 
+# 
+# dt_woe_list <- lapply(dt_list, function(x) woebin_ply(x, bins))
+# dt_woe_list
+# 
+# #Regresion logistica 
+# 
+# m1 <- glm(ganado ~ ., family = binomial(), data = dt_woe_list$train)
+# summary(m1)
+# 
+# 
+# # Select a formula-based model by AIC (or by LASSO for large dataset)
+# m_step <- step(m1, direction = "both", trace = FALSE)
+# m2 <- eval(m_step$call)
+# m2
+# 
+# 
+# #KS & ROC performance del modelo
+# 
+# # First, get probabalistic predictions
+# pred_list <- lapply(dt_woe_list, function(x) predict(m1, x, type = 'response'))
+# pred_list
+# # Then evaluate model accuracy  
+# perf <- perf_eva(pred = pred_list, label = label_list, confusion_matrix = TRUE)
+# perf
+# 
+# #Scorecard 
+# 
+# # Card
+# card <- scorecard(bins, m2)
+# summary(card)
+# card
+# 
+# #Score de los alumnos de la base completa 
+# base_logit_sept <- as.data.frame(base_logit_sept)
+# score_alum <- lapply(dt_list, function(x) scorecard_ply(x, card))
+# score_alum
+# 
+# # Population Stability Index (PSI)
+# perf_psi(score = score_alum, label = label_list)
+# 
+# #Score base completa
+# score_total <- scorecard_ply(base_logit_sept, card, only_total_score = TRUE, print_step = 0L,
+#               replace_blank_na = TRUE, var_kp = NULL)
+# 
+# summary(score_total)
+# hist(score_total$score)
+# score_total
+# 
+# ###TEST 
+# 
+# test <- read_excel("C:/Users/ritaz/Desktop/test_score.xlsx")
+# 
+# 
+# score_test <- scorecard_ply(test, card, only_total_score = TRUE, print_step = 0L,
+#                              replace_blank_na = TRUE, var_kp = NULL)
+# 
+# score_test
+# 
+# ##Compilado de la base con sus scores
+# 
+# base_logit_sept <- cbind(base_logit_sept,score_total)
+# 
+# write_xlsx(base_logit_sept,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc///base_score.xlsx")
+# 
+# names(base_logit_sept)
+# table(base_logit_sept$score, base_logit_sept$cluster)
+# 
+# #Score por cluster
+# 
+# b_logit_sept_A <- filter(base_logit_sept, cluster =="A")
+# b_logit_sept_AA <- filter(base_logit_sept, cluster =="AA")
+# b_logit_sept_AAA <- filter(base_logit_sept, cluster =="AAA")
+# b_logit_sept_otros <- filter(base_logit_sept, cluster =="Otros")
+# 
+# hist(b_logit_sept_A$score)
+# hist(b_logit_sept_AA$score)
+# hist(b_logit_sept_AAA$score)
+# hist(b_logit_sept_otros$score)
+# 
+# summary(b_logit_sept_A)
+# summary(b_logit_sept_AA)
+# summary(b_logit_sept_AAA)
+# summary(b_logit_sept_otros)
+# 
+# 
+# 
+# #Score por ganados
+# 
+# 
+# b_logit_sept_win <- filter(base_logit_sept, ganado == 1)
+# b_logit_sept_loss <- filter(base_logit_sept, ganado == 0)
+# 
+# hist(b_logit_sept_win$score)
+# hist(b_logit_sept_loss$score)
+# 
+# summary(b_logit_sept_win)
+# summary(b_logit_sept_loss)
+
+
+#-------------------------------------------------------------------------------
+#                       SENSIBILIDAD PRECIO INDIVIDUAL 
+#-------------------------------------------------------------------------------
+
+
+##Base Becas  nivel alumno
+
+becas <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc/becas_resum.xlsx")
+
+
+#Trabajo general de la base becas
+
+becas <- rename(becas, periodo = 'PeriodoAdmision')
+becas <- rename(becas, beca_p = 'PorcentajeBeca')
+becas <- rename(becas, tipo_beca = 'BecaFinal')
+
+becas$beca_d <- 0
+becas$beca_d[becas$beca_p >= 0 | (!is.na(becas$tipo_beca))] <- 1
+
+count(becas$periodo)
+becas$periodo <- as.character(becas$periodo)
+becas$periodo[becas$periodo == "201920"] <- "2019-20"
+becas$periodo[becas$periodo == "202010"] <- "2020-10"
+becas$periodo[becas$periodo == "202020"] <- "2020-20"
+becas$periodo[becas$periodo == "202110"] <- "2021-10"
+becas$periodo[becas$periodo == "202120"] <- "2021-20"
+becas$periodo[becas$periodo == "202210"] <- "2022-10"
+
+
+becas$beca_p[is.na(becas$beca_p)] <- 0
+becas$beca_p <- becas$beca_p/100
+
+#tipo de beca
+becas$tipo_beca[is.na(becas$tipo_beca)] <- "Ninguna"
+count(becas$tipo_beca)
+
+becas$tipo_beca[becas$tipo_beca == "BECA ASISTENCIA FINANCIERA 2"] <- "BECA ASISTENCIA FINANCIERA"
+
+##Base Arancel agregado nivel carrera
+arancel <-  read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "arancel_beca")
+arancel <- rename(arancel, carr = 'Carrera')
+
+arancel <- arancel %>% dplyr::select(carr, arancel)
+
+
+##Base Becas agregado nivel carrera
+beca_carr <-  read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/becas.xlsx", sheet = "beca_media")
+beca_carr <- rename(beca_carr, carr = 'Carrera')
+
+beca_carr <- rename(beca_carr, b_201920 = '201920')
+beca_carr <- rename(beca_carr, b_202010 = '202010')
+beca_carr <- rename(beca_carr, b_202020 = '202020')
+beca_carr <- rename(beca_carr, b_202110 = '202110')
+beca_carr <- rename(beca_carr, b_202120 = '202120')
+beca_carr <- rename(beca_carr, b_202210 = '202210')
+beca_carr <- rename(beca_carr, b_prom = 'prom')
+
+names(arancel)
+
+##Join 1 de aranceles con sus becas historicas
+
+arancel <- join(arancel, beca_carr, by = "carr")
+
+
+#Bases de becas dependiendo de su periodo de semestre
+
+#Septiembre
+
+becas_sept20 <- filter(becas, periodo == "2020-10")
+becas_sept21 <- filter(becas, periodo == "2021-10")
+becas_sept22 <- filter(becas, periodo == "2022-10")
+
+
+becas_sept <- rbind(becas_sept20,becas_sept21,becas_sept22)
+
+#Marzo
+
+becas_mar19 <- filter(becas, periodo == "2019-20")
+becas_mar20 <- filter(becas, periodo == "2020-20")
+becas_mar21 <- filter(becas, periodo == "2021-20")
+
+
+becas_mar <- rbind(becas_mar19,becas_mar20,becas_mar21)
+
+
+#El join de la base se hara unicamente con su periodo correspondiente 
+#Match septiembre:
+
+becas_sept$tipo_beca[is.na(becas_sept$ValorColegiaturaDescontadoBeca)] <- 0
+completa <- join(res_final_sept, becas_sept, by = "id")
+
+
+completa <- na.omit(completa)
+
+#Ahora hago atch de esto con las constantes de becas y arancel a nivel carrera
+
+
+completa <- data.table(completa, arancel, by = "carr")
+
+
+#Variables de gasto familiar en educacion esperado
+completa$p30_gasto <- (0.3*completa$ing_f) #Gasto 30% ingreso familiar mensual
+completa$p25_gasto <- (0.25*completa$ing_f) #Gasto 25% ingreso familiar mensual
+completa$p20_gasto <- (0.2*completa$ing_f) #Gasto 20% ingreso familiar mensual
+
+#Variables de pago colegiatura
+completa$pago <- (1-completa$beca_p)*(completa$arancel)
+completa$pago_mens <- ((1-completa$beca_p)*(completa$arancel))/6
+
+
+
+#Diferencia con el 30%, 25% y 20% versus lo pagado
+#Negativo Deficit y endeude 
+#Positivo Superavit y puedo pagar efectivo
+completa$d_30 <- round(completa$p30_gasto - completa$pago_mens,0)
+completa$d_25 <- round(completa$p25_gasto - completa$pago_mens,0)
+completa$d_20 <- round(completa$p20_gasto - completa$pago_mens,0)
+
+#Estatus Deficit 
+
+completa$deficit_30 <- (completa$pago_mens)/completa$p30_gasto
+completa$deficit_25 <- (completa$pago_mens)/completa$p25_gasto
+completa$deficit_20 <- (completa$pago_mens)/completa$p20_gasto
+
+
+names(completa)
+#Drop de variables que no me interesan 
+
+completa <- completa[,-33]
+
+#Beca Recibida
+
+completa$beca_rec <- completa$arancel - completa$beca_p
+
+
+completa <- completa %>% dplyr::select(id,ganado,origen,prov,sexo,ciclo,
+                                       edad,carr,etnia,cluster,niv_est_m,ing_m,
+                                       ocu_m,niv_est_p,ing_p,ocu_p,edad_mad,edad_pad,
+                                       score_ctrl,periodo,beca_p,tipo_beca,beca_d,arancel,
+                                       b_201920,b_202010,b_202020,b_202110,b_202120,b_202210,
+                                       b_prom,ing_f,p30_gasto,p25_gasto,p20_gasto,pago,
+                                       pago_mens,d_30,d_25,d_20, deficit_20, deficit_25, deficit_30,beca_rec)
+
+
+
+#Distribucuion de presupuesto vs deficit 
+
+graph <- completa %>% dplyr::select(id,p30_gasto,p25_gasto,p20_gasto,pago_mens,d_30,d_25,d_20)
+graph
+
+summary(completa$p30_gasto)
+summary(completa$p25_gasto)
+summary(completa$p20_gasto)
+
+summary(completa$d_30)
+summary(completa$d_25)
+summary(completa$d_20)
+
+graph1 <- melt(graph, id.vars = c("id"))
+names(graph1)[2] <- "Variable"
+names(graph1)[3] <- "Valor"
+
+
+# Plot
+ggplot(graph1, aes(x = Valor, y = Variable, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Valor", option = "D") +
+        labs(title = 'Presupuesto vs Deficit') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+# With transparency 
+p2 <- ggplot(data=graph1, aes(x=Valor, group=Variable, fill=Variable)) +
+        geom_density(adjust=1.5, alpha=.4) +
+        theme_ipsum()
+p2
+
+
+ggplotly(p2, hoverinfo = "text")
+
+
+
+##Lolipop de medias de presupeusto vs pago por carrerea
+
+#Presupuesto del 30%
+
+graph2 <- completa %>% dplyr::select(carr,p30_gasto,pago_mens)
+graph2 <- aggregate(graph2[, 2:3], list(graph2$carr), mean)
+names(graph2)[1] <- "carr"
+
+
+g2 <- ggplot(graph2) +
+        geom_segment( aes(x=carr, xend=carr, y=pago_mens, yend=p30_gasto), color="grey") +
+        geom_point( aes(x=carr, y=pago_mens), color=rgb(0.2,0.7,0.1,0.5), size=3 ) +
+        geom_point( aes(x=carr, y=p30_gasto), color=rgb(0.7,0.2,0.1,0.5), size=3 ) +
+        coord_flip()+
+        theme_ipsum() +
+        theme(
+                legend.position = "none",
+        ) +
+        xlab("Carrera") +
+        ylab("Dinero")
+g2
+
+ggplotly(g2, hoverinfo = "text")
+
+
+#Presupuesto del 25%
+
+graph3 <- completa %>% dplyr::select(carr,p25_gasto,pago_mens)
+graph3 <- aggregate(graph3[, 2:3], list(graph3$carr), mean)
+names(graph3)[1] <- "carr"
+
+
+g3 <- ggplot(graph3) +
+        geom_segment( aes(x=carr, xend=carr, y=pago_mens, yend=p25_gasto), color="grey") +
+        geom_point( aes(x=carr, y=pago_mens), color=rgb(0.2,0.7,0.1,0.5), size=3 ) +
+        geom_point( aes(x=carr, y=p25_gasto), color=rgb(0.7,0.2,0.1,0.5), size=3 ) +
+        coord_flip()+
+        theme_ipsum() +
+        theme(
+                legend.position = "none",
+        ) +
+        xlab("Carrera") +
+        ylab("Dinero")
+g3
+
+ggplotly(g3, hoverinfo = "text")
+
+
+#Presupuesto del 20%
+
+graph4 <- completa %>% dplyr::select(carr,p20_gasto,pago_mens)
+graph4 <- aggregate(graph4[, 2:3], list(graph4$carr), mean)
+names(graph4)[1] <- "carr"
+
+
+g4 <- ggplot(graph4) +
+        geom_segment( aes(x=carr, xend=carr, y=pago_mens, yend=p20_gasto), color="grey") +
+        geom_point( aes(x=carr, y=pago_mens), color=rgb(0.2,0.7,0.1,0.5), size=3 ) +
+        geom_point( aes(x=carr, y=p20_gasto), color=rgb(0.7,0.2,0.1,0.5), size=3 ) +
+        coord_flip()+
+        theme_ipsum() +
+        theme(
+                legend.position = "none",
+        ) +
+        xlab("Carrera") +
+        ylab("Dinero")
+g4
+
+ggplotly(g4, hoverinfo = "text")
+
+
+#Scatter Presupeusto 
+
+graph5 <- completa %>% dplyr::select(id,p30_gasto,p25_gasto,p20_gasto)
+graph5 <- melt(graph5, id.vars = c("id"))
+
+graph5_2 <- completa %>% dplyr::select(id,deficit_30,deficit_25,deficit_20)
+graph5_2 <- melt(graph5_2, id.vars = c("id"))
+
+
+graph6 <- merge(graph5, graph5_2, by = "id")
+names(graph6)[2] <- "Rango Presupuestario"
+names(graph6)[3] <- "Presupuesto"
+names(graph6)[5] <- "Deficit"
+graph6 <- graph6 %>% dplyr::select(id,'Rango Presupuestario',Presupuesto,Deficit)
+
+graph6$`Rango Presupuestario` <- as.character(graph6$`Rango Presupuestario`)
+
+graph6$`Rango Presupuestario`[graph6$`Rango Presupuestario` == "p20_gasto"] <- "Rango20"
+graph6$`Rango Presupuestario`[graph6$`Rango Presupuestario` == "p25_gasto"] <- "Rango25"
+graph6$`Rango Presupuestario`[graph6$`Rango Presupuestario` == "p30_gasto"] <- "Rango30"
+
+
+
+graph7 <- ggplot(graph6, aes(x=graph6$Deficit, y=graph6$Presupuesto, 
+                             color=graph6$`Rango Presupuestario`)) + 
+        geom_point(size=6) +
+        theme_ipsum()
+
+graph7
+
+ggplotly(graph7, hoverinfo = "text")
+
+
+summary(graph6$Deficit)
+
+#Resumen grafico correlaciones
+
+library(GGally)
+
+graph8 <- completa %>% dplyr::select(score_ctrl,p30_gasto,p25_gasto,p20_gasto, deficit_30,deficit_25,deficit_20, pago_mens)
+
+corr_plot <- ggpairs(graph8, columns = 1:8)
+corr_plot
+
+
+#Mapa de Calor Presupeusto
+
+graph9 <- completa %>% dplyr::select(id,deficit_30,deficit_25,deficit_20)
+graph9 <- melt(graph9, id.vars = c("id"))
+
+graph9_2 <- completa %>% dplyr::select(id,beca_p)
+graph9_2 <- melt(graph9_2, id.vars = c("id"))
+
+
+graph10 <- join(graph9, graph9_2, by = "id")
+names(graph10)[3] <- "Deficit"
+names(graph10)[5] <- "BecaOtorgada"
+graph10 <- graph10 %>% dplyr::select(id,Deficit,BecaOtorgada)
+
+
+# Hexbin chart with default option
+ggplot(graph10, aes(x=BecaOtorgada, y=Deficit) ) +
+        scale_fill_continuous(type = "viridis") +
+        geom_hex() +
+        theme_bw()
+
+
+
+
+
+
+##Tipo de beca otorgada 
+
+#Por frecuencia y tipo
+names(completa)
+graph11 <- completa %>% dplyr::select(id, tipo_beca, beca_p)
+
+
+graph11 <- melt(graph11, id.vars = c("id","tipo_beca" ))
+names(graph11)[3] <- "tipo"
+names(graph11)[4] <- "porcentaje"
+
+
+# Plot
+ggplot(graph11, aes(x = porcentaje, y = tipo_beca, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "TipoBeca", option = "D") +
+        labs(title = 'Tipo de Beca y Porcentaje Asignados') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+# With transparency 
+
+b1<- ggplot(data=graph11, aes(x=porcentaje, group=tipo_beca, fill=tipo_beca)) +
+        geom_density(adjust=1.5, alpha=.4) +
+        theme_ipsum()
+b1
+
+
+ggplotly(b1, hoverinfo = "text")
+
+
+#Por cluster
+names(completa)
+graph12 <- completa %>% dplyr::select(id, cluster, beca_p)
+
+
+# Plot
+ggplot(graph12, aes(x = beca_p, y = cluster, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Beca por Clusters') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+# With transparency 
+
+b2<- ggplot(data=graph12, aes(x=beca_p, group=cluster, fill=cluster)) +
+        geom_density(adjust=1.5, alpha=.4) +
+        theme_ipsum()
+b2
+
+
+ggplotly(b2, hoverinfo = "text")
+
+
+#Correlacion Score con Pago y con Deficit medio esperado 
+graph13 <- completa %>% dplyr::select(id, pago_mens, score_ctrl, deficit_20, deficit_25, deficit_30, beca_p, b_prom)
+
+
+graph13 <- graph13 %>% mutate(deficit_m = rowMeans(graph13[,c(4:6)]))
+
+graph13 <- graph13 %>% dplyr::select(pago_mens, score_ctrl, deficit_m)
+
+corr_plot2 <- ggpairs(graph13)
+corr_plot2
+
+graph14 <- graph13 %>% dplyr::select(score_ctrl, beca_p, b_prom)
+
+corr_plot3 <- ggpairs(graph14)
+corr_plot3
+
+
+#Scatter beca recibida vs beca media 
+
+
+graph15 <- ggplot(completa, aes(x=b_prom, y=beca_p)) +
+        geom_point() +
+        geom_abline(intercept = 0, slope = 1, size = 1, color="red", fill="#69b3a2") +
+        labs(y="Beca Recibida", x = "Beca Promedio Carrera")+
+        theme_ipsum()
+graph15
+
+ggplotly(graph15, hoverinfo = "text")
+
+
+summary(res_final_sept$score_ctrl)
+
+
+
+###Modelamiento para encontrar relaciones###
+
+
+library(ggpubr)
+completa <- completa %>% mutate(presupuesto_medio = rowMeans(completa[,c(33:35)]))
+
+completa$deficit_m <- (completa$pago_mens)/completa$presupuesto_medio
+
+#Normalizacion
+library(normalr)
+norm <- function(x) {x / sqrt(sum(x^2))}
+completa$score_ctrl_norm <- norm(completa$score_ctrl)
+
+#Escala
+completa$score_ctrl_esc <- resca(
+        data = completa,
+        values = completa$score_ctrl,
+        new_min = 0,
+        new_max = 100,
+        na.rm = TRUE,
+        keep = TRUE
+)
+
+
+hist(completa$score_ctrl_esc)
+
+#Logaritmo
+
+completa$score_ctrl_ln <- log(completa$score_ctrl)
+
+summary(completa$score_ctrl)
+summary(completa$score_ctrl_norm)
+summary(completa$score_ctrl_esc)
+summary(completa$score_ctrl_ln)
+
+
+#Deficit en funcion de Score
+#REGRESION DE DEFICIT EN FUNCION DE SCORE Y EL INGRESO QUINTILIZADO
+
+
+completa$ing_f_c2 <- 0 
+completa$ing_f_c2[completa$ing_f < 897] <- "[0,897)"
+completa$ing_f_c2[completa$ing_f >= 897  & completa$ing_f < 1635] <- "[897,1635)"
+completa$ing_f_c2[completa$ing_f >= 1635 & completa$ing_f < 2440] <- "[1635,2440)"
+completa$ing_f_c2[completa$ing_f >= 2440 & completa$ing_f < 4447] <- "[2440,4447)"
+completa$ing_f_c2[completa$ing_f >= 4447] <- "[4447,o mas)"
+
+
+#Baseline [0,897)
+completa <- within(completa, ing_f_c2 <- relevel(ing_f_c2, ref = '[0,897)'))
+completa$ing_f_c2 <- as.factor(completa$ing_f_c2)
+
+reg1 <- lm(deficit_m ~ score_ctrl + ing_f_c2, data=completa)
+reg1.res = resid(reg1)
+summary(reg1)
+summary(reg1.res) #Media cercana a 0
+sum(reg1.res) #cercano a 0
+plot(reg1.res)
+
+coef(reg1)
+
+#Baseline [897,1635)
+completa <- within(completa, ing_f_c2 <- relevel(ing_f_c2, ref = '[897,1635)'))
+reg2 <- lm(deficit_m ~ score_ctrl + ing_f_c2, data=completa)
+reg2.res = resid(reg2)
+summary(reg2) 
+summary(reg2.res) #Media cercana a 0
+sum(reg2.res) #cercano a 0
+plot(reg2.res)
+
+coef(reg2)
+
+#Baseline [1635,2440)
+completa <- within(completa, ing_f_c2 <- relevel(ing_f_c2, ref = '[1635,2440)'))
+reg3 <- lm(deficit_m ~ score_ctrl + ing_f_c2, data=completa)
+reg3.res = resid(reg3)
+summary(reg3) 
+summary(reg3.res) #Media cercana a 0
+sum(reg3.res) #cercano a 0
+plot(reg3.res)
+
+coef(reg3)
+
+#Baseline [2440,4447)
+completa <- within(completa, ing_f_c2 <- relevel(ing_f_c2, ref = '[2440,4447)'))
+reg4 <- lm(deficit_m ~ score_ctrl + ing_f_c2, data=completa)
+reg4.res = resid(reg4)
+summary(reg4) 
+summary(reg4.res) #Media cercana a 0
+sum(reg4.res) #cercano a 0
+plot(reg4.res)
+
+coef(reg4)
+
+#Baseline [4447,o mas)
+completa <- within(completa, ing_f_c2 <- relevel(ing_f_c2, ref = '[4447,o mas)'))
+reg5 <- lm(deficit_m ~ score_ctrl + ing_f_c2, data=completa)
+reg5.res = resid(reg5)
+summary(reg5) 
+summary(reg5.res) #Media cercana a 0
+sum(reg5.res) #cercano a 0
+plot(reg5.res)
+
+coef(reg5)
+
+
+
+# reg2 <- lm(pago_mens ~ score_ctrl, data=completa)
+# reg2.res = resid(reg2)
+# summary(reg2) #Beta 0: 552.66535, Beta 1:-0.19747
+# summary(reg2.res) #Media cercana a 0
+# sum(reg2.res) #cercano a 0
+# 
+# #Prediccion de beca frente a varios escenarios de score
+# #Normal
+# reg3 <- lm(beca_p ~ score_ctrl, data=completa)
+# reg3.res = resid(reg3)
+# summary(reg3) #Beta 0: 3.699e-02, Beta 1: 3.357e-04
+# summary(reg3.res) #Media cercana a 0
+# sum(reg3.res) #cercano a 0
+# 
+# #Normalizado
+# reg3.1 <- lm(beca_p ~ score_ctrl_norm, data=completa)
+# reg3.1.res = resid(reg3.1)
+# summary(reg3.1) #Beta 0: 0.03699, Beta 1: 10.93262
+# summary(reg3.1.res) #Media cercana a 0
+# sum(reg3.1.res) #cercano a 0
+# 
+# #Reescalado entre 0 y 100
+# reg3.2 <- lm(beca_p ~ score_ctrl_esc, data=completa)
+# reg3.2.res = resid(reg3.2)
+# summary(reg3.2) #Beta 0: 0.1500552, Beta 1: 0.0010645
+# summary(reg3.2.res) #Media cercana a 0
+# sum(reg3.2.res) #cercano a 0
+# 
+# #Logaritmo 
+# reg3.3 <- lm(beca_p ~ score_ctrl_ln, data=completa)
+# reg3.3.res = resid(reg3.3)
+# summary(reg3.3) #Beta 0: -0.72216, Beta 1: 0.14909
+# summary(reg3.3.res) #Media cercana a 0
+# sum(reg3.3.res) #cercano a 0
+
+
+#Predichos
+completa$arancel_mensual <- completa$arancel/6
+
+completa$defi_pred <- predict(reg1, newdata = completa, type = "response")
+completa$defi_pred[completa$defi_pred < 1] <- 1
+
+
+completa$pago_pred <- (completa$arancel_mensual)-((completa$arancel_mensual)/completa$defi_pred) #Pago faltante
+completa$beca_pred <- completa$pago_pred/(completa$arancel_mensual)
+
+
+#Predichos Becas
+hist(completa$beca_pred)
+hist(completa$beca_p)
+
+
+summary(completa$beca_pred)
+summary(completa$beca_p)
+
+#Predichos Pagos
+
+
+hist(completa$arancel_mens)
+hist(completa$pago_pred) ##pago faltante
+hist(completa$pago_mens)
+
+summary(completa$arancel_mens)
+summary(completa$pago_pred)
+summary(completa$pago_mens)
+
+
+#Diferencias 
+
+completa$dif_deficit <- completa$defi_pred - completa$deficit_m
+completa$dif_pago <- completa$pago_pred  - completa$pago_mens
+completa$dif_beca <- completa$beca_pred - completa$beca_p
+
+
+sum(completa$dif_deficit)
+sum(completa$dif_pago)
+sum(completa$dif_beca)
+
+mean(completa$dif_deficit)
+mean(completa$dif_pago)
+mean(completa$dif_beca)
+
+summary(completa$dif_deficit)
+summary(completa$dif_pago)
+summary(completa$dif_beca)
+
+a <- plot(completa$dif_deficit)
+b <- plot(completa$dif_pago)
+c <- plot(completa$dif_beca)
+
+
+
+#Graficos
+#Deficit
+
+plot(completa$deficit_m, reg1.res, 
+     ylab="Residuals", xlab="Deficit", 
+     main="Deficit Real vs Predicho")   
+abline(0, 0)
+
+
+
+#Scatter con beca recomendada 
+
+graph16 <- ggplot(completa, aes(x=beca_p, y=beca_pred)) +
+        geom_point() +
+        geom_abline(intercept = 0, slope = 1, size = 1, color="red", fill="#69b3a2") +
+        labs(y="Beca Predicha", x = "Beca Otorgada")+
+        theme_ipsum()
+graph16
+
+ggplotly(graph16, hoverinfo = "text")
+
+#Heat map con beca recomendada
+
+ggplot(completa, aes(x=beca_p, y=beca_pred) ) +
+        scale_fill_continuous(type = "viridis") +
+        geom_hex() +
+        labs(y="Beca predicha", x = "Beca Otorfada")+
+        theme_bw()
+
+summary(completa$beca_pred)
+summary(completa$beca_p)
+
+
+#3D scatter de Becas, sensibilidad y score
+library(rgl)
+library(magick)
+
+graph17<- plot3d( 
+        x=completa$sens_cliente, y=completa$beca_pred, z=completa$score_ctrl, 
+        type = 's', 
+        radius = 1,
+        xlab="Beca predicha", ylab="Beca Otorgada", zlab="Score")
+
+graph17
+
+play3d( spin3d( axis = c(0, 0, 1), rpm = 7), duration = 100)
+
+# Save like gif
+movie3d(
+        movie="3DScatter", 
+        spin3d( axis = c(0, 0, 1), rpm = 7),
+        duration = 100, 
+        dir = "C:/Users/ritaz/Documents",
+        type = "gif", 
+        clean = TRUE
+)
+
+###
+
+completa_2 <- completa %>% dplyr :: select(!c(b_201920,b_202010,b_202020,b_202110,b_202120,b_202210,d_25,d_20,
+                                              d_30,d_25,d_20,d_20,d_25,d_30, deficit_20, deficit_25, deficit_30,p20_gasto,p25_gasto,p30_gasto,score_ctrl_norm,
+                                              score_ctrl_esc,score_ctrl_ln))
+
+#Quintil de ingreso familiar                                
+
+completa_2$ing_f_c <- quantcut(completa_2$ing_f, q = 5, na.rm = TRUE)
+
+#Quintil de score    
+completa_2$score_ctrl_c <- quantcut(completa_2$score_ctrl, q = 5, na.rm = TRUE)
+
+
+#-------------------------------------------------------------------------------
+#                       BECA PREDICHA
+#-------------------------------------------------------------------------------
+#beca predicha por qunitil de score
+
+graph18 <- completa_2 %>% dplyr :: select(id,beca_pred,score_ctrl_c)
+
+graph18 <- melt(graph18, idvars = "id")
+names(graph18)[4] <- "Predicha"
+
+
+
+# Plot Sensibilidad vs Quintil de Score
+ggplot(graph18, aes(x = Predicha, y = score_ctrl_c, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Score", option = "D") +
+        labs(title = 'BecaPredicha vs Quintil de Score') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Comparativo con beca otorgada
+
+graph18.1 <- completa_2 %>% dplyr :: select(id,beca_p,score_ctrl_c)
+
+graph18.1 <- melt(graph18.1, idvars = "id")
+names(graph18.1)[4] <- "Otorgada"
+
+
+
+# Plot BEca Otorgada vs Quintil de Score
+ggplot(graph18.1, aes(x = Otorgada, y = score_ctrl_c, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Score", option = "D") +
+        labs(title = 'BecaOtorgada vs Quintil de Score') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+# Plot Sensibilidad vs Quintil de ingreso famiiliar
+
+graph19 <- completa_2 %>% dplyr :: select(id,beca_pred,ing_f_c)
+
+graph19 <- melt(graph19, idvars = "id")
+names(graph19)[4] <- "Predicha"
+
+
+ggplot(graph19, aes(x = Predicha, y = ing_f_c, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Quintil", option = "D") +
+        labs(title = 'Predicha vs Quintil Ingreso Familiar') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Comparativo con beca otorgada
+
+graph19.1 <- completa_2 %>% dplyr :: select(id,beca_p,ing_f_c)
+
+graph19.1 <- melt(graph19.1, idvars = "id")
+names(graph19.1)[4] <- "Otorgada"
+
+
+
+# Plot BEca Otorgada vs Quintil de Score
+ggplot(graph19.1, aes(x = Otorgada, y = ing_f_c, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Score", option = "D") +
+        labs(title = 'BecaOtorgada vs Quintil de Ingreso') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+# Plot Predicha vs Cluster Colegio
+
+graph20 <- completa_2 %>% dplyr :: select(id,beca_pred,cluster)
+
+graph20 <- melt(graph20, idvars = "id")
+names(graph20)[4] <- "Predicha"
+
+
+ggplot(graph20, aes(x = Predicha, y = cluster, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Predicha vs Cluster') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Comparativo con beca otorgada
+
+graph20.1 <- completa_2 %>% dplyr :: select(id,beca_p,cluster)
+
+graph20.1 <- melt(graph20.1, idvars = "id")
+names(graph20.1)[4] <- "Otorgada"
+
+
+
+# Plot BEca Otorgada vs Quintil de Score
+ggplot(graph20.1, aes(x = Otorgada, y = cluster, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'BecaOtorgada vs Cluster') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+# Plot Sensibilidad  vs Carrera ???
+
+graph21 <- completa_2 %>% dplyr :: select(id,sens_cliente,carr)
+names(graph21)[2] <- "SensibilidadMedia"
+
+
+ggplot(graph21, aes(x=SensibilidadMedia, color=carr, fill=carr)) +
+        geom_histogram(alpha=0.6, binwidth = 5) +
+        scale_fill_viridis(discrete=TRUE) +
+        scale_color_viridis(discrete=TRUE) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        ) +
+        xlab("") +
+        ylab("Assigned Probability (%)") +
+        facet_wrap(~carr)
+
+#Scatter con beca entregada vs sensibilidad cliente
+
+graph18 <- ggplot(completa, aes(x=beca_p, y=beca_pred)) +
+        geom_point() +
+        geom_abline(intercept = 0, slope = 1, size = 1, color="red", fill="#69b3a2") +
+        labs(y="Beca Predicha", x = "Beca Recibida")+
+        theme_ipsum()
+graph18
+
+ggplotly(graph18, hoverinfo = "text")
+
+#Heat map con beca entregada vs sensibilidad cliente
+
+ggplot(completa, aes(x=beca_p, y=beca_pred) ) +
+        scale_fill_continuous(type = "viridis") +
+        geom_hex() +
+        geom_abline(intercept = 0, slope = 1, size = 1, color="red", fill="#69b3a2")+
+        labs(y="Beca Predicha", x = "Beca Recibida")+
+        theme_bw()
+
+
+#Comparativo con beca otorgada ORIGEN
+
+graph21.1 <- completa_2 %>% dplyr :: select(id,beca_p,origen)
+
+graph21.1 <- melt(graph21.1, idvars = "id")
+names(graph21.1)[4] <- "Otorgada"
+
+
+
+# Plot BEca Otorgada vs Quintil de Score
+ggplot(graph21.1, aes(x = Otorgada, y = origen, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Origen", option = "D") +
+        labs(title = 'BecaOtorgada vs Origen') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+#Comparativo con beca otorgada GANADO
+
+graph22.1 <- completa_2 %>% dplyr :: select(id,beca_p,ganado)
+
+graph22.1$ganado <- as.factor(graph22.1$ganado)
+
+graph22.1 <- melt(graph22.1, idvars = "id")
+names(graph22.1)[4] <- "Otorgada"
+
+
+
+# Plot Beca Otorgada vs Quintil de Score
+ggplot(graph22.1, aes(x = Otorgada, y = ganado, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Origen", option = "D") +
+        labs(title = 'BecaOtorgada vs Origen') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#                         #PROBABILIDAD DE DOCUMENTAR LOGIT CON SCORE Y PREDICHOS ###
+# 
+# #Comparar con aquellos que si documentaron
+# 
+# modbase <- completa %>% dplyr::select(ganado,score_ctrl,pago_pred,beca_pred)
+# 
+# reg4 <- glm(ganado ~ score_ctrl + pago_pred + beca_pred, data=modbase, family = "binomial")
+# summary(reg4) 
+# 
+# completa$ganadoP <- predict(reg4, newdata = completa, type = "response")
+# 
+# summary(completa$ganadoP)
+# 
+# 
+
+
+
+
+
+
+#-------------------------------------------------------------------------------
+#                       RESULTADOS EN BASE COMPLETA DE SCORE
+#-------------------------------------------------------------------------------
+
+#APLICAR A res_final_sept
+
+res_final_sept <- data.table(res_final_sept, arancel, by = "carr")
+
+names(res_final_sept)
+res_final_sept <- res_final_sept[,-28] 
+res_final_sept <- res_final_sept[,-36] 
+
+
+
+#Predichos
+res_final_sept$arancel_mensual <- res_final_sept$arancel/6
+
+res_final_sept$defi_pred <- predict(reg1, newdata = res_final_sept, type = "response")
+res_final_sept$defi_pred[res_final_sept$defi_pred < 1] <- 1
+
+
+res_final_sept$pago_pred <- (res_final_sept$arancel_mensual)-((res_final_sept$arancel_mensual)/res_final_sept$defi_pred) #Pago faltante
+res_final_sept$beca_pred <- res_final_sept$pago_pred/(res_final_sept$arancel_mensual)
+
+
+
+#Estadisticas descriptivas
+
+summary(res_final_sept$score_ctrl)
+summary(res_final_sept$beca_pred)
+
+#Quintil de score    
+res_final_sept$score_ctrl_c <- quantcut(res_final_sept$score_ctrl, q = 5, na.rm = TRUE)
+
+
+#Score vs Q Ingreso
+
+graph22 <- res_final_sept %>% dplyr :: select(id,score_ctrl,ing_m_f)
+
+graph22 <- melt(graph22, idvars = "id")
+names(graph22)[4] <- "Score"
+
+
+ggplot(graph22, aes(x = Score, y = ing_m_f, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Score vs Quintil') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Score vs Cluster
+
+graph23 <- res_final_sept %>% dplyr :: select(id,score_ctrl,cluster)
+
+graph23 <- melt(graph23, idvars = "id")
+names(graph23)[4] <- "Score"
+
+
+ggplot(graph23, aes(x = Score, y = cluster, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Score vs Cluster') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Score vs Origen
+
+graph28 <- res_final_sept %>% dplyr :: select(id,score_ctrl,origen)
+
+graph28 <- melt(graph28, idvars = "id")
+names(graph28)[4] <- "Score"
+
+
+ggplot(graph28, aes(x = Score, y = origen, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Origen", option = "D") +
+        labs(title = 'Score vs Origen') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+#Score vs Estado
+
+graph29 <- res_final_sept %>% dplyr :: select(id,score_ctrl,estado)
+
+graph29 <- melt(graph29, idvars = "id")
+names(graph29)[4] <- "Score"
+
+
+ggplot(graph29, aes(x = Score, y = estado, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Estado", option = "D") +
+        labs(title = 'Score vs Estado') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+#Quintil score vs Sensibilidad
+
+graph24 <- res_final_sept %>% dplyr :: select(id,score_ctrl_c,beca_pred)
+graph24 <- melt(graph24, idvars = "id")
+
+names(graph24)[4] <- "Predicha"
+
+
+ggplot(graph24, aes(x = Predicha, y = score_ctrl_c, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Score", option = "D") +
+        labs(title = 'Quintil Score vs Predicha') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+
+#Sensibilidad vs Q Ingreso
+
+graph25 <- res_final_sept %>% dplyr :: select(id,beca_pred,ing_m_f)
+
+graph25 <- melt(graph25, idvars = "id")
+names(graph25)[4] <- "Predicha"
+
+
+ggplot(graph25, aes(x = Predicha, y = ing_m_f, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Predicha vs Quintil') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Sensibilidad vs Cluster
+
+graph26 <- res_final_sept %>% dplyr :: select(id,beca_pred,cluster)
+
+graph26 <- melt(graph26, idvars = "id")
+names(graph26)[4] <- "Predicha"
+
+
+ggplot(graph26, aes(x = Predicha, y = cluster, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Cluster", option = "D") +
+        labs(title = 'Predicha vs Cluster') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Sensibilidad vs Origen
+
+graph27 <- res_final_sept %>% dplyr :: select(id,beca_pred,origen)
+
+graph27 <- melt(graph27, idvars = "id")
+names(graph27)[4] <- "Predicha"
+
+
+ggplot(graph27, aes(x = Predicha, y = origen, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Origen", option = "D") +
+        labs(title = 'Predicha vs Origen') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+
+#Sensibilidad vs Estado
+
+graph28 <- res_final_sept %>% dplyr :: select(id,beca_pred,estado)
+
+graph28 <- melt(graph28, idvars = "id")
+names(graph28)[4] <- "Predicha"
+
+
+ggplot(graph28, aes(x = Predicha, y = estado, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Estado", option = "D") +
+        labs(title = 'Predicha vs Estado') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Otro tipo de graficos 
+
+res_final_sept$c_beca_pred <- quantcut(res_final_sept$beca_pred, q = 5, na.rm = TRUE)
+
+res_final_sept$q_beca_pred <- 0
+res_final_sept$q_beca_pred[res_final_sept$beca_pred >= 0.0 & res_final_sept$beca_pred <= 0.10] <- "0% a 10%"
+res_final_sept$q_beca_pred[res_final_sept$beca_pred > 0.10 & res_final_sept$beca_pred <= 0.20] <- "10% a 20%"
+res_final_sept$q_beca_pred[res_final_sept$beca_pred > 0.20 & res_final_sept$beca_pred <= 0.30] <- "20% a 30%"
+res_final_sept$q_beca_pred[res_final_sept$beca_pred > 0.30 & res_final_sept$beca_pred <= 0.40] <- "30% a 40%"
+res_final_sept$q_beca_pred[res_final_sept$beca_pred > 0.40 & res_final_sept$beca_pred <= 0.50] <- "40% a 50%"
+res_final_sept$q_beca_pred[res_final_sept$beca_pred > 0.50 & res_final_sept$beca_pred <= 0.60] <- "50% a 60%"
+res_final_sept$q_beca_pred[res_final_sept$beca_pred > 0.60 & res_final_sept$beca_pred <= 0.70] <- "60% a 70%"
+res_final_sept$q_beca_pred[res_final_sept$beca_pred > 0.70 & res_final_sept$beca_pred <= 0.80] <- "70% a 80%"
+res_final_sept$q_beca_pred[res_final_sept$beca_pred > 0.80 & res_final_sept$beca_pred <= 0.90] <- "80% a 90%"
+res_final_sept$q_beca_pred[res_final_sept$beca_pred > 0.90 & res_final_sept$beca_pred <= 1] <- "90% a 100%"
+
+
+#Origen
+ggplot(res_final_sept, aes(x = q_beca_pred, fill = origen)) +
+        geom_bar(position = position_dodge()) +
+        theme_classic()
+
+
+
+#Cluster
+ggplot(res_final_sept, aes(x = q_beca_pred, fill = cluster)) +
+        geom_bar(position = position_dodge()) +
+        theme_classic()
+
+
+#Quintil score
+ggplot(res_final_sept, aes(x = score_ctrl_c, fill = origen)) +
+        geom_bar(position = position_dodge()) +
+        theme_classic()
+
+
+#Quintil de ingreso familiar                                
+
+ggplot(res_final_sept, aes(x = ing_m_f, fill = origen)) +
+        geom_bar(position = position_dodge()) +
+        theme_classic()
+
+
+
+
+### 
+
+write_xlsx(res_final_sept,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/ProbDoc///base_prob_modelo.xlsx")
+
+
+#-------------------------------------------------------------------------------
+#                     APARTADO COMPARATIVO DE BECAS OTORGADAS VS PREDICHAS
+#-------------------------------------------------------------------------------
+
+names(completa_2)
+
+completa_2$dif_beca <- completa_2$beca_p - completa_2$beca_pred
+hist(completa_2$dif_beca)
+
+##
+
+graph31 <- completa_2 %>% dplyr :: select(id,beca_p,beca_pred)
+
+graph31 <- melt(graph31, idvars = "id")
+names(graph31)[3] <- "Beca"
+
+
+ggplot(graph31, aes(x = Beca, y = variable, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Distribucion", option = "D") +
+        labs(title = 'Predicha vs Otorgada') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+#Scatter de diferencias
+
+
+graph29 <- completa_2 %>% dplyr :: select(id,beca_p,beca_pred,dif_beca,tipo_beca)
+
+graph30 <-  ggplot(completa_2, aes(x=beca_p, y=beca_pred, color=tipo_beca)) + 
+        geom_point(size=2) +
+        theme_ipsum()
+
+ggplotly(graph30, hoverinfo = "text")
+
+#Conteo de veces otorgadas vs predichas
+
+veces_otorgadas <- filter(completa_2,  beca_p > 0)
+veces_predichas <- filter(completa_2,  beca_pred >0)
+
+
+v_ot <- count(veces_otorgadas$tipo_beca)
+
+v_pr <- count(veces_predichas$tipo_beca)
+
+conteo_veces <- merge(v_ot, v_pr, by = "x")
+
+conteo_veces <- rename(conteo_veces, TipoBeca = 'x')
+conteo_veces <- rename(conteo_veces, Otorgadas = 'freq.x')
+conteo_veces <- rename(conteo_veces, Predichas = 'freq.y')
+conteo_veces
+
+#Conteo de veces no otorgadas vs no predichas
+
+veces_no_otorgadas <- filter(completa_2,  beca_p == 0)
+veces_no_predichas <- filter(completa_2,  beca_pred == 0)
+
+
+v_no_ot <- count(veces_no_otorgadas$tipo_beca) #Veces que no se hubiesen otorgado
+
+v_no_pr <- count(veces_no_predichas$tipo_beca)
+
+sum(v_no_ot$freq) #1580 veces
+sum(v_no_pr$freq) #2519 veces
+
+#Grafico de no otorgadas predichas por tipo de beca 
+
+v_no_pr %>%
+        mutate(name = fct_reorder(x, desc(freq))) %>%
+        ggplot( aes(x=x, y=freq)) +
+        geom_bar(stat="identity", fill="#de3e37", alpha=.6, width=0.9) +
+        xlab("") +
+        theme(axis.text.x = element_text(angle = 60, vjust = 1, hjust=1))
+
+
+##Gasto en dinero 
+
+###BECAS OTORGADAS VS PREDICHAS CRUDO
+
+names(completa_2)
+#Para las becas otorgadas
+completa_2$beca_rec <- completa_2$arancel- completa_2$pago
+completa_2$beca_rec[completa_2$beca_d == 0] <- 0
+
+
+#Para las becas predichas
+completa_2$pago_predicho <- completa_2$arancel - ((completa_2$beca_pred)*(completa_2$arancel))
+
+
+completa_2$beca_rec_pred <- completa_2$arancel-(completa_2$pago_predicho)
+completa_2$beca_rec_pred[completa_2$beca_pred == 0] <- 0
+
+sum(completa_2$beca_rec)
+sum(completa_2$beca_rec_pred)
+
+ratio <- sum(completa_2$beca_rec)/sum(completa_2$beca_rec_pred)
+ratio
+
+###CONSIDERANDO SOLO BECAS ADMISIONES Y SU PROCESO DE VENTA
+
+completa_2$default <- 0
+completa_2$default[!c(completa_2$tipo_beca == 'BECA ADMISION' | completa_2$tipo_beca == 'BECA ASISTENCIA FINANCIERA' | 
+                              completa_2$tipo_beca == 'BECA BOOTCAM' | completa_2$tipo_beca == 'BECAS HIBRIDAS' | 
+                              completa_2$tipo_beca == 'BECA TURISMO Y HOSPITALIDAD')] <- 1
+
+#Solo base de becas otorgadas por proceso de negociacion
+completa_2_adm <- filter(completa_2, default == 0)
+
+completa_2_adm$beca_rec <- completa_2_adm$arancel- completa_2_adm$pago
+completa_2_adm$beca_rec[completa_2_adm$beca_d == 0] <- 0
+
+
+completa_2_adm$beca_rec_pred <- completa_2_adm$arancel-(completa_2_adm$pago_predicho)
+completa_2_adm$beca_rec_pred[completa_2_adm$beca_pred == 0] <- 0
+
+sum(completa_2_adm$beca_rec)
+sum(completa_2_adm$beca_rec_pred)
+
+ratio <- sum(completa_2_adm$beca_rec)/sum(completa_2_adm$beca_rec_pred)
+ratio
+
+
+
+##
+
+graph32 <- completa_2_adm %>% dplyr :: select(id,beca_p,beca_pred)
+
+graph32 <- melt(graph32, idvars = "id")
+names(graph32)[3] <- "Beca"
+
+
+ggplot(graph32, aes(x = Beca, y = variable, fill = ..x..)) +
+        geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+        scale_fill_viridis(name = "Distribucion", option = "D") +
+        labs(title = 'Predicha vs Otorgada solo Admisiones') +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                panel.spacing = unit(0.1, "lines"),
+                strip.text.x = element_text(size = 8)
+        )
+
+
+# With transparency 
+p2 <- ggplot(data=graph32, aes(x=Beca, group=variable, fill=variable)) +
+        geom_density(adjust=1.5, alpha=.4) +
+        theme_ipsum()
+p2
+
+
+ggplotly(p2, hoverinfo = "text")
+
+
+###### CARACTERIZACION DE FALSOS NEGATIVOS ########
+
+#Regulares
+completa_2$f_neg <- 0
+completa_2$f_neg[completa_2$beca_pred == 0 & completa_2$beca_p != 0] <- 1
+
+
+#Admisioes
+completa_2_adm$f_neg <- 0
+completa_2_adm$f_neg[completa_2_adm$beca_pred == 0 & completa_2_adm$beca_p != 0] <- 1
+
+
+#base solo para caracteristicas considerando falsos negativos
+
+base_fn <- filter(completa_2, f_neg == 1)
+
+base_fn <- base_fn %>% dplyr::select(origen, prov, sexo, ciclo, edad, carr, cluster, score_ctrl, 
+                                     ing_f, beca_p, defi_pred, pago_pred)
+
+tab1(base_fn$origen, sort.group = "decreasing", cum.percent = TRUE)
+tab1(base_fn$prov, sort.group = "decreasing", cum.percent = TRUE)
+tab1(base_fn$sexo, sort.group = "decreasing", cum.percent = TRUE)
+tab1(base_fn$carr, sort.group = "decreasing", cum.percent = TRUE)
+tab1(base_fn$cluster, sort.group = "decreasing", cum.percent = TRUE)
+
+summary(base_fn$beca_p)
+summary(base_fn$ciclo)
+summary(base_fn$edad)
+summary(base_fn$score_ctrl)
+summary(base_fn$ing_f)
+
+
+#base solo para caracteristicas considerando falsos negativos SOLO ADMISION
+
+base_fn_adm <- filter(completa_2_adm, f_neg == 1)
+
+base_fn_adm <- base_fn_adm %>% dplyr::select(origen, prov, sexo, ciclo, edad, carr, cluster, score_ctrl, 
+                                             ing_f, beca_p, defi_pred, pago_pred)
+
+tab1(base_fn_adm$origen, sort.group = "decreasing", cum.percent = TRUE)
+tab1(base_fn_adm$prov, sort.group = "decreasing", cum.percent = TRUE)
+tab1(base_fn_adm$sexo, sort.group = "decreasing", cum.percent = TRUE)
+tab1(base_fn_adm$carr, sort.group = "decreasing", cum.percent = TRUE)
+tab1(base_fn_adm$cluster, sort.group = "decreasing", cum.percent = TRUE)
+
+summary(base_fn_adm$beca_p)
+summary(base_fn_adm$ciclo)
+summary(base_fn_adm$edad)
+summary(base_fn_adm$score_ctrl)
+summary(base_fn_adm$ing_f)
+
+
+
+
+
+
+
+
+
+
