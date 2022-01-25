@@ -1,0 +1,952 @@
+#------------------------------------------------------------------------------
+                        #MUESTREO ALEATORIO CR VERSION 4
+                        #COORDINACION DE PROYECTOS
+                        #INTELIGENCIA DE LA INFORMACION 
+                        #UDLA
+#------------------------------------------------------------------------------
+
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(pwr)
+library(tidyverse)
+library(lifecycle)
+library(stable)
+library(groupdata2)
+library(DataExplorer)
+
+source("http://news.mrdwab.com/install_github.R")
+install_github("mrdwab/mrdwabmisc")
+library(mrdwabmisc)
+
+alumnos <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/CR-varios/GRUPO CONTROL ESTUDIANTE.xlsx", sheet = "GRUPO CONTROL ESTUDIANTE")
+alumnos <- filter(alumnos, finaliza != 1)
+personal <- read_excel("C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/CR-varios/BASE ENCUESTA DEMOGRÁFICOS CR FINAL.xlsx", sheet = "Base de Datos completa")
+personal <- rename(personal, direccion = 'Dirección')
+personal$Universidad[personal$Universidad == "UNIVERSIDAD U LATINA S.R.L."] <- "ulat"
+personal$Universidad[personal$Universidad == "UNIVERSIDAD AMERICANA UAM S.R.L."] <- "uam"
+
+
+personal$Puesto[personal$Puesto == "DOCENTE ADMINISTRATIVO"] <- "DOCENTE REGULAR"
+
+#PERSONAL DE UNIVERSIDADES
+personal_latina <- filter(personal, Universidad == "ulat")
+personal_americana <- filter(personal, Universidad == "uam")
+
+
+count(personal$`Tipo de Rol`)
+count(personal_latina$`Tipo de Rol`)
+count(personal_latina$Puesto)
+
+count(personal_americana$`Tipo de Rol`)
+count(personal_americana$Puesto)
+
+
+#optimos de size por universidad para significancia estadistica
+size_latina <- sample.size(population = c(84, 422, 1297, 47), samp.size = NULL, c.lev = 95, c.int = NULL,
+                           what = "sample", distribution = 50)
+
+size_americana <- sample.size(population = c(16, 89, 310,3), samp.size = NULL, c.lev = 95, c.int = NULL,
+                              what = "sample", distribution = 50)
+
+#EsTUDIANTES DE UNIVERSIDADES
+alum_latina <- filter(alumnos, universidad == "Universidad Latina de Costa Rica")
+alum_americana <- filter(alumnos, universidad == "Universidad Americana")
+
+alum_latina <- unique(alum_latina)
+alum_americana <- unique(alum_americana)
+
+count(alumnos$universidad)
+
+
+size_alumnos <- sample.size(population = c(8520, 14329), samp.size = NULL, c.lev = 95, c.int = NULL,
+                            what = "sample", distribution = 50)
+
+
+########################## Muestreo V4 ##################################
+
+####################### Administrativos####################### 
+
+
+
+admin_latina <- filter(personal_latina, `Tipo de Rol` == "Administrativos")
+admin_americana <- filter(personal_americana, `Tipo de Rol` == "Administrativos")
+
+count(admin_latina$Departamento)
+count(admin_americana$Departamento)
+
+s_admin_latina <- admin_latina %>% sample_n(250) #tomo mas de los 185 del sample adecuado para cunado se reduzca la muestra quedarme con 195 o cerca
+s_admin_americana <- admin_americana %>% sample_n(85)
+
+count(s_admin_latina$Sede)
+count(s_admin_americana$Sede)
+
+count(s_admin_latina$direccion)
+count(s_admin_americana$direccion)
+
+#LATINA
+#HEREDIA POR DIRECCIONES
+
+
+s_admin_latina_heredia <- filter(s_admin_latina, Sede == "CAMPUS HEREDIA")
+##
+count(s_admin_latina_heredia$direccion)
+##
+#
+s_admin_latina_heredia_finanzas <- filter(s_admin_latina_heredia, direccion == "DIRECCION DE FINANZAS")
+s_admin_latina_heredia_finanzas <- group(s_admin_latina_heredia_finanzas,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_heredia_finanzas <- rename(s_admin_latina_heredia_finanzas, grupo = '.groups')
+
+s_admin_latina_heredia_finanzas$grupo_asignado <- paste(s_admin_latina_heredia_finanzas$Universidad, 
+                                                        s_admin_latina_heredia_finanzas$Sede,
+                                                        s_admin_latina_heredia_finanzas$direccion, 
+                                                        s_admin_latina_heredia_finanzas$grupo, sep = '_')
+#
+
+s_admin_latina_heredia_infra <- filter(s_admin_latina_heredia, direccion == "DIRECCION DE INFRAESTRUCTURA Y SEG")
+s_admin_latina_heredia_infra <- group(s_admin_latina_heredia_infra,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                         allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                         randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_heredia_infra <- rename(s_admin_latina_heredia_infra, grupo = '.groups')
+
+s_admin_latina_heredia_infra$grupo_asignado <- paste(s_admin_latina_heredia_infra$Universidad, 
+                                                     s_admin_latina_heredia_infra$Sede,
+                                                     s_admin_latina_heredia_infra$direccion, 
+                                                     s_admin_latina_heredia_infra$grupo, sep = '_')
+#
+
+s_admin_latina_heredia_admisiones <- filter(s_admin_latina_heredia, direccion == "GERENCIA DE ADMISIONES")
+s_admin_latina_heredia_admisiones <- group(s_admin_latina_heredia_admisiones,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                   allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                   randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_heredia_admisiones <- rename(s_admin_latina_heredia_admisiones, grupo = '.groups')
+
+s_admin_latina_heredia_admisiones$grupo_asignado <- paste(s_admin_latina_heredia_admisiones$Universidad, 
+                                                          s_admin_latina_heredia_admisiones$Sede,
+                                                          s_admin_latina_heredia_admisiones$direccion, 
+                                                          s_admin_latina_heredia_admisiones$grupo, sep = '_')
+
+#
+
+s_admin_latina_heredia_rect <- filter(s_admin_latina_heredia, direccion == "RECTORIA")
+s_admin_latina_heredia_rect <- group(s_admin_latina_heredia_rect,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                           allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                           randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_heredia_rect <- rename(s_admin_latina_heredia_rect, grupo = '.groups')
+
+s_admin_latina_heredia_rect$grupo_asignado <- paste(s_admin_latina_heredia_rect$Universidad, 
+                                                    s_admin_latina_heredia_rect$Sede,
+                                                    s_admin_latina_heredia_rect$direccion, 
+                                                    s_admin_latina_heredia_rect$grupo, sep = '_')
+
+s_admin_latina_heredia<- do.call("rbind", list(s_admin_latina_heredia_finanzas, s_admin_latina_heredia_infra,
+                                               s_admin_latina_heredia_admisiones, s_admin_latina_heredia_rect))
+
+
+#
+
+# SEDE SAN PEDRO POR DIRECCIONES
+
+s_admin_latina_pedro <- filter(s_admin_latina, Sede == "SEDE SAN PEDRO")
+##
+count(s_admin_latina_pedro$direccion)
+##
+#
+s_admin_latina_pedro_finanzas <- filter(s_admin_latina_pedro, direccion == "DIRECCION DE FINANZAS")
+s_admin_latina_pedro_finanzas <- group(s_admin_latina_pedro_finanzas,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                       allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                       randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_pedro_finanzas <- rename(s_admin_latina_pedro_finanzas, grupo = '.groups')
+
+s_admin_latina_pedro_finanzas$grupo_asignado <- paste(s_admin_latina_pedro_finanzas$Universidad, 
+                                                      s_admin_latina_pedro_finanzas$Sede,
+                                                      s_admin_latina_pedro_finanzas$direccion, 
+                                                      s_admin_latina_pedro_finanzas$grupo, sep = '_')
+#
+
+s_admin_latina_pedro_infra <- filter(s_admin_latina_pedro, direccion == "DIRECCION DE INFRAESTRUCTURA Y SEG")
+s_admin_latina_pedro_infra <- group(s_admin_latina_pedro_infra,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                    allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                    randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_pedro_infra <- rename(s_admin_latina_pedro_infra, grupo = '.groups')
+
+s_admin_latina_pedro_infra$grupo_asignado <- paste(s_admin_latina_pedro_infra$Universidad, 
+                                                   s_admin_latina_pedro_infra$Sede,
+                                                   s_admin_latina_pedro_infra$direccion, 
+                                                   s_admin_latina_pedro_infra$grupo, sep = '_')
+
+#
+
+s_admin_latina_pedro_mkt <- filter(s_admin_latina_pedro, direccion == "DIRECCION DE MERCADEO")
+s_admin_latina_pedro_mkt <- group(s_admin_latina_pedro_mkt,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                    allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                    randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_pedro_mkt <- rename(s_admin_latina_pedro_mkt, grupo = '.groups')
+
+s_admin_latina_pedro_mkt$grupo_asignado <- paste(s_admin_latina_pedro_mkt$Universidad, 
+                                                 s_admin_latina_pedro_mkt$Sede,
+                                                 s_admin_latina_pedro_mkt$direccion, 
+                                                 s_admin_latina_pedro_mkt$grupo, sep = '_')
+
+#
+
+
+s_admin_latina_pedro_rrhh <- filter(s_admin_latina_pedro, direccion == "DIRECCION DE RRHH")
+s_admin_latina_pedro_rrhh <- group(s_admin_latina_pedro_rrhh,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                  allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                  randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_pedro_rrhh <- rename(s_admin_latina_pedro_rrhh, grupo = '.groups')
+
+s_admin_latina_pedro_rrhh$grupo_asignado <- paste(s_admin_latina_pedro_rrhh$Universidad, 
+                                                  s_admin_latina_pedro_rrhh$Sede,
+                                                  s_admin_latina_pedro_rrhh$direccion, 
+                                                  s_admin_latina_pedro_rrhh$grupo, sep = '_')
+
+#
+
+s_admin_latina_pedro_ti <- filter(s_admin_latina_pedro, direccion == "DIRECCION DE TI")
+s_admin_latina_pedro_ti <- group(s_admin_latina_pedro_ti,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                   allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                   randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_pedro_ti <- rename(s_admin_latina_pedro_ti, grupo = '.groups')
+
+s_admin_latina_pedro_ti$grupo_asignado <- paste(s_admin_latina_pedro_ti$Universidad, 
+                                                s_admin_latina_pedro_ti$Sede,
+                                                s_admin_latina_pedro_ti$direccion, 
+                                                s_admin_latina_pedro_ti$grupo, sep = '_')
+
+#
+
+s_admin_latina_pedro_admisiones <- filter(s_admin_latina_pedro, direccion == "GERENCIA DE ADMISIONES")
+s_admin_latina_pedro_admisiones <- group(s_admin_latina_pedro_admisiones,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                 allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                 randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_pedro_admisiones <- rename(s_admin_latina_pedro_admisiones, grupo = '.groups')
+
+s_admin_latina_pedro_admisiones$grupo_asignado <- paste(s_admin_latina_pedro_admisiones$Universidad, 
+                                                        s_admin_latina_pedro_admisiones$Sede,
+                                                        s_admin_latina_pedro_admisiones$direccion, 
+                                                        s_admin_latina_pedro_admisiones$grupo, sep = '_')
+
+#
+
+s_admin_latina_pedro_relac <- filter(s_admin_latina_pedro, direccion == "GERENCIA DE RELACIONAMIENTO")
+s_admin_latina_pedro_relac <- group(s_admin_latina_pedro_relac,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                         allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                         randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_pedro_relac <- rename(s_admin_latina_pedro_relac, grupo = '.groups')
+
+s_admin_latina_pedro_relac$grupo_asignado <- paste(s_admin_latina_pedro_relac$Universidad, 
+                                                   s_admin_latina_pedro_relac$Sede,
+                                                   s_admin_latina_pedro_relac$direccion, 
+                                                   s_admin_latina_pedro_relac$grupo, sep = '_')
+
+#
+
+s_admin_latina_pedro_rect <- filter(s_admin_latina_pedro, direccion == "RECTORIA")
+s_admin_latina_pedro_rect <- group(s_admin_latina_pedro_rect,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                    allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                    randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_pedro_rect <- rename(s_admin_latina_pedro_rect, grupo = '.groups')
+
+s_admin_latina_pedro_rect$grupo_asignado <- paste(s_admin_latina_pedro_rect$Universidad, 
+                                                  s_admin_latina_pedro_rect$Sede,
+                                                  s_admin_latina_pedro_rect$direccion, 
+                                                  s_admin_latina_pedro_rect$grupo, sep = '_')
+
+#
+
+
+s_admin_latina_pedro<- do.call("rbind", list(s_admin_latina_pedro_finanzas, s_admin_latina_pedro_infra,
+                                             s_admin_latina_pedro_mkt, s_admin_latina_pedro_rrhh,
+                                             s_admin_latina_pedro_ti,s_admin_latina_pedro_admisiones,
+                                             s_admin_latina_pedro_relac,s_admin_latina_pedro_rect))
+
+# SEDE SANTA CRUZ POR DIRECCIONES
+
+s_admin_latina_cruz <- filter(s_admin_latina, Sede == "SEDE SANTA CRUZ")
+##
+count(s_admin_latina_cruz$direccion)
+
+#
+
+s_admin_latina_cruz_admisiones <- filter(s_admin_latina_cruz, direccion == "GERENCIA DE ADMISIONES")
+s_admin_latina_cruz_admisiones <- group(s_admin_latina_cruz_admisiones,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                         allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                         randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_latina_cruz_admisiones <- rename(s_admin_latina_cruz_admisiones, grupo = '.groups')
+
+s_admin_latina_cruz_admisiones$grupo_asignado <- paste(s_admin_latina_cruz_admisiones$Universidad, 
+                                                       s_admin_latina_cruz_admisiones$Sede,
+                                                       s_admin_latina_cruz_admisiones$direccion, 
+                                                       s_admin_latina_cruz_admisiones$grupo, sep = '_')
+
+# 
+s_admin_latina_cruz<- do.call("rbind", list(s_admin_latina_cruz_admisiones))
+#
+
+####CONSOLIDADO DEPARTAMENTOS DE LATINA####
+
+s_admin_latina<- do.call("rbind", list(s_admin_latina_heredia,s_admin_latina_pedro,s_admin_latina_cruz))
+
+reporte_admin_latina <- create_report(s_admin_latina)
+
+count(s_admin_latina$Sede)
+table(s_admin_latina$direccion,s_admin_latina$Sede)
+
+
+####AMERICANA
+
+count(s_admin_americana$Sede)
+
+#SEDE CARTAGO POR DIRECCIONES
+
+s_admin_americana_cartago <- filter(s_admin_americana, Sede == "SEDE CARTAGO")
+##
+count(s_admin_americana_cartago$direccion)
+##
+#
+
+s_admin_americana_cartago_admisiones <- filter(s_admin_americana_cartago, direccion == "GERENCIA DE ADMISIONES")
+s_admin_americana_cartago_admisiones <- group(s_admin_americana_cartago_admisiones,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                        allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                        randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_americana_cartago_admisiones <- rename(s_admin_americana_cartago_admisiones, grupo = '.groups')
+
+s_admin_americana_cartago_admisiones$grupo_asignado <- paste(s_admin_americana_cartago_admisiones$Universidad, 
+                                                             s_admin_americana_cartago_admisiones$Sede,
+                                                             s_admin_americana_cartago_admisiones$direccion, 
+                                                             s_admin_americana_cartago_admisiones$grupo, sep = '_')
+
+# 
+s_admin_americana_cartago<- do.call("rbind", list(s_admin_americana_cartago_admisiones))
+
+#SEDE HEREDIA POR DIRECCIONES
+
+s_admin_americana_heredia <- filter(s_admin_americana, Sede == "SEDE HEREDIA")
+##
+count(s_admin_americana_heredia$direccion)
+##
+#
+s_admin_americana_heredia_infra <- filter(s_admin_americana_heredia, direccion == "DIRECCION DE INFRAESTRUCTURA Y SEG")
+s_admin_americana_heredia_infra <- group(s_admin_americana_heredia_infra,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                              allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                              randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_americana_heredia_infra <- rename(s_admin_americana_heredia_infra, grupo = '.groups')
+
+s_admin_americana_heredia_infra$grupo_asignado <- paste(s_admin_americana_heredia_infra$Universidad, 
+                                                        s_admin_americana_heredia_infra$Sede,
+                                                        s_admin_americana_heredia_infra$direccion, 
+                                                        s_admin_americana_heredia_infra$grupo, sep = '_')
+#
+
+s_admin_americana_heredia_admisiones <- filter(s_admin_americana_heredia, direccion == "GERENCIA DE ADMISIONES")
+s_admin_americana_heredia_admisiones <- group(s_admin_americana_heredia_admisiones,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                         allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                         randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_americana_heredia_admisiones <- rename(s_admin_americana_heredia_admisiones, grupo = '.groups')
+
+s_admin_americana_heredia_admisiones$grupo_asignado <- paste(s_admin_americana_heredia_admisiones$Universidad, 
+                                                             s_admin_americana_heredia_admisiones$Sede,
+                                                             s_admin_americana_heredia_admisiones$direccion, 
+                                                             s_admin_americana_heredia_admisiones$grupo, sep = '_')
+
+# 
+s_admin_americana_heredia<- do.call("rbind", list(s_admin_americana_heredia_infra,s_admin_americana_heredia_admisiones))
+
+#SEDE SAN JOSE POR DIRECCIONES
+
+s_admin_americana_jose <- filter(s_admin_americana, Sede == "SEDE SAN JOSE")
+##
+count(s_admin_americana_jose$direccion)
+##
+#
+s_admin_americana_jose_finanzas <- filter(s_admin_americana_jose, direccion == "DIRECCION DE FINANZAS")
+s_admin_americana_jose_finanzas <- group(s_admin_americana_jose_finanzas,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                              allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                              randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_americana_jose_finanzas <- rename(s_admin_americana_jose_finanzas, grupo = '.groups')
+
+s_admin_americana_jose_finanzas$grupo_asignado <- paste(s_admin_americana_jose_finanzas$Universidad, 
+                                                             s_admin_americana_jose_finanzas$Sede,
+                                                             s_admin_americana_jose_finanzas$direccion, 
+                                                             s_admin_americana_jose_finanzas$grupo, sep = '_')
+#
+s_admin_americana_jose_infra <- filter(s_admin_americana_jose, direccion == "DIRECCION DE INFRAESTRUCTURA Y SEG")
+s_admin_americana_jose_infra <- group(s_admin_americana_jose_infra,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                         allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                         randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_americana_jose_infra <- rename(s_admin_americana_jose_infra, grupo = '.groups')
+
+s_admin_americana_jose_infra$grupo_asignado <- paste(s_admin_americana_jose_infra$Universidad, 
+                                                     s_admin_americana_jose_infra$Sede,
+                                                     s_admin_americana_jose_infra$direccion, 
+                                                     s_admin_americana_jose_infra$grupo, sep = '_')
+#
+
+s_admin_americana_jose_mkt <- filter(s_admin_americana_jose, direccion == "DIRECCION DE MERCADEO")
+s_admin_americana_jose_mkt <- group(s_admin_americana_jose_mkt,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                      allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                      randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_americana_jose_mkt <- rename(s_admin_americana_jose_mkt, grupo = '.groups')
+
+s_admin_americana_jose_mkt$grupo_asignado <- paste(s_admin_americana_jose_mkt$Universidad, 
+                                                   s_admin_americana_jose_mkt$Sede,
+                                                   s_admin_americana_jose_mkt$direccion, 
+                                                   s_admin_americana_jose_mkt$grupo, sep = '_')
+
+#
+
+s_admin_americana_jose_admisiones <- filter(s_admin_americana_jose, direccion == "GERENCIA DE ADMISIONES")
+s_admin_americana_jose_admisiones <- group(s_admin_americana_jose_admisiones,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                    allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                    randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_americana_jose_admisiones <- rename(s_admin_americana_jose_admisiones, grupo = '.groups')
+
+s_admin_americana_jose_admisiones$grupo_asignado <- paste(s_admin_americana_jose_admisiones$Universidad, 
+                                                          s_admin_americana_jose_admisiones$Sede,
+                                                          s_admin_americana_jose_admisiones$direccion, 
+                                                          s_admin_americana_jose_admisiones$grupo, sep = '_')
+#
+
+s_admin_americana_jose_relac <- filter(s_admin_americana_jose, direccion == "GERENCIA DE RELACIONAMIENTO")
+s_admin_americana_jose_relac <- group(s_admin_americana_jose_relac,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                           allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                           randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_americana_jose_relac <- rename(s_admin_americana_jose_relac, grupo = '.groups')
+
+s_admin_americana_jose_relac$grupo_asignado <- paste(s_admin_americana_jose_relac$Universidad, 
+                                                     s_admin_americana_jose_relac$Sede,
+                                                     s_admin_americana_jose_relac$direccion, 
+                                                     s_admin_americana_jose_relac$grupo, sep = '_')
+
+#
+
+s_admin_americana_jose_rect <- filter(s_admin_americana_jose, direccion == "RECTORIA")
+s_admin_americana_jose_rect <- group(s_admin_americana_jose_rect,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                      allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                      randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_admin_americana_jose_rect <- rename(s_admin_americana_jose_rect, grupo = '.groups')
+
+s_admin_americana_jose_rect$grupo_asignado <- paste(s_admin_americana_jose_rect$Universidad, 
+                                                    s_admin_americana_jose_rect$Sede,
+                                                    s_admin_americana_jose_rect$direccion, 
+                                                    s_admin_americana_jose_rect$grupo, sep = '_')
+
+
+# 
+s_admin_americana_jose<- do.call("rbind", list(s_admin_americana_jose_finanzas,s_admin_americana_jose_infra, 
+                                               s_admin_americana_jose_mkt, s_admin_americana_jose_admisiones,
+                                               s_admin_americana_jose_rect, s_admin_americana_jose_relac))
+
+
+####CONSOLIDADO DEPARTAMENTOS DE AMERICANA####
+
+s_admin_americana<- do.call("rbind", list(s_admin_americana_cartago,s_admin_americana_heredia,s_admin_americana_jose))
+
+reporte_admin_americana <- create_report(s_admin_americana)
+
+count(s_admin_americana$Sede)
+table(s_admin_americana$direccion,s_admin_americana$Sede)
+
+####CONSOLIDADO ADMINISTRATIVOS####
+
+s_admin <- do.call("rbind", list(s_admin_americana,s_admin_latina))
+
+names(s_admin_americana)
+names(s_admin_latina)
+
+##
+write_xlsx(s_admin,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/CR-varios///sample_administrativosV4.xlsx")
+
+
+
+
+
+#########################Academicos Admin#####################################
+
+
+ac.adm_latina <- filter(personal_latina, `Tipo de Rol` == "Académico - Administrativos")
+ac.adm_americana <- filter(personal_americana, `Tipo de Rol` == "Académico - Administrativos")
+
+ac.adm_latina <- ac.adm_latina %>% sample_n(45)
+ac.adm_americana <- ac.adm_americana %>% sample_n(10)
+
+count(ac.adm_latina$Sede)
+count(ac.adm_americana$Sede)
+
+#LATINA
+
+#SEDE HEREDIA
+
+s_ac.adm_latina_heredia <- filter(ac.adm_latina, Sede == "CAMPUS HEREDIA")
+##
+#
+s_ac.adm_latina_heredia <- group(s_ac.adm_latina_heredia,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                         allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                         randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_ac.adm_latina_heredia <- rename(s_ac.adm_latina_heredia, grupo = '.groups')
+
+s_ac.adm_latina_heredia$grupo_asignado <- paste(s_ac.adm_latina_heredia$Universidad, 
+                                                s_ac.adm_latina_heredia$Sede,
+                                                s_ac.adm_latina_heredia$direccion, 
+                                                s_ac.adm_latina_heredia$grupo, sep = '_')
+#SEDE SAN PEDRO 
+
+
+s_ac.adm_latina_pedro <- filter(ac.adm_latina, Sede == "SEDE SAN PEDRO")
+##
+#
+s_ac.adm_latina_pedro <- group(s_ac.adm_latina_pedro,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                 allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                 randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_ac.adm_latina_pedro <- rename(s_ac.adm_latina_pedro, grupo = '.groups')
+
+s_ac.adm_latina_pedro$grupo_asignado <- paste(s_ac.adm_latina_pedro$Universidad, 
+                                              s_ac.adm_latina_pedro$Sede,
+                                              s_ac.adm_latina_pedro$direccion, 
+                                              s_ac.adm_latina_pedro$grupo, sep = '_')
+
+# 
+s_ac.adm_latina<- do.call("rbind", list(s_ac.adm_latina_heredia,s_ac.adm_latina_pedro))
+
+reporte_ac.adm_latina <- create_report(s_ac.adm_latina)
+
+count(s_ac.adm_latina$Sede)
+table(s_ac.adm_latina$direccion,s_ac.adm_latina$Sede)
+
+
+
+
+#AMERICANA
+#SEDE SAN JOSE 
+
+s_ac.adm_americana_jose <- filter(ac.adm_americana, Sede == "SEDE SAN JOSE")
+##
+#
+s_ac.adm_americana_jose <- group(s_ac.adm_americana_jose,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                               allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                               randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_ac.adm_americana_jose <- rename(s_ac.adm_americana_jose, grupo = '.groups')
+
+s_ac.adm_americana_jose$grupo_asignado <- paste(s_ac.adm_americana_jose$Universidad, 
+                                                s_ac.adm_americana_jose$Sede,
+                                                s_ac.adm_americana_jose$direccion, 
+                                                s_ac.adm_americana_jose$grupo, sep = '_')
+
+# 
+s_ac.adm_americana<- do.call("rbind", list(s_ac.adm_americana))
+
+reporte_ac.adm_americana <- create_report(s_ac.adm_americana)
+
+count(s_ac.adm_americana$Sede)
+table(s_ac.adm_americana$direccion,s_ac.adm_americana$Sede)
+
+
+####CONSOLIDADO ADMINISTRATIVOS-ACADEMICOS####
+
+s_ac.adm <- do.call("rbind", list(s_ac.adm_americana,s_ac.adm_latina))
+
+##
+write_xlsx(s_ac.adm,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/CR-varios///sample_ac.admV4.xlsx")
+
+
+#######################  DOCENTES #####################################
+
+docentes_latina_tc <- filter(personal_latina, (`Tipo de Rol` == "Docentes" & Puesto == "DOCENTE TIEMPO COMPLETO"))
+docentes_latina_tm <- filter(personal_latina, (`Tipo de Rol` == "Docentes" & Puesto == "DOCENTE REGULAR"))
+
+docentes_americana_tc <- filter(personal_americana, (`Tipo de Rol` == "Docentes" & Puesto == "DOCENTE TIEMPO COMPLETO"))
+docentes_americana_tm <- filter(personal_americana, (`Tipo de Rol` == "Docentes" & Puesto == "DOCENTE REGULAR"))
+
+docentes_americana_tc <- docentes_americana_tc %>% sample_n(3)
+docentes_americana_tm <- docentes_americana_tm %>% sample_n(154)
+
+docentes_latina_tc <- docentes_latina_tc %>% sample_n(42)
+docentes_latina_tm <- docentes_latina_tm %>% sample_n(245)
+
+#######################  DOCENTES TC #####################################
+
+count(docentes_latina_tc$Sede)
+count(docentes_americana_tc$Sede)
+
+#LATINA
+
+#SEDE HEREDIA
+
+s_doc_tc_latina_heredia <- filter(docentes_latina_tc, Sede == "CAMPUS HEREDIA")
+##
+#
+s_doc_tc_latina_heredia <- group(s_doc_tc_latina_heredia,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                 allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                 randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tc_latina_heredia <- rename(s_doc_tc_latina_heredia, grupo = '.groups')
+
+s_doc_tc_latina_heredia$grupo_asignado <- paste(s_doc_tc_latina_heredia$Universidad, 
+                                                s_doc_tc_latina_heredia$Sede,
+                                                s_doc_tc_latina_heredia$Departamento, 
+                                                s_doc_tc_latina_heredia$grupo, sep = '_')
+
+
+
+#SEDE SAN PEDRO 
+
+s_doc_tc_latina_pedro <- filter(docentes_latina_tc, Sede == "SEDE SAN PEDRO")
+##
+#
+s_doc_tc_latina_pedro <- group(s_doc_tc_latina_pedro,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                 allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                 randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tc_latina_pedro <- rename(s_doc_tc_latina_pedro, grupo = '.groups')
+
+s_doc_tc_latina_pedro$grupo_asignado <- paste(s_doc_tc_latina_pedro$Universidad, 
+                                              s_doc_tc_latina_pedro$Sede,
+                                              s_doc_tc_latina_pedro$Departamento, 
+                                              s_doc_tc_latina_pedro$grupo, sep = '_')
+
+# 
+s_doc_tc_latina<- do.call("rbind", list(s_doc_tc_latina_heredia,s_doc_tc_latina_pedro))
+
+reporte_doc_tc_latina <- create_report(s_doc_tc_latina)
+
+count(s_doc_tc_latina$Sede)
+
+
+#AMERICANA
+
+#SEDE SAN JOSE
+
+s_doc_tc_americana_jose <- filter(docentes_americana_tc, Sede == "SEDE SAN JOSE")
+##
+#
+s_doc_tc_americana_jose <- group(s_doc_tc_americana_jose,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                 allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                 randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tc_americana_jose <- rename(s_doc_tc_americana_jose, grupo = '.groups')
+
+s_doc_tc_americana_jose$grupo_asignado <- paste(s_doc_tc_americana_jose$Universidad, 
+                                                s_doc_tc_americana_jose$Sede,
+                                                s_doc_tc_americana_jose$Departamento, 
+                                                s_doc_tc_americana_jose$grupo, sep = '_')
+# 
+s_doc_tc_americana<- do.call("rbind", list(s_doc_tc_americana_jose))
+
+reporte_doc_tc_americana <- create_report(s_doc_tc_americana)
+
+count(s_doc_tc_americana$Sede)
+
+
+####CONSOLIDADO DOCENTES TC####
+
+s_doc_tc <- do.call("rbind", list(s_doc_tc_latina,s_doc_tc_americana))
+
+
+#######################  DOCENTES TM #####################################
+
+count(docentes_latina_tm$Sede)
+count(docentes_americana_tm$Sede)
+
+#LATINA
+
+#CAMPUS HEREDIA
+
+s_doc_tm_latina_heredia <- filter(docentes_latina_tm, Sede == "CAMPUS HEREDIA")
+##
+#
+s_doc_tm_latina_heredia <- group(s_doc_tm_latina_heredia,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                 allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                 randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_latina_heredia <- rename(s_doc_tm_latina_heredia, grupo = '.groups')
+
+s_doc_tm_latina_heredia$grupo_asignado <- paste(s_doc_tm_latina_heredia$Universidad, 
+                                                s_doc_tm_latina_heredia$Sede,
+                                                s_doc_tm_latina_heredia$Departamento, 
+                                                s_doc_tm_latina_heredia$grupo, sep = '_')
+
+#
+
+#SEDE CIUDAD NEILY
+
+s_doc_tm_latina_neily <- filter(docentes_latina_tm, Sede == "SEDE CIUDAD NEILY")
+##
+#
+s_doc_tm_latina_neily <- group(s_doc_tm_latina_neily,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                 allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                 randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_latina_neily <- rename(s_doc_tm_latina_neily, grupo = '.groups')
+
+s_doc_tm_latina_neily$grupo_asignado <- paste(s_doc_tm_latina_neily$Universidad, 
+                                              s_doc_tm_latina_neily$Sede,
+                                              s_doc_tm_latina_neily$Departamento, 
+                                              s_doc_tm_latina_neily$grupo, sep = '_')
+#SEDE GRECIA
+
+s_doc_tm_latina_grecia <- filter(docentes_latina_tm, Sede == "SEDE GRECIA")
+##
+#
+s_doc_tm_latina_grecia <- group(s_doc_tm_latina_grecia,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                               allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                               randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_latina_grecia <- rename(s_doc_tm_latina_grecia, grupo = '.groups')
+
+s_doc_tm_latina_grecia$grupo_asignado <- paste(s_doc_tm_latina_grecia$Universidad, 
+                                               s_doc_tm_latina_grecia$Sede,
+                                               s_doc_tm_latina_grecia$Departamento, 
+                                               s_doc_tm_latina_grecia$grupo, sep = '_')
+
+#SEDE GUAPILES
+
+s_doc_tm_latina_guapiles <- filter(docentes_latina_tm, Sede == "SEDE GUAPILES")
+##
+#
+s_doc_tm_latina_guapiles <- group(s_doc_tm_latina_guapiles,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_latina_guapiles <- rename(s_doc_tm_latina_guapiles, grupo = '.groups')
+
+s_doc_tm_latina_guapiles$grupo_asignado <- paste(s_doc_tm_latina_guapiles$Universidad, 
+                                                 s_doc_tm_latina_guapiles$Sede,
+                                                 s_doc_tm_latina_guapiles$Departamento, 
+                                                 s_doc_tm_latina_guapiles$grupo, sep = '_')
+
+#SEDE PEREZ ZELEDON
+
+s_doc_tm_latina_perez <- filter(docentes_latina_tm, Sede == "SEDE PEREZ ZELEDON")
+##
+#
+s_doc_tm_latina_perez <- group(s_doc_tm_latina_perez,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                  allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                  randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_latina_perez <- rename(s_doc_tm_latina_perez, grupo = '.groups')
+
+s_doc_tm_latina_perez$grupo_asignado <- paste(s_doc_tm_latina_perez$Universidad, 
+                                              s_doc_tm_latina_perez$Sede,
+                                              s_doc_tm_latina_perez$Departamento, 
+                                              s_doc_tm_latina_perez$grupo, sep = '_')
+
+
+#SEDE SAN PEDRO
+
+s_doc_tm_latina_pedro <- filter(docentes_latina_tm, Sede == "SEDE SAN PEDRO")
+##
+#
+s_doc_tm_latina_pedro <- group(s_doc_tm_latina_pedro,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                               allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                               randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_latina_pedro <- rename(s_doc_tm_latina_pedro, grupo = '.groups')
+
+s_doc_tm_latina_pedro$grupo_asignado <- paste(s_doc_tm_latina_pedro$Universidad, 
+                                              s_doc_tm_latina_pedro$Sede,
+                                              s_doc_tm_latina_pedro$Departamento, 
+                                              s_doc_tm_latina_pedro$grupo, sep = '_')
+
+
+#SEDE SEDE SANTA CRUZ
+
+s_doc_tm_latina_cruz <- filter(docentes_latina_tm, Sede == "SEDE SANTA CRUZ")
+##
+#
+s_doc_tm_latina_cruz <- group(s_doc_tm_latina_cruz,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                               allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                               randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_latina_cruz <- rename(s_doc_tm_latina_cruz, grupo = '.groups')
+
+s_doc_tm_latina_cruz$grupo_asignado <- paste(s_doc_tm_latina_cruz$Universidad, 
+                                             s_doc_tm_latina_cruz$Sede,
+                                             s_doc_tm_latina_cruz$Departamento, 
+                                             s_doc_tm_latina_cruz$grupo, sep = '_')
+
+
+# 
+s_doc_tm_latina <- do.call("rbind", list(s_doc_tm_latina_cruz,s_doc_tm_latina_grecia, 
+                                         s_doc_tm_latina_guapiles, s_doc_tm_latina_heredia, 
+                                         s_doc_tm_latina_neily, s_doc_tm_latina_pedro, s_doc_tm_latina_perez))
+
+#
+
+reporte_doc_tm_latina <- create_report(s_doc_tm_latina)
+
+count(s_doc_tm_latina$Sede)
+
+
+
+#AMERICANA
+
+#SEDE CARTAGO
+
+s_doc_tm_americana_cartago <- filter(docentes_americana_tm, Sede == "SEDE CARTAGO")
+##
+#
+s_doc_tm_americana_cartago <- group(s_doc_tm_americana_cartago,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                 allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                 randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_americana_cartago <- rename(s_doc_tm_americana_cartago, grupo = '.groups')
+
+s_doc_tm_americana_cartago$grupo_asignado <- paste(s_doc_tm_americana_cartago$Universidad, 
+                                                   s_doc_tm_americana_cartago$Sede,
+                                                   s_doc_tm_americana_cartago$Departamento, 
+                                                   s_doc_tm_americana_cartago$grupo, sep = '_')
+
+#
+
+#SEDE HEREDIA
+
+s_doc_tm_americana_heredia <- filter(docentes_americana_tm, Sede == "SEDE HEREDIA")
+##
+#
+s_doc_tm_americana_heredia <- group(s_doc_tm_americana_heredia,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                    allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                    randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_americana_heredia <- rename(s_doc_tm_americana_heredia, grupo = '.groups')
+
+s_doc_tm_americana_heredia$grupo_asignado <- paste(s_doc_tm_americana_heredia$Universidad, 
+                                                   s_doc_tm_americana_heredia$Sede,
+                                                   s_doc_tm_americana_heredia$Departamento, 
+                                                   s_doc_tm_americana_heredia$grupo, sep = '_')
+
+#
+
+#SEDE SAN JOSE
+
+s_doc_tm_americana_jose <- filter(docentes_americana_tm, Sede == "SEDE SAN JOSE")
+##
+#
+s_doc_tm_americana_jose <- group(s_doc_tm_americana_jose,3,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                    allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                    randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_doc_tm_americana_jose <- rename(s_doc_tm_americana_jose, grupo = '.groups')
+
+s_doc_tm_americana_jose$grupo_asignado <- paste(s_doc_tm_americana_jose$Universidad, 
+                                                s_doc_tm_americana_jose$Sede,
+                                                s_doc_tm_americana_jose$Departamento, 
+                                                s_doc_tm_americana_jose$grupo, sep = '_')
+
+#
+
+s_doc_tm_americana <- do.call("rbind", list(s_doc_tm_americana_jose,s_doc_tm_americana_cartago, 
+                                            s_doc_tm_americana_heredia))
+
+reporte_doc_tm_americana <- create_report(s_doc_tm_americana)
+
+count(s_doc_tm_americana$Sede)
+
+####CONSOLIDADO DOCENTES TM####
+
+s_doc_tm <- do.call("rbind", list(s_doc_tm_americana,s_doc_tm_latina))
+
+####CONSOLIDADO DOCENTES ####
+
+s_doc <- do.call("rbind", list(s_doc_tm,s_doc_tc))
+
+
+##
+write_xlsx(s_doc,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/CR-varios///sample_docentesV4.xlsx")
+
+
+
+#######################  ALUMNOS #####################################
+
+alumnos$universidad[alumnos$universidad == "Universidad Latina de Costa Rica"] <- "ulat"
+alumnos$universidad[alumnos$universidad == "Universidad Americana"] <- "uam"
+alumnos <- filter(alumnos, finaliza != 1)
+
+alum_latina <- filter(alumnos, universidad == "ulat")
+alum_americana <- filter(alumnos, universidad == "uam")
+
+alum_latina <- alum_latina %>% sample_n(375)
+alum_americana <- alum_americana %>% sample_n(370)
+
+
+#LATINA
+
+
+s_alum_latina <- group(alum_latina,21,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                                 allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                                 randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_alum_latina <- rename(s_alum_latina, grupo = '.groups')
+
+s_alum_latina$grupo_asignado <- paste(s_alum_latina$universidad, 
+                                      s_alum_latina$facul,
+                                      s_alum_latina$grupo, sep = '_')
+
+reporte_alum_latina <- create_report(s_alum_latina)
+
+count(s_alum_latina$facul)
+
+#AMERICANA
+
+
+s_alum_americana <- group(alum_americana,21,method = "n_dist",starts_col = NULL,force_equal = FALSE,
+                       allow_zero = FALSE,return_factor = FALSE,descending = FALSE,
+                       randomize = FALSE,col_name = ".groups",remove_missing_starts = FALSE)
+s_alum_americana <- rename(s_alum_americana, grupo = '.groups')
+
+s_alum_americana$grupo_asignado <- paste(s_alum_americana$universidad, 
+                                         s_alum_americana$facul,
+                                         s_alum_americana$grupo, sep = '_')
+
+reporte_alum_americana <- create_report(s_alum_americana)
+
+count(s_alum_americana$facul)
+
+####CONSOLIDADO ALUMNOS ####
+
+s_alum <- do.call("rbind", list(s_alum_latina,s_alum_americana))
+
+
+##
+write_xlsx(s_alum,"C:/Users/ritaz/Desktop/COORDINACION DE PROYECTOS/CR-varios///sample_alumnosV4.xlsx")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
