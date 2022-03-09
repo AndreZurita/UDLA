@@ -1226,5 +1226,48 @@ tabla_resumen <- tabla_resumen %>% dplyr::select(Carnet,Estudiante,cod_materia_v
                                                  bloque_materia_reemplazo,score_reemplazo)
 
 
+#Tabla de resumen unico reemplazo
+write.table(tabla_resumen, "clipboard", sep="\t", row.names=FALSE)
 
+
+############ Para mas de una opcion de reemplazo ################
+
+tabla_resumen_varios <- admin_fu_max %>% dplyr::select(Carnet,Estudiante,cod,carr,bloque,followup,score_sup_2)
+
+tabla_resumen_varios_2 <- pool_elegibles %>% dplyr::select(Carnet,cod,nom,bloque.x,score_reem) 
+
+tabla_resumen_varios <- left_join(tabla_resumen_varios, tabla_resumen_varios_2, by = 'Carnet')
+
+
+#
+
+names(tabla_resumen_varios)[3] <- 'cod_materia_vinculada'
+names(tabla_resumen_varios)[4] <- 'materia_vinculada'
+names(tabla_resumen_varios)[5] <- 'bloque_materia_vinculada'
+names(tabla_resumen_varios)[6] <- 'cod_materia_suprimida'
+names(tabla_resumen_varios)[7] <- 'score_supresion'
+names(tabla_resumen_varios)[8] <- 'cod_materia_reemplazo'
+names(tabla_resumen_varios)[9] <- 'materia_reemplazo'
+names(tabla_resumen_varios)[10] <- 'bloque_materia_reemplazo'
+names(tabla_resumen_varios)[11] <- 'score_reemplazo'
+
+
+#
+names(tabla_resumen_varios)[6] <- "cod" 
+nombres <- admin_malla %>% dplyr::select(cod,carr)
+tabla_resumen_varios <- left_join(tabla_resumen_varios, nombres, by = 'cod')
+
+names(tabla_resumen_varios)[6] <- 'cod_materia_suprimida'
+names(tabla_resumen_varios)[12] <- 'materia_suprimida'
+
+#
+
+tabla_resumen_varios <- tabla_resumen_varios %>% dplyr::select(Carnet,Estudiante,cod_materia_vinculada,materia_vinculada,
+                                                 bloque_materia_vinculada,cod_materia_suprimida,materia_suprimida,
+                                                 score_supresion,cod_materia_reemplazo,materia_reemplazo,
+                                                 bloque_materia_reemplazo,score_reemplazo)
+
+
+#Tabla de resumen unico reemplazo
+write.table(tabla_resumen_varios, "clipboard", sep="\t", row.names=FALSE)
 
