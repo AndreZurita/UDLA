@@ -746,6 +746,20 @@ setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
 #Base alumnos
 admin <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ADMINISTRACION).xlsx", sheet = "Administracion")
 
+names(admin)[21] <- "cod"
+names(admin)[17] <- "malla"
+
+admin <-  left_join(admin, homologado, by = c("cod","malla"))
+
+names(admin)[21] <- "c"
+names(admin)[33] <- "cod"
+
+admin <- admin[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,33,22,23,24,25,26,27,28,29,30,31,32,21)]
+
+admin <- admin %>% dplyr::select(-c(c))
+
+
+
 #Bases de mallas
 admin_malla <-  read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ADMINISTRACION).xlsx", sheet = "CURRICULA (FCEA-AN-AN-BAC01)")
 
