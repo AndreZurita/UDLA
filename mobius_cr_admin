@@ -3,6 +3,7 @@ graphics.off() #limpiar el dispositivo de graficas
 gc() #limpiar la memoria virtual 
 cat("\014") #limpiar la consola
 
+start_time <- Sys.time()
 
 library(tidyverse)
 library(tidyr)
@@ -1267,7 +1268,22 @@ tabla_resumen_varios <- tabla_resumen_varios %>% dplyr::select(Carnet,Estudiante
                                                  score_supresion,cod_materia_reemplazo,materia_reemplazo,
                                                  bloque_materia_reemplazo,score_reemplazo)
 
+tabla_resumen_varios <- unique(tabla_resumen_varios)
+
+tabla_resumen_varios<-tabla_resumen_varios[!(tabla_resumen_varios$materia_suprimida ==  tabla_resumen_varios$materia_reemplazo),]
+
+tabla_resumen_varios <-  tabla_resumen_varios[with(tabla_resumen_varios,order(Carnet,score_reemplazo)),]
+
+
+#Me quedo solo con los que seran unicamente reemplazados
+
+reemplazos <- filter(tabla_resumen_varios, !is.na(score_reemplazo))
+
+reemplazos <-  reemplazos[with(reemplazos,order(Carnet,score_reemplazo)),]
 
 #Tabla de resumen unico reemplazo
 write.table(tabla_resumen_varios, "clipboard", sep="\t", row.names=FALSE)
 
+end_time <- Sys.time()
+time_taken <- round(end_time - start_time, 2)
+time_taken
