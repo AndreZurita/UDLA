@@ -1,0 +1,1023 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(GGally)
+library(corrgram)
+library(treemap)
+
+
+#------------------------------------------------------------------------------
+#ANALISIS DESEMPEÑO MARKETING DIGITAL
+#COORDINACION DE PROYECTOS
+#INTELIGENCIA DE LA INFORMACION 
+#UDLA
+#------------------------------------------------------------------------------
+
+
+
+##################### ELASTICIDADES ############################
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+
+
+base2 <- read_excel("COORDINACION DE PROYECTOS/rep_mkt/base_rep.xlsx", sheet = "base2")
+names(base2)[10] <- "gasto"
+#base2$periodo <- as.Date(base2$periodo, format = "%Y/%m")
+
+
+base2 <- base2[!grepl("-H", base2$carr),]
+base2 <- base2[!grepl("NEGOCIOS INTERNACIONALES HIBRIDO", base2$carr),]
+base2 <- base2[!grepl("CIENCIAS POLITICAS", base2$carr),]
+base2 <- base2[!grepl("TURISMO", base2$carr),]
+base2 <- base2[!grepl("NEGOCIOS DIGITALES", base2$carr),]
+base2 <- base2[!grepl("LIC.COMUNICACIÓN-N", base2$carr),]
+#elast <- elast[!grepl("LIC. PUBLICIDAD", elast$carr),]
+base2 <- base2[!grepl("LIC. ADMINISTRACION EMPRESAS-DUAL", base2$carr),]
+base2 <- base2[!grepl("LIC. ADMINISTRACION EMPRESAS-S", base2$carr),]
+
+w_leads <- base2 %>% dplyr::select(carr, periodo, leads_mkt)
+w_leads <- spread(w_leads, periodo, leads_mkt)
+colnames(w_leads)[2:7] <- paste("leads", colnames(w_leads[,c(2:7)]), sep = "")
+
+
+w_gasto <- base2 %>% dplyr::select(carr, periodo, gasto)
+w_gasto <- spread(w_gasto, periodo, gasto)
+colnames(w_gasto)[2:7] <- paste("gasto", colnames(w_gasto[,c(2:7)]), sep = "")
+
+
+
+elast <- left_join(w_leads, w_gasto, by = "carr")
+
+elast[is.na(elast)] <- 0
+
+
+#Elasticidad de septiembre 2019 a septiembre 2020
+elast$vl_2021_10 <- (elast$`leads2021-1`-elast$`leads2020-1`)/(elast$`leads2020-1`)
+elast$vg_2021_10 <- (elast$`gasto2021-1`-elast$`gasto2020-1`)/(elast$`gasto2020-1`)
+
+elast$vg_2021_10[elast$vg_2021_10 == 0] <- 0.0000001
+
+elast$e1 <- elast$vl_2021_10/elast$vg_2021_10
+
+#Elasticidad de marzo 2020 a marzo 2021
+elast$vl_2021_20 <- (elast$`leads2021-2`-elast$`leads2020-2`)/(elast$`leads2020-2`)
+elast$vg_2021_20 <- (elast$`gasto2021-2`-elast$`gasto2020-2`)/(elast$`gasto2020-2`)
+
+elast$vg_2021_20[elast$vg_2021_20 == 0] <- 0.0000001
+
+elast$e2 <- elast$vl_2021_20/elast$vg_2021_20
+
+#Elasticidad de septiembre 2020 a septiembre 2021
+elast$vl_2122_10 <- (elast$`leads2022-1`-elast$`leads2021-1`)/(elast$`leads2021-1`)
+elast$vg_2122_10 <- (elast$`gasto2022-1`-elast$`gasto2021-1`)/(elast$`gasto2021-1`)
+
+elast$vg_2122_10[elast$vg_2122_10 == 0] <- 0.0000001
+
+elast$e3 <- elast$vl_2122_10/elast$vg_2122_10
+
+#Elasticidad de marzo 2021 a marzo 2022
+elast$vl_2122_20 <- (elast$`leads2022-2`-elast$`leads2021-2`)/(elast$`leads2021-2`)
+elast$vg_2122_20 <- (elast$`gasto2022-2`-elast$`gasto2021-2`)/(elast$`gasto2021-2`)
+
+elast$vg_2122_20[elast$vg_2122_20 == 0] <- 0.0000001
+
+elast$e4 <- elast$vl_2122_20/elast$vg_2122_20
+
+
+#Elasticidad 1 de septiembre 2019 a septiembre 2020
+
+elast$e1_tipo <- 0
+elast$e1_tipo[elast$vg_2021_10 >= 0 & elast$vl_2021_10 >= 0] <- "Normal"
+elast$e1_tipo[elast$vg_2021_10 < 0 & elast$vl_2021_10 < 0] <- "Normal"
+
+elast$e1_tipo[elast$vg_2021_10 < 0 & elast$vl_2021_10 >= 0] <- "Giffen"
+
+elast$e1_tipo[elast$vg_2021_10 >= 0 & elast$vl_2021_10 < 0] <- "Critica"
+
+
+#Elasticidad 2 de marzo 2020 a marzo 2021
+
+elast$e2_tipo <- 0
+elast$e2_tipo[elast$vg_2021_20 >= 0 & elast$vl_2021_20 >= 0] <- "Normal"
+elast$e2_tipo[elast$vg_2021_20 < 0 & elast$vl_2021_20 < 0] <- "Normal"
+
+elast$e2_tipo[elast$vg_2021_20 < 0 & elast$vl_2021_20 >= 0] <- "Giffen"
+
+elast$e2_tipo[elast$vg_2021_20 >= 0 & elast$vl_2021_20 < 0] <- "Critica"
+
+#Elasticidad 3 de septiembre 2020 a septiembre 2021
+
+elast$e3_tipo <- 0
+elast$e3_tipo[elast$vg_2122_10 >= 0 & elast$vl_2122_10 >= 0] <- "Normal"
+elast$e3_tipo[elast$vg_2122_10 < 0 & elast$vl_2122_10 < 0] <- "Normal"
+
+elast$e3_tipo[elast$vg_2122_10 < 0 & elast$vl_2122_10 >= 0] <- "Giffen"
+
+elast$e3_tipo[elast$vg_2122_10 >= 0 & elast$vl_2122_10 < 0] <- "Critica"
+
+
+#Elasticidad 4 de marzo 2021 a marzo 2022
+
+elast$e4_tipo <- 0
+elast$e4_tipo[elast$vg_2122_20 >= 0 & elast$vl_2122_20 >= 0] <- "Normal"
+elast$e4_tipo[elast$vg_2122_20 < 0 & elast$vl_2122_20 < 0] <- "Normal"
+
+elast$e4_tipo[elast$vg_2122_20 < 0 & elast$vl_2122_20 >= 0] <- "Giffen"
+
+elast$e4_tipo[elast$vg_2122_20 >= 0 & elast$vl_2122_20 < 0] <- "Critica"
+
+
+#Elimino hibridos, CCPP, Turismo, Negocios Digitales, Comunicacion noche,
+#Gastronomia, Dual, Publicidad*,Semi repetido del analisis
+
+elast <- elast[!grepl("-H", elast$carr),]
+elast <- elast[!grepl("NEGOCIOS INTERNACIONALES HIBRIDO", elast$carr),]
+elast <- elast[!grepl("CIENCIAS POLITICAS", elast$carr),]
+elast <- elast[!grepl("TURISMO", elast$carr),]
+elast <- elast[!grepl("NEGOCIOS DIGITALES", elast$carr),]
+elast <- elast[!grepl("LIC.COMUNICACIÓN-N", elast$carr),]
+#elast <- elast[!grepl("LIC. PUBLICIDAD", elast$carr),]
+elast <- elast[!grepl("LIC. ADMINISTRACION EMPRESAS-DUAL", elast$carr),]
+elast <- elast[!grepl("LIC. ADMINISTRACION EMPRESAS-S", elast$carr),]
+elast <- elast[-c(27), ]
+
+###Grafico y analisis de elasticidad###
+
+var_precios_long <- elast %>% dplyr::select(carr,vg_2021_10,vg_2021_20,vg_2122_10,vg_2122_20)
+var_leads_long <- elast %>% dplyr::select(carr,vl_2021_10,vl_2021_20,vl_2122_10,vl_2122_20)
+
+var_precios_long <- as.data.frame(var_precios_long)
+var_leads_long <- as.data.frame(var_leads_long)
+
+var_precios_long <- melt(var_precios_long, id.vars = c("carr"))
+var_leads_long <- melt(var_leads_long, id.vars = c("carr"))
+
+elasticidades <- join(var_precios_long, var_leads_long, by = c('carr'))
+
+names(elasticidades)[2] <- "periodo"
+names(elasticidades)[3] <- "var_precio"
+names(elasticidades)[5] <- "var_leads"
+
+
+elasticidades <- elasticidades %>%
+  
+  ggplot(aes(x = var_leads, y = var_precio, label = carr)) + 
+  geom_point(mapping = aes(color = periodo)) + 
+  scale_size(range = c(.1, 12), name="periodo") +
+  scale_fill_viridis(discrete=FALSE, guide="none", option="B") +
+  geom_hline(yintercept = 0, color = "red", size = 0.75) +
+  geom_vline(xintercept = 0, color = "red", size = 0.75) +
+  annotate("text", x = -2, y = 5, label = "Normal", color = "black", size = 7) +
+  annotate("text", x = -1, y = -2, label = "Critica", color = "black", size = 7) +
+  annotate("text", x = 4, y = 5, label = "Giffen", color = "black", size = 7) +
+  annotate("text", x = 1, y = -2, label = "Normal", color = "black", size = 7)
+theme_ipsum() 
+
+ggplotly(elasticidades, hoverinfo = "text")
+
+
+#Resumen cambios de elasticidades
+
+elast$`Estatus Marzo` <- 0
+
+
+elast$`Estatus Marzo`[elast$e1_tipo == "Normal" & elast$e3_tipo == "Normal"] <-"Mantiene Normal"
+elast$`Estatus Marzo`[elast$e1_tipo == "Normal" & elast$e3_tipo == "Critica"] <-"Empeora Critica"
+elast$`Estatus Marzo`[elast$e1_tipo == "Normal" & elast$e3_tipo == "Giffen"] <-"Mejora Max"
+elast$`Estatus Marzo`[elast$e1_tipo == "Critica" & elast$e3_tipo == "Normal"] <-"Mejora Normal"
+elast$`Estatus Marzo`[elast$e1_tipo == "Critica" & elast$e3_tipo == "Giffen"] <-"Mejora Max"
+elast$`Estatus Marzo`[elast$e1_tipo == "Critica" & elast$e3_tipo == "Critica"] <-"Mantiene Critica"
+elast$`Estatus Marzo`[elast$e1_tipo == "Giffen" & elast$e3_tipo == "Giffen"] <-"Mantiene Max"
+elast$`Estatus Marzo`[elast$e1_tipo == "Giffen" & elast$e3_tipo == "Normal"] <-"Empeora Normal"
+elast$`Estatus Marzo`[elast$e1_tipo == "Giffen" & elast$e3_tipo == "Critica"] <-"Empeora Critica"
+
+
+elast$`Estatus Septiembre` <- 0
+
+
+elast$`Estatus Septiembre`[elast$e2_tipo == "Normal" & elast$e4_tipo == "Normal"] <-"Mantiene Normal"
+elast$`Estatus Septiembre`[elast$e2_tipo == "Normal" & elast$e4_tipo == "Critica"] <-"Empeora Critica"
+elast$`Estatus Septiembre`[elast$e2_tipo == "Normal" & elast$e4_tipo == "Giffen"] <-"Mejora Max"
+elast$`Estatus Septiembre`[elast$e2_tipo == "Critica" & elast$e4_tipo == "Normal"] <-"Mejora Normal"
+elast$`Estatus Septiembre`[elast$e2_tipo == "Critica" & elast$e4_tipo == "Giffen"] <-"Mejora Max"
+elast$`Estatus Septiembre`[elast$e2_tipo == "Critica" & elast$e4_tipo == "Critica"] <-"Mantiene Critica"
+elast$`Estatus Septiembre`[elast$e2_tipo == "Giffen" & elast$e4_tipo == "Giffen"] <-"Mantiene Max"
+elast$`Estatus Septiembre`[elast$e2_tipo == "Giffen" & elast$e4_tipo == "Normal"] <-"Empeora Normal"
+elast$`Estatus Septiembre`[elast$e2_tipo == "Giffen" & elast$e4_tipo == "Critica"] <-"Empeora Critica"
+
+treemap <- count(elast$`Estatus Marzo`)
+treemap2 <- count(elast$`Estatus Septiembre`)
+
+tree <- join(treemap, treemap2, by = "x")
+
+names(tree)[1] <- "Estado"
+names(tree)[2] <- "Estatus Marzo"
+names(tree)[3] <- "Estatus Septiembre"
+
+
+tree[is.na(tree)] <- 0
+
+#Cambios de Marzo
+
+treemap(tree,
+        index="Estado",
+        vSize="Estatus Marzo",
+        type="index"
+)
+
+#Cambios de Septiembre
+
+treemap(tree,
+        index="Estado",
+        vSize="Estatus Septiembre",
+        type="index"
+)
+
+#Evolucion en el tiempo por tipo de bien y carrera
+
+evolucion <- elast %>% dplyr:: select(carr, e1_tipo, e2_tipo, e3_tipo, e4_tipo)
+
+evolucion <- as.data.frame(evolucion)
+names(evolucion)[2] <- "202010_a_202110"
+names(evolucion)[3] <- "202020_a_202120"
+names(evolucion)[4] <- "202110_a_202210"
+names(evolucion)[5] <- "202120_a_202220"
+
+estado_evol <- melt(evolucion, id.vars = c("carr"))
+
+names(estado_evol)[2] <- "periodo"
+names(estado_evol)[3] <- "TipoBien"
+
+
+estado_evol$valor <- 0
+estado_evol$valor[estado_evol$TipoBien == "Giffen"] <- 1
+estado_evol$valor[estado_evol$TipoBien == "Normal"] <- 0
+estado_evol$valor[estado_evol$TipoBien == "Critica"] <- -1
+
+evolucion <- estado_evol %>%
+  ggplot( aes(x=periodo, y=valor, group=carr, color=carr)) +
+  geom_line()+
+  geom_hline(yintercept = 0, color = "red", size = 0.75) +
+  annotate("text", x = 0.75, y = 0.9, label = "Giffen", color = "black", size = 7) +
+  annotate("text", x = 0.75, y = 0.2, label = "Normal", color = "black", size = 7) +
+  annotate("text", x = 0.75, y = -0.9, label = "Critico", color = "black", size = 7) +
+  scale_color_viridis(discrete = TRUE) +
+  theme(axis.text.x = element_text(60) )
+theme_ipsum() 
+
+ggplotly(evolucion, hoverinfo = "text")
+
+
+
+######## Lollipop de conversion vs gasto por lead ########
+
+lpop <- base2 %>% dplyr::select(carr,periodo,gasto,leads_mkt)
+  
+#Por periodo
+  #202010
+
+lpop202010 <- filter(lpop, periodo == "2020-1")
+
+ggplot(lpop202010) +
+  geom_segment( aes(x=carr, xend=carr, y=gasto, yend=leads_mkt), color="grey") +
+  geom_point( aes(x=carr, y=gasto), color="forestgreen", size=3 ) +
+  geom_point( aes(x=carr, y=leads_mkt), color="darkblue", size=3 ) +
+  coord_flip()+
+  theme_ipsum() +
+  theme(
+    legend.position = "none",
+  ) +
+  xlab("") +
+  ylab("")
+
+
+#202020
+
+lpop202020 <- filter(lpop, periodo == "2020-2")
+
+ggplot(lpop202020) +
+  geom_segment( aes(x=carr, xend=carr, y=gasto, yend=leads_mkt), color="grey") +
+  geom_point( aes(x=carr, y=gasto), color="forestgreen", size=3 ) +
+  geom_point( aes(x=carr, y=leads_mkt), color="darkblue", size=3 ) +
+  coord_flip()+
+  theme_ipsum() +
+  theme(
+    legend.position = "none",
+  ) +
+  xlab("") +
+  ylab("")
+
+#202110
+
+lpop202110 <- filter(lpop, periodo == "2021-1")
+
+ggplot(lpop202110) +
+  geom_segment( aes(x=carr, xend=carr, y=gasto, yend=leads_mkt), color="grey") +
+  geom_point( aes(x=carr, y=gasto), color="forestgreen", size=3 ) +
+  geom_point( aes(x=carr, y=leads_mkt), color="darkblue", size=3 ) +
+  coord_flip()+
+  theme_ipsum() +
+  theme(
+    legend.position = "none",
+  ) +
+  xlab("") +
+  ylab("")
+
+#202120
+
+lpop202120 <- filter(lpop, periodo == "2021-2")
+
+ggplot(lpop202120) +
+  geom_segment( aes(x=carr, xend=carr, y=gasto, yend=leads_mkt), color="grey") +
+  geom_point( aes(x=carr, y=gasto), color="forestgreen", size=3 ) +
+  geom_point( aes(x=carr, y=leads_mkt), color="darkblue", size=3 ) +
+  coord_flip()+
+  theme_ipsum() +
+  theme(
+    legend.position = "none",
+  ) +
+  xlab("") +
+  ylab("")
+
+#202210
+
+lpop202210 <- filter(lpop, periodo == "2022-1")
+
+ggplot(lpop202210) +
+  geom_segment( aes(x=carr, xend=carr, y=gasto, yend=leads_mkt), color="grey") +
+  geom_point( aes(x=carr, y=gasto), color="forestgreen", size=3 ) +
+  geom_point( aes(x=carr, y=leads_mkt), color="darkblue", size=3 ) +
+  coord_flip()+
+  theme_ipsum() +
+  theme(
+    legend.position = "none",
+  ) +
+  xlab("") +
+  ylab("")
+
+
+
+#202220
+
+lpop202220 <- filter(lpop, periodo == "2022-2")
+
+ggplot(lpop202220) +
+  geom_segment( aes(x=carr, xend=carr, y=gasto, yend=leads_mkt), color="grey") +
+  geom_point( aes(x=carr, y=gasto), color="forestgreen", size=3 ) +
+  geom_point( aes(x=carr, y=leads_mkt), color="darkblue", size=3 ) +
+  coord_flip()+
+  theme_ipsum() +
+  theme(
+    legend.position = "none",
+  ) +
+  xlab("") +
+  ylab("")
+
+write.table(elast, "clipboard", sep="\t", row.names=FALSE)
+
+###### PCA para scoring y parecidos ######
+library(factoextra)
+
+options(ggrepel.max.overlaps = Inf)
+
+#Por periodos 
+#202010
+base_pca <- base2 %>% dplyr::select(carr,periodo, leads_mkt, afl, doc, gasto, CTR, CPC, CPL, conv_la)
+
+base_pca20201 <- filter(base_pca, periodo == "2020-1")
+lista20201 <- base_pca20201 %>% dplyr::select(carr)
+lista20201 <- tibble::rowid_to_column(lista20201, "index")
+write.table(lista20201, "clipboard", sep="\t", row.names=FALSE)
+
+
+base_pca20201 <- base_pca20201  %>% dplyr::select(-c(carr,periodo))
+
+res.pca <- prcomp(base_pca20201, scale = TRUE)
+fviz_eig(res.pca)
+
+fviz_pca_ind(res.pca,
+             col.ind = "cos2",
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE   
+)
+
+
+fviz_pca_var(res.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE     # Avoid text overlapping
+)
+
+#Quienes reaccionan a que>
+fviz_pca_biplot(res.pca, repel = TRUE,
+                col.var = "#009999", # Variables color
+                col.ind = "#0000FF"  # Individuals color
+)
+
+#Scoring
+score <- as.data.frame(res.pca$x)
+score <- score %>% dplyr::select(PC1, PC2, PC3, PC4, PC5, PC6, PC7, PC8)
+
+#score$mean <- rowMeans(score)
+score$sum <- rowSums(score)
+
+score <- cbind(lista20201, score)
+
+write.table(score, "clipboard", sep="\t", row.names=FALSE)
+
+
+#202020
+
+base_pca20202 <- filter(base_pca, periodo == "2020-2")
+lista20202 <- base_pca20202 %>% dplyr::select(carr)
+lista20202 <- tibble::rowid_to_column(lista20202, "index")
+write.table(lista20202, "clipboard", sep="\t", row.names=FALSE)
+
+
+base_pca20202 <- base_pca20202  %>% dplyr::select(-c(carr,periodo))
+
+res.pca <- prcomp(base_pca20202, scale = TRUE)
+fviz_eig(res.pca)
+
+fviz_pca_ind(res.pca,
+             col.ind = "cos2",
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE   
+)
+
+
+fviz_pca_var(res.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE     # Avoid text overlapping
+)
+
+#Quienes reaccionan a que>
+fviz_pca_biplot(res.pca, repel = TRUE,
+                col.var = "#009999", # Variables color
+                col.ind = "#0000FF"  # Individuals color
+)
+
+#Scoring
+score <- as.data.frame(res.pca$x)
+score <- score %>% dplyr::select(PC1, PC2, PC3, PC4, PC5, PC6, PC7, PC8)
+
+#score$mean <- rowMeans(score)
+score$sum <- rowSums(score)
+
+score <- cbind(lista20202, score)
+write.table(score, "clipboard", sep="\t", row.names=FALSE)
+
+
+#202110
+
+base_pca20211 <- filter(base_pca, periodo == "2021-1")
+lista20211 <- base_pca20211 %>% dplyr::select(carr)
+lista20211 <- tibble::rowid_to_column(lista20211, "index")
+write.table(lista20211, "clipboard", sep="\t", row.names=FALSE)
+
+
+base_pca20211 <- base_pca20211  %>% dplyr::select(-c(carr,periodo))
+
+res.pca <- prcomp(base_pca20211, scale = TRUE)
+fviz_eig(res.pca)
+
+fviz_pca_ind(res.pca,
+             col.ind = "cos2",
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE   
+)
+
+
+fviz_pca_var(res.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE     # Avoid text overlapping
+)
+
+#Quienes reaccionan a que>
+fviz_pca_biplot(res.pca, repel = TRUE,
+                col.var = "#009999", # Variables color
+                col.ind = "#0000FF"  # Individuals color
+)
+
+#Scoring
+score <- as.data.frame(res.pca$x)
+score <- score %>% dplyr::select(PC1, PC2, PC3, PC4, PC5, PC6, PC7, PC8)
+
+#score$mean <- rowMeans(score)
+score$sum <- rowSums(score)
+
+score <- cbind(lista20211, score)
+write.table(score, "clipboard", sep="\t", row.names=FALSE)
+
+#202120
+
+base_pca20212 <- filter(base_pca, periodo == "2021-2")
+lista20212 <- base_pca20212 %>% dplyr::select(carr)
+lista20212 <- tibble::rowid_to_column(lista20212, "index")
+write.table(lista20212, "clipboard", sep="\t", row.names=FALSE)
+
+
+base_pca20212 <- base_pca20212  %>% dplyr::select(-c(carr,periodo))
+
+res.pca <- prcomp(base_pca20212, scale = TRUE)
+fviz_eig(res.pca)
+
+fviz_pca_ind(res.pca,
+             col.ind = "cos2",
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE   
+)
+
+
+fviz_pca_var(res.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE     # Avoid text overlapping
+)
+
+#Quienes reaccionan a que>
+fviz_pca_biplot(res.pca, repel = TRUE,
+                col.var = "#009999", # Variables color
+                col.ind = "#0000FF"  # Individuals color
+)
+
+#Scoring
+score <- as.data.frame(res.pca$x)
+score <- score %>% dplyr::select(PC1, PC2, PC3, PC4, PC5, PC6, PC7, PC8)
+
+#score$mean <- rowMeans(score)
+score$sum <- rowSums(score)
+
+score <- cbind(lista20212, score)
+write.table(score, "clipboard", sep="\t", row.names=FALSE)
+
+
+
+#202210
+
+base_pca202210 <- filter(base_pca, periodo == "2022-1")
+lista202210 <- base_pca202210 %>% dplyr::select(carr)
+lista202210 <- tibble::rowid_to_column(lista202210, "index")
+write.table(lista202210, "clipboard", sep="\t", row.names=FALSE)
+
+
+base_pca202210 <- base_pca202210  %>% dplyr::select(-c(carr,periodo))
+
+res.pca <- prcomp(base_pca202210, scale = TRUE)
+fviz_eig(res.pca)
+
+fviz_pca_ind(res.pca,
+             col.ind = "cos2",
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE   
+)
+
+
+fviz_pca_var(res.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE     # Avoid text overlapping
+)
+
+#Quienes reaccionan a que>
+fviz_pca_biplot(res.pca, repel = TRUE,
+                col.var = "#009999", # Variables color
+                col.ind = "#0000FF"  # Individuals color
+)
+
+#Scoring
+score <- as.data.frame(res.pca$x)
+score <- score %>% dplyr::select(PC1, PC2, PC3, PC4, PC5, PC6, PC7, PC8)
+
+#score$mean <- rowMeans(score)
+score$sum <- rowSums(score)
+
+score <- cbind(lista202210, score)
+write.table(score, "clipboard", sep="\t", row.names=FALSE)
+
+
+#202220
+
+base_pca202220 <- filter(base_pca, periodo == "2022-2")
+lista202220 <- base_pca202220 %>% dplyr::select(carr)
+lista202220 <- tibble::rowid_to_column(lista202220, "index")
+write.table(lista202220, "clipboard", sep="\t", row.names=FALSE)
+
+
+base_pca202220 <- base_pca202220  %>% dplyr::select(-c(carr,periodo))
+
+res.pca <- prcomp(base_pca202220, scale = TRUE)
+fviz_eig(res.pca)
+
+fviz_pca_ind(res.pca,
+             col.ind = "cos2",
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE   
+)
+
+
+fviz_pca_var(res.pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#009999", "#C4961A", "#0000FF"),
+             repel = TRUE     # Avoid text overlapping
+)
+
+#Quienes reaccionan a que>
+fviz_pca_biplot(res.pca, repel = TRUE,
+                col.var = "#009999", # Variables color
+                col.ind = "#0000FF"  # Individuals color
+)
+
+#Scoring
+score <- as.data.frame(res.pca$x)
+score <- score %>% dplyr::select(PC1, PC2, PC3, PC4, PC5, PC6, PC7, PC8)
+
+#score$mean <- rowMeans(score)
+score$sum <- rowSums(score)
+
+score <- cbind(lista202220, score)
+write.table(score, "clipboard", sep="\t", row.names=FALSE)
+
+
+###### Correlograma gasto, impresiones, clics, leads, afluentes, doc ######
+
+
+corrgram1 <- base2 %>% dplyr::select(periodo, gasto,leads_mkt, afl, doc, Impresiones, Clics)
+
+#Por periodo
+#202010
+
+corrgram1_202010 <- filter(corrgram1, periodo == "2020-1")
+corrgram1_202010 <- corrgram1_202010 %>% dplyr::select(gasto,leads_mkt, afl, doc, Impresiones, Clics)
+
+corrgram(corrgram1_202010, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno 202010") 
+
+#202020
+
+corrgram1_202020 <- filter(corrgram1, periodo == "2020-2")
+corrgram1_202020 <- corrgram1_202020 %>% dplyr::select(gasto,leads_mkt, afl, doc, Impresiones, Clics)
+
+corrgram(corrgram1_202020, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno 202020") 
+
+
+#202110
+
+corrgram1_202110 <- filter(corrgram1, periodo == "2021-1")
+corrgram1_202110 <- corrgram1_202110 %>% dplyr::select(gasto,leads_mkt, afl, doc, Impresiones, Clics)
+
+corrgram(corrgram1_202110, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno 202110") 
+
+
+#202120
+
+corrgram1_202120 <- filter(corrgram1, periodo == "2021-2")
+corrgram1_202120 <- corrgram1_202120 %>% dplyr::select(gasto,leads_mkt, afl, doc, Impresiones, Clics)
+
+corrgram(corrgram1_202120, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno 202120") 
+
+
+
+#202210
+
+corrgram1_202210 <- filter(corrgram1, periodo == "2022-1")
+corrgram1_202210 <- corrgram1_202210 %>% dplyr::select(gasto,leads_mkt, afl, doc, Impresiones, Clics)
+
+corrgram(corrgram1_202210, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno 202210") 
+
+
+#202220
+
+corrgram1_202220 <- filter(corrgram1, periodo == "2022-2")
+corrgram1_202220 <- corrgram1_202220 %>% dplyr::select(gasto,leads_mkt, afl, doc, Impresiones, Clics)
+
+corrgram(corrgram1_202220, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno 202220") 
+
+
+
+###### Correlograma gasto, conversiones ######
+
+
+corrgram2 <- base2 %>% dplyr::select(periodo, gasto,conv_la, conv_ad)
+
+#Por periodo
+#202010
+
+corrgram2_202010 <- filter(corrgram2, periodo == "2020-1")
+corrgram2_202010 <- corrgram2_202010 %>% dplyr::select(gasto,conv_la, conv_ad)
+
+corrgram(corrgram2_202010, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno Mkt 202010") 
+
+#202020
+
+corrgram2_202020 <- filter(corrgram2, periodo == "2020-2")
+corrgram2_202020 <- corrgram2_202020 %>% dplyr::select(gasto,conv_la, conv_ad)
+
+corrgram(corrgram2_202020, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno Mkt 202020") 
+
+
+#202110
+
+corrgram2_202110 <- filter(corrgram2, periodo == "2021-1")
+corrgram2_202110 <- corrgram2_202110 %>% dplyr::select(gasto,conv_la, conv_ad)
+
+corrgram(corrgram2_202110, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno Mkt 202110") 
+
+
+#202120
+
+corrgram2_202120 <- filter(corrgram2, periodo == "2021-2")
+corrgram2_202120 <- corrgram2_202120 %>% dplyr::select(gasto,conv_la, conv_ad)
+
+corrgram(corrgram2_202120, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno Mkt 202120") 
+
+
+
+#202210
+
+corrgram2_202210 <- filter(corrgram2, periodo == "2022-1")
+corrgram2_202210 <- corrgram2_202210 %>% dplyr::select(gasto,conv_la, conv_ad)
+
+corrgram(corrgram2_202210, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno Mkt 202210") 
+
+
+#202220
+
+corrgram2_202220 <- filter(corrgram2, periodo == "2022-2")
+corrgram2_202220 <- corrgram2_202220 %>% dplyr::select(gasto,conv_la, conv_ad)
+
+corrgram(corrgram2_202220, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt, main="Correlacion Desempeno Mkt 202220") 
+
+
+###### Leads en el tiempo ######
+
+tiempo <- base2 %>% dplyr::select(periodo, gasto,leads_mkt)
+
+leads <- aggregate(tiempo$leads_mkt, by=list(periodo=tiempo$periodo), FUN=sum)
+names(leads)[2] <- "leads"
+
+gasto <- aggregate(tiempo$gasto, by=list(periodo=tiempo$periodo), FUN=sum)
+names(leads)[2] <- "gasto"
+
+t_graph <- left_join(leads, gasto)
+names(t_graph)[2] <- "leads"
+names(t_graph)[3] <- "gasto"
+
+t_graph <- melt(t_graph, id.vars = "periodo" )
+names(t_graph)[3] <- "valor"
+
+
+ggplot(t_graph, aes(fill=variable, y=valor, x=periodo)) + 
+  geom_bar(position="dodge", stat="identity")
+
+
+###### Conversiones en el tiempo ######
+
+tiempo2 <- base2 %>% dplyr::select(periodo, conv_la ,conv_ad)
+
+conv_la <- aggregate(tiempo2$conv_la, by=list(periodo=tiempo2$periodo), FUN=mean)
+names(conv_la)[2] <- "conv_la"
+
+conv_ad <- aggregate(tiempo2$conv_ad, by=list(periodo=tiempo2$periodo), FUN=mean)
+names(conv_ad)[2] <- "conv_ad"
+
+t_graph2 <- left_join(conv_la, conv_ad)
+names(t_graph)[2] <- "conv_la"
+names(t_graph)[3] <- "conv_ad"
+
+t_graph2 <- melt(t_graph2, id.vars = "periodo" )
+names(t_graph2)[3] <- "valor"
+
+
+ggplot(t_graph2, aes(fill=variable, y=valor, x=periodo)) + 
+  geom_bar(position="dodge", stat="identity")
+
+
+###### Regresiones ######
+
+### R1 Leads vs gasto, impresiones y clics ###
+
+#Para periodos Septiembre
+
+Periodo <- c("2020-1", "2021-1", "2022-1")
+sept <- filter(base2, periodo %in% Periodo)
+
+sept$l.gasto <- log(sept$gasto)
+sept$l.imp <- log(sept$Impresiones)
+sept$l.clic <- log(sept$Clics)
+
+sept$l.gasto[sept$l.gasto == Inf | sept$l.gasto == -Inf ] <- 0
+sept$l.imp[sept$l.imp == Inf | sept$l.imp == -Inf ] <- 0
+sept$l.clic[sept$l.clic == Inf | sept$l.clic == -Inf ] <- 0
+
+
+linearMod <- lm(leads_mkt ~ l.gasto + l.imp + l.clic, data=sept)  
+summary(linearMod)
+
+#Para periodos Marzo
+
+Periodo <- c("2020-2", "2021-2", "2022-2")
+mar <- filter(base2, periodo %in% Periodo)
+
+mar$l.gasto <- log(mar$gasto)
+mar$l.imp <- log(mar$Impresiones)
+mar$l.clic <- log(mar$Clics)
+
+mar$l.gasto[mar$l.gasto == Inf | mar$l.gasto == -Inf ] <- 0
+mar$l.imp[mar$l.imp == Inf | mar$l.imp == -Inf ] <- 0
+mar$l.clic[mar$l.clic == Inf | mar$l.clic == -Inf ] <- 0
+
+
+linearMod2 <- lm(leads_mkt ~ l.gasto + l.imp + l.clic, data=mar)  
+summary(linearMod2)
+
+
+### R2 Documentados vs gasto, leads, impresiones y clics ###
+
+#Para periodos Septiembre
+
+linearMod3 <- lm(doc ~ l.gasto + leads_mkt + l.imp + l.clic, data=sept)  
+summary(linearMod3)
+
+#Para periodos Marzo
+
+linearMod4 <- lm(doc ~ l.gasto + leads_mkt + l.imp + l.clic, data=mar)  
+summary(linearMod4)
+
+
+###### Return on Investment ######
+
+roi <- read_excel("COORDINACION DE PROYECTOS/rep_mkt/base_rep.xlsx", sheet = "docs2")
+
+roi <- left_join(roi, gasto)
+names(roi)[8] <- "gasto"
+
+roi$roi <- (roi$revenue - roi$gasto)/roi$gasto
+
+#ratio gasto real
+
+# roi$r_g_real <- roi$g_real/roi$gasto
+# 
+# roi$g_real[roi$periodo == "2021-1" | roi$periodo == "2022-1"] <- roi$gasto*4.174064
+# roi$g_real[roi$periodo == "2021-2" | roi$periodo == "2022-2"] <- roi$gasto*3.043392
+# 
+# roi$r_g_real <- roi$g_real/roi$gasto
+
+
+#Grafico Documentados
+
+d_graph <- roi %>% dplyr::select(periodo, doc_mkt, doc_adm )
+d_graph <- as.data.frame(d_graph)
+d_graph <- melt(d_graph, id.vars = "periodo")
+names(d_graph)[3] <- "valor"
+
+
+ggplot(d_graph, aes(fill=variable, y=valor, x=periodo)) + 
+  geom_bar(position="dodge", stat="identity")
+
+  #Grafico ratio
+
+r_graph <- roi %>% dplyr::select(periodo, ratio)
+r_graph <- as.data.frame(r_graph)
+r_graph <- melt(r_graph, id.vars = "periodo")
+names(r_graph)[3] <- "valor"
+
+
+
+ggplot(r_graph, aes(x=periodo, y=valor, group = 1)) + geom_line()
+
+
+#Grafico ROI
+
+d_graph2 <- roi %>% dplyr::select(periodo, revenue, gasto )
+d_graph2 <- as.data.frame(d_graph2)
+d_graph2 <- melt(d_graph2, id.vars = "periodo")
+names(d_graph2)[3] <- "valor"
+
+
+ggplot(d_graph2, aes(fill=variable, y=valor, x=periodo)) + 
+  geom_bar(position="dodge", stat="identity")
+
+#Grafico ratio
+
+r_graph <- roi %>% dplyr::select(periodo, roi)
+r_graph <- as.data.frame(r_graph)
+r_graph <- melt(r_graph, id.vars = "periodo")
+names(r_graph)[3] <- "valor"
+
+
+
+ggplot(r_graph, aes(x=periodo, y=valor, group = 1)) + geom_line()
+
+###### Costo por lead ######
+
+cpl_base <- base2 %>% dplyr::select(carr, periodo, CPL)
+
+cpl_base <- spread(cpl_base, key = periodo, value = CPL)
+
+
+cpl_base <- cpl_base[!grepl("-H", cpl_base$carr),]
+cpl_base <- cpl_base[!grepl("NEGOCIOS INTERNACIONALES HIBRIDO", cpl_base$carr),]
+cpl_base <- cpl_base[!grepl("CIENCIAS POLITICAS", cpl_base$carr),]
+cpl_base <- cpl_base[!grepl("TURISMO", cpl_base$carr),]
+cpl_base <- cpl_base[!grepl("NEGOCIOS DIGITALES", cpl_base$carr),]
+cpl_base <- cpl_base[!grepl("LIC.COMUNICACIÓN-N", cpl_base$carr),]
+#elast <- elast[!grepl("LIC. PUBLICIDAD", elast$carr),]
+cpl_base <- cpl_base[!grepl("LIC. ADMINISTRACION EMPRESAS-DUAL", cpl_base$carr),]
+cpl_base <- cpl_base[-c(28), ]
+
+write.table(cpl_base, "clipboard", sep="\t", row.names=FALSE)
+
+
+
+################ Clusters para cada periodo ###############
+
+#---------------202220----------------#
+
+
+base202220 <- filter(base2, periodo == "2022-2")
+base202220 <- base202220 %>% dplyr::select(leads_mkt, afl, doc, gasto, Impresiones, Clics, conv_ad, conv_ad)
+
+library(factoextra)
+fviz_nbclust(x = base202220, FUNcluster = kmeans, method = "wss", k.max = 15, 
+             diss = get_dist(base202220, method = "euclidean"), nstart = 50)
+
+k.means.fit <- kmeans(base202220,3)
+
+attributes(k.means.fit)
+
+
+# Centroids:
+k.means.fit$centers
+
+# Clusters:
+cluster202110 <- as.data.frame(k.means.fit$cluster)
+
+# Cluster size:
+k.means.fit$size
+
+#Primera Visualizacion
+fviz_cluster(object = k.means.fit, data = base202220, show.clust.cent = TRUE,
+             ellipse.type = "euclid", star.plot = TRUE, repel = TRUE) +
+  labs(title = "Resultados clustering K-means") +
+  theme_bw() +
+  theme(legend.position = "none")
