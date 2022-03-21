@@ -1311,6 +1311,11 @@ reemplazos <- left_join(reemplazos, campos, by = "cod_materia_reemplazo")
 
 reemplazos <- reemplazos %>% dplyr::select(-Curso)
 
+reemplazos <- as.data.frame(reemplazos)
+#Tabla de resultados a excel
+
+write_xlsx(reemplazos,"COORDINACION DE PROYECTOS/CurriculumPers/Bases//reemplazos_AdminNeg.xlsx")
+
 end_time <- Sys.time()
 time_taken <- round(end_time - start_time, 2)
 time_taken
