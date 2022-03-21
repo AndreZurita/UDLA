@@ -327,7 +327,14 @@ academico <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX A
 #Hay que tener CUDIADO CR toma codigos antiguos y los pone en otras materias, por eso hay que consolidar a nivel
 #Plan de programa 
 
+table(academico$`Plan de Estudio`)
+table(academico$`Codigo Curso`,academico$`Plan de Estudio`)
+#Tab de solo bachillerato
+table(academico$`Grado Academico`, academico$`Plan de Estudio`)
+
+
 homologado <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/malla_admin_neg.xlsx", sheet = "malla")
+
 
 names(academico)[21] <- "cod"
 names(academico)[17] <- "malla"
@@ -1283,6 +1290,26 @@ reemplazos <-  reemplazos[with(reemplazos,order(Carnet,score_reemplazo)),]
 
 #Tabla de resumen unico reemplazo
 write.table(tabla_resumen_varios, "clipboard", sep="\t", row.names=FALSE)
+
+
+
+#Match con campos de codigo de facultad, enfasis y plan de estudios
+
+
+#Bases de mallas
+campos <-  read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ADMINISTRACION).xlsx", sheet = "Administracion")
+
+campos <- campos %>% dplyr::select('Codigo Curso', Curso, 'Codigo Carrera', 'Codigo Facultad',Facultad,
+                                   'Codigo Enfasis', Enfasis, 'Plan de Estudio')
+
+campos <- unique(campos)
+
+names(campos)[1] <- "cod_materia_reemplazo"
+
+
+reemplazos <- left_join(reemplazos, campos, by = "cod_materia_reemplazo")
+
+reemplazos <- reemplazos %>% dplyr::select(-Curso)
 
 end_time <- Sys.time()
 time_taken <- round(end_time - start_time, 2)
