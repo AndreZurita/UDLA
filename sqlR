@@ -1,0 +1,121 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(GGally)
+library(corrgram)
+library(RODBC)
+library(DBI)
+library(odbc)
+
+reportes <- dbConnect(odbc::odbc(),
+                 Driver = "SQL Server",
+                 Server = "sgcn05.udla-ec.int",
+                 Database = "Reportes",
+                 Trusted_Connection = "True",
+                 PWD = rstudioapi::askForPassword("Database password"),
+                 Port = 1433)
+
+#Todas las funciones
+lsf.str("package:DBI")
+
+# currTableSQL<-paste("SELECT top 10 * From PROY_DocumentadosDetalle",sep="")
+# DF<-sqlQuery(con,currTableSQL)
+
+list <- dbListTables(reportes)
+list <- as.data.frame(list)
+
+#Campos de un reporte, es decir el nombre de sus columnas
+fields <- dbListFields(reportes, "Proy_DocumentadosDetalle")
+fields
+
+#Consulta
+results <- dbGetQuery(reportes, "SELECT * FROM PROY_DocumentadosDetalle")
+results
+
+
+##
+
+desertores <- dbGetQuery(reportes, "SELECT * FROM MODELO_AlumnoPeriodoDesercion")
+desertores <- as.data.frame(desertores)
+
+write_xlsx(desertores,"COORDINACION DE PROYECTOS/Desercion/desertores.xlsx")
+
+
+##### PARA CR BASES MOBIUS #####
+
+
+mobius <- dbConnect(odbc::odbc(),
+                      Driver = "SQL Server",
+                      Server = "11.100.0.136",
+                      Database = "BIGDATA",
+                      Trusted_Connection = "True",
+                      PWD = rstudioapi::askForPassword("Database password"),
+                      Port = 1433)
+
+
+
+username <- "gen_UDLA_01"
+password <- "Rtyp2022$"
+server <- "11.100.0.136"
+database <- "BIGDATA"
+connectionString <- paste0("DRIVER={SQL Server}; server=",server,"; database=",database,"; uid=",username,"; pwd=",password, sep="")
+
+conexion <- odbcDriverConnect(connection=connectionString)
+
+
+currTableSQL<-paste("SELECT top 10 * From PROY_DocumentadosDetalle",sep="")
+DF<-sqlQuery(conexion,currTableSQL)
+
+
+
+
+
+
+
