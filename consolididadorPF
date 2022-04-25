@@ -1,0 +1,132 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(DataCombine)
+library(pivottabler)
+#------------------------------------------------------------------------------
+#CONSOLIDADOR PERIODO FUTURO CR 
+#COORDINACION DE PROYECTOS
+#INTELIGENCIA DE LA INFORMACION 
+#UDLA
+#------------------------------------------------------------------------------
+
+
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+recom_CANAS_latina_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_canas/recom_CANAS_latina_pand_C1.xlsx")
+recom_CANAS_latina_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_canas/recom_CANAS_latina_pand_c2.xlsx")
+recom_CANAS_latina_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_canas/recom_CANAS_latina_pand_C3.xlsx")
+
+recom_grecia_latina_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_grecia/recom_grecia_latina_pand_C1.xlsx")
+recom_grecia_latina_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_grecia/recom_grecia_latina_pand_c2.xlsx")
+recom_grecia_latina_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_grecia/recom_grecia_latina_pand_C3.xlsx")
+
+
+recom_guapiles_latina_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_guapiles/recom_guapiles_latina_pand_C1.xlsx")
+recom_guapiles_latina_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_guapiles/recom_guapiles_latina_pand_c2.xlsx")
+recom_guapiles_latina_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_guapiles/recom_guapiles_latina_pand_C3.xlsx")
+
+recom_heredia_latina_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_heredia/recom_heredia_latina_pand_C1.xlsx")
+recom_heredia_latina_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_heredia/recom_heredia_latina_pand_C2.xlsx")
+recom_heredia_latina_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_heredia/recom_heredia_latina_pand_C3.xlsx")
+
+
+recom_neily_latina_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_neily/recom_neily_latina_pand_C1.xlsx")
+recom_neily_latina_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_neily/recom_neily_latina_pand_C2.xlsx")
+recom_neily_latina_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_neily/recom_neily_latina_pand_C3.xlsx")
+
+
+recom_perezzeledon_latina_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_perezzeledon/recom_perezzeledon_latina_pand_C1.xlsx")
+recom_perezzeledon_latina_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_perezzeledon/recom_perezzeledon_latina_pand_C2.xlsx")
+recom_perezzeledon_latina_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_perezzeledon/recom_perezzeledon_latina_pand_C3.xlsx")
+
+
+recom_sanjose_latina_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_sanjose/recom_sanjose_latina_pand_C1.xlsx")
+recom_sanjose_latina_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_sanjose/recom_sanjose_latina_pand_C2.xlsx")
+recom_sanjose_latina_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_sanjose/recom_sanjose_latina_pand_C3.xlsx")
+
+
+recom_santacruz_latina_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_santacruz/recom_santacruz_latina_pand_C1.xlsx")
+recom_santacruz_latina_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_santacruz/recom_santacruz_latina_pand_C2.xlsx")
+recom_santacruz_latina_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/s_santacruz/recom_santacruz_latina_pand_C3.xlsx")
+
+
+recom_CARTAGO_americana_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_CARTAGO/recom_CARTAGO_americana_pand_C1.xlsx")
+recom_CARTAGO_americana_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_CARTAGO/recom_CARTAGO_americana_pand_C2.xlsx")
+recom_CARTAGO_americana_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_CARTAGO/recom_CARTAGO_americana_pand_C3.xlsx")
+
+recom_HEREDIA_americana_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_HEREDIA/recom_HEREDIA_americana_pand_C1.xlsx")
+recom_HEREDIA_americana_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_HEREDIA/recom_HEREDIA_americana_pand_C2.xlsx")
+recom_HEREDIA_americana_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_HEREDIA/recom_HEREDIA_americana_pand_C3.xlsx")
+
+recom_SANJOSE_americana_pand_C1 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/recom_SANJOSE_americana_pand_C1.xlsx")
+recom_SANJOSE_americana_pand_C2 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/recom_SANJOSE_americana_pand_C2.xlsx")
+recom_SANJOSE_americana_pand_C3 <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/recom_SANJOSE_americana_pand_C3.xlsx")
+
+
+
+#Consolidador 
+
+
+consolidado <- rbind(recom_CANAS_latina_pand_C1, recom_CANAS_latina_pand_C2, recom_CANAS_latina_pand_C3, recom_grecia_latina_pand_C1,
+                     recom_grecia_latina_pand_C2, recom_grecia_latina_pand_C3, recom_guapiles_latina_pand_C1, recom_guapiles_latina_pand_C2, 
+                     recom_guapiles_latina_pand_C3, recom_heredia_latina_pand_C1 , recom_heredia_latina_pand_C2, recom_heredia_latina_pand_C3, recom_neily_latina_pand_C1, recom_perezzeledon_latina_pand_C1,
+                     recom_sanjose_latina_pand_C1, recom_sanjose_latina_pand_C2, recom_sanjose_latina_pand_C3, recom_santacruz_latina_pand_C1,
+                     recom_santacruz_latina_pand_C2,recom_santacruz_latina_pand_C3,recom_CARTAGO_americana_pand_C1,recom_CARTAGO_americana_pand_C2,
+                     recom_CARTAGO_americana_pand_C3,recom_HEREDIA_americana_pand_C1,recom_HEREDIA_americana_pand_C2,recom_HEREDIA_americana_pand_C3,
+                     recom_SANJOSE_americana_pand_C1,recom_SANJOSE_americana_pand_C2,recom_SANJOSE_americana_pand_C3)
+
+write_xlsx(consolidado,"COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/consolidado.xlsx")
+
+
+
+
+
+
+
