@@ -125,8 +125,514 @@ consolidado <- rbind(recom_CANAS_latina_pand_C1, recom_CANAS_latina_pand_C2, rec
 write_xlsx(consolidado,"COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/consolidado.xlsx")
 
 
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(DataCombine)
+library(pivottabler)
+#Comparativo
+
+#LATINA, C1, PANDEMIA
+
+
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+latina <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/mat_hist_1c_CR.xlsx", sheet = "Ulatina (NUEVOS PUROS)")
+
+
+latina <- filter(latina, TIPO_JORNADA == "JORNADA EN PANDEMIA ( VIRTUAL )")
+latina <- filter(latina, BLOQUE == "I Cuatrimestre")
+latina <- filter(latina, PERIODO == 1)
+
+
+horario_split_2 <- as.data.frame(str_split_fixed(latina$HORARIO, " ", 2))
+names(horario_split_2)[1] <- "dia"
+names(horario_split_2)[2] <- "hora"
+
+latina <- cbind(latina, horario_split_2)
+names(latina)
+
+latina$paralelo <- paste0(latina$AULA, "-", latina$HORARIO)
+latina <-  latina%>% dplyr::select(paralelo, everything())
+
+latina <-  latina %>% distinct(paralelo, .keep_all= TRUE)
+latina$count <- 1
+
+
+write_xlsx(latina,"COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/latina_c1_mock.xlsx")
+
+
+qhpvt(latina, "dia", "hora", "n()")
+
+pt <- PivotTable$new()
+pt$addData(latina)
+pt$addColumnDataGroups("dia")
+pt$addRowDataGroups("hora")
+pt$defineCalcuamion(calculationName="paralelos", summariseExpression="n()")
+pt$renderPivot()
 
 
 
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(DataCombine)
+library(pivottabler)
 
 
+#LATINA, C2, PANDEMIA
+
+
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+latina <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/mat_hist_1c_CR.xlsx", sheet = "Ulatina (NUEVOS PUROS)")
+
+
+latina <- filter(latina, TIPO_JORNADA == "JORNADA EN PANDEMIA ( VIRTUAL )")
+latina <- filter(latina, BLOQUE == "I Cuatrimestre")
+latina <- filter(latina, PERIODO == 2)
+
+
+horario_split_2 <- as.data.frame(str_split_fixed(latina$HORARIO, " ", 2))
+names(horario_split_2)[1] <- "dia"
+names(horario_split_2)[2] <- "hora"
+
+latina <- cbind(latina, horario_split_2)
+names(latina)
+
+latina$paralelo <- paste0(latina$AULA, "-", latina$HORARIO)
+latina <-  latina%>% dplyr::select(paralelo, everything())
+
+latina <-  latina %>% distinct(paralelo, .keep_all= TRUE)
+latina$count <- 1
+
+
+write_xlsx(latina,"COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/latina_c2_mock.xlsx")
+
+
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(DataCombine)
+library(pivottabler)
+
+
+#LATINA, C3, PANDEMIA
+
+
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+latina <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/mat_hist_1c_CR.xlsx", sheet = "Ulatina (NUEVOS PUROS)")
+
+
+latina <- filter(latina, TIPO_JORNADA == "JORNADA EN PANDEMIA ( VIRTUAL )")
+latina <- filter(latina, BLOQUE == "I Cuatrimestre")
+latina <- filter(latina, PERIODO == 3)
+
+
+horario_split_2 <- as.data.frame(str_split_fixed(latina$HORARIO, " ", 2))
+names(horario_split_2)[1] <- "dia"
+names(horario_split_2)[2] <- "hora"
+
+latina <- cbind(latina, horario_split_2)
+names(latina)
+
+latina$paralelo <- paste0(latina$AULA, "-", latina$HORARIO)
+latina <-  latina%>% dplyr::select(paralelo, everything())
+
+latina <-  latina %>% distinct(paralelo, .keep_all= TRUE)
+latina$count <- 1
+
+
+write_xlsx(latina,"COORDINACION DE PROYECTOS/CurriculumPers/ULATINA/latina_c3_mock.xlsx")
+
+
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(DataCombine)
+library(pivottabler)
+
+
+#uam, C1, PANDEMIA
+
+
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+uam <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/mat_hist_1c_CR.xlsx", sheet = "UAM (NUEVOS PUROS)")
+
+
+uam <- filter(uam, TIPO_JORNADA == "JORNADA EN PANDEMIA ( VIRTUAL )")
+uam <- filter(uam, BLOQUE == "I Cuatrimestre")
+uam <- filter(uam, PERIODO == 1)
+
+
+horario_split_2 <- as.data.frame(str_split_fixed(uam$HORARIO, " ", 2))
+names(horario_split_2)[1] <- "dia"
+names(horario_split_2)[2] <- "hora"
+
+uam <- cbind(uam, horario_split_2)
+names(uam)
+
+uam$paralelo <- paste0(uam$AULA, "-", uam$HORARIO)
+uam <-  uam%>% dplyr::select(paralelo, everything())
+
+uam <-  uam %>% distinct(paralelo, .keep_all= TRUE)
+uam$count <- 1
+
+
+write_xlsx(uam,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/uam_c1_mock.xlsx")
+
+
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(DataCombine)
+library(pivottabler)
+
+
+#uam, C1, PANDEMIA
+
+
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+uam <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/mat_hist_1c_CR.xlsx", sheet = "UAM (NUEVOS PUROS)")
+
+
+uam <- filter(uam, TIPO_JORNADA == "JORNADA EN PANDEMIA ( VIRTUAL )")
+uam <- filter(uam, BLOQUE == "I Cuatrimestre")
+uam <- filter(uam, PERIODO == 2)
+
+
+horario_split_2 <- as.data.frame(str_split_fixed(uam$HORARIO, " ", 2))
+names(horario_split_2)[1] <- "dia"
+names(horario_split_2)[2] <- "hora"
+
+uam <- cbind(uam, horario_split_2)
+names(uam)
+
+uam$paralelo <- paste0(uam$AULA, "-", uam$HORARIO)
+uam <-  uam%>% dplyr::select(paralelo, everything())
+
+uam <-  uam %>% distinct(paralelo, .keep_all= TRUE)
+uam$count <- 1
+
+
+write_xlsx(uam,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/uam_c2_mock.xlsx")
+
+
+
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(DataCombine)
+library(pivottabler)
+
+
+#uam, C1, PANDEMIA
+
+
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+uam <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/mat_hist_1c_CR.xlsx", sheet = "UAM (NUEVOS PUROS)")
+
+
+uam <- filter(uam, TIPO_JORNADA == "JORNADA EN PANDEMIA ( VIRTUAL )")
+uam <- filter(uam, BLOQUE == "I Cuatrimestre")
+uam <- filter(uam, PERIODO == 3)
+
+
+horario_split_2 <- as.data.frame(str_split_fixed(uam$HORARIO, " ", 2))
+names(horario_split_2)[1] <- "dia"
+names(horario_split_2)[2] <- "hora"
+
+uam <- cbind(uam, horario_split_2)
+names(uam)
+
+uam$paralelo <- paste0(uam$AULA, "-", uam$HORARIO)
+uam <-  uam%>% dplyr::select(paralelo, everything())
+
+uam <-  uam %>% distinct(paralelo, .keep_all= TRUE)
+uam$count <- 1
+
+
+write_xlsx(uam,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/uam_c3_mock.xlsx")
