@@ -1,0 +1,3832 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+library(DataCombine)
+library(pivottabler)
+#------------------------------------------------------------------------------
+#PERIODO FUTURO CR 
+#COORDINACION DE PROYECTOS
+#INTELIGENCIA DE LA INFORMACION 
+#UDLA
+#------------------------------------------------------------------------------
+
+
+
+##################### TRABAJO EN BASE Uamericana ############################
+
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+pf_americana <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/mat_hist_1c_CR.xlsx", sheet = "UAM (NUEVOS PUROS)")
+
+#Solo 1 cuatrimestre
+
+pf_americana <- filter(pf_americana, BLOQUE == "I Cuatrimestre")
+
+#En pandemia
+
+pf_americana <- filter(pf_americana, TIPO_JORNADA == "JORNADA EN PANDEMIA ( VIRTUAL )")
+
+#Solo periodos 1
+
+pf_americana <- filter(pf_americana, PERIODO == 2)
+
+names(pf_americana)[15] <- "sede"
+names(pf_americana)[12] <- "carrera"
+names(pf_americana)[19] <- "cod_padre"
+names(pf_americana)[20] <- "cod_hijo"
+
+#Aquellos que no tienen en su codigo padre registro, lo registraremos como hijo
+
+pf_americana$cod_padre[is.na(pf_americana$cod_padre)] <- pf_americana$cod_hijo
+
+pf_americana$carrera <- sub(".* - ", "", pf_americana$carrera)
+pf_americana$sede <- sub(".* - ", "", pf_americana$sede)
+pf_americana$sede <- sub(".*CAMPUS ", "", pf_americana$sede)
+pf_americana$sede <- sub(".*SEDE ", "", pf_americana$sede)
+
+#Cambio estructura de sedes
+
+count(pf_americana$sede)
+
+pf_americana$sede[pf_americana$sede == "SAN JOSE"] <- "SANJOSE"
+
+#Cambio estrucutura carreras
+
+count(pf_americana$carrera)
+pf_americana$carrera[pf_americana$carrera == "ADMINISTRACIÓN DE NEGOCIOS" ] <- "admin-neg"
+pf_americana$carrera[pf_americana$carrera == "CIENCIAS DE LA EDUCACIÓN" ] <- "ccss-educ"
+pf_americana$carrera[pf_americana$carrera == "CIENCIAS DE LA EDUCACIÓN EN LA ENSEÑANZA DE LA CIENCIA" ] <- "ccss-edu-ens"
+pf_americana$carrera[pf_americana$carrera == "CIENCIAS DE LA EDUCACIÓN PREESCOLAR" ] <- "ccss-educ-pre"
+pf_americana$carrera[pf_americana$carrera == "COMUNICACIÓN DE MERCADEO" ] <- "com-mercadeo"
+pf_americana$carrera[pf_americana$carrera == "CONTADURÍA" ] <- "conta"
+pf_americana$carrera[pf_americana$carrera == "CONTADURÍA PÚBLICA" ] <- "conta-pub"
+pf_americana$carrera[pf_americana$carrera == "DERECHO" ] <- "derecho"
+pf_americana$carrera[pf_americana$carrera == "DISEÑO PUBLICITARIO" ] <- "dis-publ"
+pf_americana$carrera[pf_americana$carrera == "ESTADÍSTICA APLICADA A LAS EMPRESAS" ] <- "estad"
+pf_americana$carrera[pf_americana$carrera == "GESTIÓN DE PROCESOS" ] <- "gest-proc"
+pf_americana$carrera[pf_americana$carrera == "INGENIERÍA DE SISTEMAS" ] <- "sist"
+pf_americana$carrera[pf_americana$carrera == "INGENIERÍA INDUSTRIAL" ] <- "indus"
+pf_americana$carrera[pf_americana$carrera == "LA ENSEÑANZA DEL INGLÉS" ] <- "ingles"
+pf_americana$carrera[pf_americana$carrera == "PUBLICIDAD" ] <- "publ"
+pf_americana$carrera[pf_americana$carrera == "TERAPIA FÍSICA" ] <- "ter-fis"
+
+
+
+pf_americana_list <- split(pf_americana, f = pf_americana$sede) 
+list2env(pf_americana_list,envir=.GlobalEnv)
+
+
+
+######## UAM SEDE CARTAGO#########
+
+
+#primer animado sede-carrera
+#Diferenciado entre bases de datos de cada una de las sedes y sus carreras #
+
+uam_CARTAGO_carr <- split(CARTAGO, f = CARTAGO$carrera) 
+names(uam_CARTAGO_carr) <- paste0("CARTAGO-",names(uam_CARTAGO_carr)) 
+
+list2env(uam_CARTAGO_carr,envir=.GlobalEnv)
+
+
+#segundo anidado Sede-carrera-materias#
+
+#CARTAGO-admin de negocios
+
+`CARTAGO-admin-neg-materias` <- split(`CARTAGO-admin-neg`, f = `CARTAGO-admin-neg`$cod_padre) 
+names(`CARTAGO-admin-neg-materias`) <- paste0("CARTAGO-admin-neg-materias-",names(`CARTAGO-admin-neg-materias`)) 
+
+list2env(`CARTAGO-admin-neg-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_CARTAGO_admin-neg` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_CARTAGO_admin-neg`)[1] <- "horario"
+`horario_CARTAGO_admin-neg` <- unique(`horario_CARTAGO_admin-neg`)
+
+
+`obs_CARTAGO-admin-neg-materias` <- as.data.frame(sapply(`CARTAGO-admin-neg-materias`, NROW))
+
+`obs_CARTAGO-admin-neg-materias` <- tibble::rownames_to_column(`obs_CARTAGO-admin-neg-materias`, "materia")
+names(`obs_CARTAGO-admin-neg-materias`)[2] <- "obs"
+
+`obs_CARTAGO-admin-neg-materias`$materia <- str_remove(`obs_CARTAGO-admin-neg-materias`$materia, "CARTAGO-admin-neg-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_CARTAGO-admin-neg-materias` <- filter(`obs_CARTAGO-admin-neg-materias`, obs >= 10)
+`no_elegibles_CARTAGO-admin-neg-materias` <- filter(`obs_CARTAGO-admin-neg-materias`, obs < 10)
+
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`CARTAGO-admin-neg-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_CARTAGO_admin-neg` <- left_join(`horario_CARTAGO_admin-neg`, `AN-BAN-01`)
+names(`horario_CARTAGO_admin-neg`)[2] <- "AN-BAN-01"
+
+`horario_CARTAGO_admin-neg`$`AN-BAN-01`[is.na(`horario_CARTAGO_admin-neg`$`AN-BAN-01`)] <- 0
+
+
+
+#AN-BAN-02
+
+`AN-BAN-02` <- as.data.frame(count(`CARTAGO-admin-neg-materias-AN-BAN-02`$HORARIO)) 
+
+`AN-BAN-02`$freq <- (`AN-BAN-02`$freq)/sum(`AN-BAN-02`$freq)
+
+names(`AN-BAN-02`)[1] <- "horario"
+
+`horario_CARTAGO_admin-neg` <- left_join(`horario_CARTAGO_admin-neg`, `AN-BAN-02`)
+names(`horario_CARTAGO_admin-neg`)[3] <- "AN-BAN-02"
+
+`horario_CARTAGO_admin-neg`$`AN-BAN-02`[is.na(`horario_CARTAGO_admin-neg`$`AN-BAN-02`)] <- 0
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`CARTAGO-admin-neg-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+`horario_CARTAGO_admin-neg` <- left_join(`horario_CARTAGO_admin-neg`, `AN-BAN-03`)
+names(`horario_CARTAGO_admin-neg`)[4] <- "AN-BAN-03"
+
+`horario_CARTAGO_admin-neg`$`AN-BAN-03`[is.na(`horario_CARTAGO_admin-neg`$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`CARTAGO-admin-neg-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_CARTAGO_admin-neg` <- left_join(`horario_CARTAGO_admin-neg`, `AN-BAN-04`)
+names(`horario_CARTAGO_admin-neg`)[5] <- "AN-BAN-04"
+
+`horario_CARTAGO_admin-neg`$`AN-BAN-04`[is.na(`horario_CARTAGO_admin-neg`$`AN-BAN-04`)] <- 0
+
+
+
+#AN-BAN-05
+
+`AN-BAN-05` <- as.data.frame(count(`CARTAGO-admin-neg-materias-AN-BAN-05`$HORARIO)) 
+
+`AN-BAN-05`$freq <- (`AN-BAN-05`$freq)/sum(`AN-BAN-05`$freq)
+
+names(`AN-BAN-05`)[1] <- "horario"
+
+`horario_CARTAGO_admin-neg` <- left_join(`horario_CARTAGO_admin-neg`, `AN-BAN-05`)
+names(`horario_CARTAGO_admin-neg`)[6] <- "AN-BAN-05"
+
+`horario_CARTAGO_admin-neg`$`AN-BAN-05`[is.na(`horario_CARTAGO_admin-neg`$`AN-BAN-05`)] <- 0
+
+
+
+##wide to long
+
+`horario_CARTAGO_admin-neg`$id <- "UAM_CANAS_admin-neg_pand_C2"
+`horario_CARTAGO_admin-neg` <-  `horario_CARTAGO_admin-neg`%>% dplyr::select(id, everything())
+
+`horario_CARTAGO_admin-neg` <- melt(`horario_CARTAGO_admin-neg`, id = c("id", "horario"))
+names(`horario_CARTAGO_admin-neg`)[3] <- "materia"
+names(`horario_CARTAGO_admin-neg`)[4] <- "asistencia"
+
+
+#CARTAGO-conta
+
+`CARTAGO-conta-materias` <- split(`CARTAGO-conta`, f = `CARTAGO-conta`$cod_padre) 
+names(`CARTAGO-conta-materias`) <- paste0("CARTAGO-conta-materias-",names(`CARTAGO-conta-materias`)) 
+
+list2env(`CARTAGO-conta-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_CARTAGO_conta` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_CARTAGO_conta`)[1] <- "horario"
+`horario_CARTAGO_conta` <- unique(`horario_CARTAGO_conta`)
+
+
+`obs_CARTAGO-conta-materias` <- as.data.frame(sapply(`CARTAGO-conta-materias`, NROW))
+
+`obs_CARTAGO-conta-materias` <- tibble::rownames_to_column(`obs_CARTAGO-conta-materias`, "materia")
+names(`obs_CARTAGO-conta-materias`)[2] <- "obs"
+
+`obs_CARTAGO-conta-materias`$materia <- str_remove(`obs_CARTAGO-conta-materias`$materia, "CARTAGO-conta-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_CARTAGO-conta-materias` <- filter(`obs_CARTAGO-conta-materias`, obs >= 10)
+`no_elegibles_CARTAGO-conta-materias` <- filter(`obs_CARTAGO-conta-materias`, obs < 10)
+
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`CARTAGO-conta-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_CARTAGO_conta` <- left_join(`horario_CARTAGO_conta`, `AN-BAN-01`)
+names(`horario_CARTAGO_conta`)[2] <- "AN-BAN-01"
+
+`horario_CARTAGO_conta`$`AN-BAN-01`[is.na(`horario_CARTAGO_conta`$`AN-BAN-01`)] <- 0
+
+
+
+#AN-BAN-02
+
+`AN-BAN-02` <- as.data.frame(count(`CARTAGO-conta-materias-AN-BAN-02`$HORARIO)) 
+
+`AN-BAN-02`$freq <- (`AN-BAN-02`$freq)/sum(`AN-BAN-02`$freq)
+
+names(`AN-BAN-02`)[1] <- "horario"
+
+`horario_CARTAGO_conta` <- left_join(`horario_CARTAGO_conta`, `AN-BAN-02`)
+names(`horario_CARTAGO_conta`)[3] <- "AN-BAN-02"
+
+`horario_CARTAGO_conta`$`AN-BAN-02`[is.na(`horario_CARTAGO_conta`$`AN-BAN-02`)] <- 0
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`CARTAGO-conta-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+`horario_CARTAGO_conta` <- left_join(`horario_CARTAGO_conta`, `AN-BAN-03`)
+names(`horario_CARTAGO_conta`)[4] <- "AN-BAN-03"
+
+`horario_CARTAGO_conta`$`AN-BAN-03`[is.na(`horario_CARTAGO_conta`$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`CARTAGO-conta-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_CARTAGO_conta` <- left_join(`horario_CARTAGO_conta`, `AN-BAN-04`)
+names(`horario_CARTAGO_conta`)[5] <- "AN-BAN-04"
+
+`horario_CARTAGO_conta`$`AN-BAN-04`[is.na(`horario_CARTAGO_conta`$`AN-BAN-04`)] <- 0
+
+
+
+##wide to long
+
+`horario_CARTAGO_conta`$id <- "UAM_CANAS_conta_pand_C2"
+`horario_CARTAGO_conta` <-  `horario_CARTAGO_conta`%>% dplyr::select(id, everything())
+
+`horario_CARTAGO_conta` <- melt(`horario_CARTAGO_conta`, id = c("id", "horario"))
+names(`horario_CARTAGO_conta`)[3] <- "materia"
+names(`horario_CARTAGO_conta`)[4] <- "asistencia"
+
+
+
+
+#CARTAGO-conta-pub
+
+`CARTAGO-conta-pub-materias` <- split(`CARTAGO-conta-pub`, f = `CARTAGO-conta-pub`$cod_padre) 
+names(`CARTAGO-conta-pub-materias`) <- paste0("CARTAGO-conta-pub-materias-",names(`CARTAGO-conta-pub-materias`)) 
+
+list2env(`CARTAGO-conta-pub-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_CARTAGO_conta-pub` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_CARTAGO_conta-pub`)[1] <- "horario"
+`horario_CARTAGO_conta-pub` <- unique(`horario_CARTAGO_conta-pub`)
+
+
+`obs_CARTAGO-conta-pub-materias` <- as.data.frame(sapply(`CARTAGO-conta-pub-materias`, NROW))
+
+`obs_CARTAGO-conta-pub-materias` <- tibble::rownames_to_column(`obs_CARTAGO-conta-pub-materias`, "materia")
+names(`obs_CARTAGO-conta-pub-materias`)[2] <- "obs"
+
+`obs_CARTAGO-conta-pub-materias`$materia <- str_remove(`obs_CARTAGO-conta-pub-materias`$materia, "CARTAGO-conta-pub-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_CARTAGO-conta-pub-materias` <- filter(`obs_CARTAGO-conta-pub-materias`, obs >= 10)
+`no_elegibles_CARTAGO-conta-pub-materias` <- filter(`obs_CARTAGO-conta-pub-materias`, obs < 10)
+
+
+#no hay sificiente infprmacion para inferir
+
+
+#CARTAGO-gest-proc
+
+`CARTAGO-gest-proc-materias` <- split(`CARTAGO-gest-proc`, f = `CARTAGO-gest-proc`$cod_padre) 
+names(`CARTAGO-gest-proc-materias`) <- paste0("CARTAGO-gest-proc-materias-",names(`CARTAGO-gest-proc-materias`)) 
+
+list2env(`CARTAGO-gest-proc-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_CARTAGO_gest-proc` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_CARTAGO_gest-proc`)[1] <- "horario"
+`horario_CARTAGO_gest-proc` <- unique(`horario_CARTAGO_gest-proc`)
+
+
+`obs_CARTAGO-gest-proc-materias` <- as.data.frame(sapply(`CARTAGO-gest-proc-materias`, NROW))
+
+`obs_CARTAGO-gest-proc-materias` <- tibble::rownames_to_column(`obs_CARTAGO-gest-proc-materias`, "materia")
+names(`obs_CARTAGO-gest-proc-materias`)[2] <- "obs"
+
+`obs_CARTAGO-gest-proc-materias`$materia <- str_remove(`obs_CARTAGO-gest-proc-materias`$materia, "CARTAGO-gest-proc-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_CARTAGO-gest-proc-materias` <- filter(`obs_CARTAGO-gest-proc-materias`, obs >= 10)
+`no_elegibles_CARTAGO-gest-proc-materias` <- filter(`obs_CARTAGO-gest-proc-materias`, obs < 10)
+
+
+#NO HAY SUFICIENTES DATOS PARA INFERIR
+
+
+#CARTAGO-indus
+
+`CARTAGO-indus-materias` <- split(`CARTAGO-indus`, f = `CARTAGO-indus`$cod_padre) 
+names(`CARTAGO-indus-materias`) <- paste0("CARTAGO-indus-materias-",names(`CARTAGO-indus-materias`)) 
+
+list2env(`CARTAGO-indus-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_CARTAGO_indus` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_CARTAGO_indus`)[1] <- "horario"
+`horario_CARTAGO_indus` <- unique(`horario_CARTAGO_indus`)
+
+
+`obs_CARTAGO-indus-materias` <- as.data.frame(sapply(`CARTAGO-indus-materias`, NROW))
+
+`obs_CARTAGO-indus-materias` <- tibble::rownames_to_column(`obs_CARTAGO-indus-materias`, "materia")
+names(`obs_CARTAGO-indus-materias`)[2] <- "obs"
+
+`obs_CARTAGO-indus-materias`$materia <- str_remove(`obs_CARTAGO-indus-materias`$materia, "CARTAGO-indus-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_CARTAGO-indus-materias` <- filter(`obs_CARTAGO-indus-materias`, obs >= 10)
+`no_elegibles_CARTAGO-indus-materias` <- filter(`obs_CARTAGO-indus-materias`, obs < 10)
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`CARTAGO-indus-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_CARTAGO_indus` <- left_join(`horario_CARTAGO_indus`, `AN-BAN-04`)
+names(`horario_CARTAGO_indus`)[2] <- "AN-BAN-04"
+
+`horario_CARTAGO_indus`$`AN-BAN-04`[is.na(`horario_CARTAGO_indus`$`AN-BAN-04`)] <- 0
+
+
+
+#III-BII-01
+
+`III-BII-01` <- as.data.frame(count(`CARTAGO-indus-materias-III-BII-01`$HORARIO)) 
+
+`III-BII-01`$freq <- (`III-BII-01`$freq)/sum(`III-BII-01`$freq)
+
+names(`III-BII-01`)[1] <- "horario"
+
+`horario_CARTAGO_indus` <- left_join(`horario_CARTAGO_indus`, `III-BII-01`)
+names(`horario_CARTAGO_indus`)[3] <- "III-BII-01"
+
+`horario_CARTAGO_indus`$`III-BII-01`[is.na(`horario_CARTAGO_indus`$`III-BII-01`)] <- 0
+
+
+#III-BII-40
+
+`III-BII-40` <- as.data.frame(count(`CARTAGO-indus-materias-III-BII-40`$HORARIO)) 
+
+`III-BII-40`$freq <- (`III-BII-40`$freq)/sum(`III-BII-40`$freq)
+
+names(`III-BII-40`)[1] <- "horario"
+
+`horario_CARTAGO_indus` <- left_join(`horario_CARTAGO_indus`, `III-BII-40`)
+names(`horario_CARTAGO_indus`)[4] <- "III-BII-40"
+
+`horario_CARTAGO_indus`$`III-BII-40`[is.na(`horario_CARTAGO_indus`$`III-BII-40`)] <- 0
+
+
+
+#III-BII-41
+
+`III-BII-41` <- as.data.frame(count(`CARTAGO-indus-materias-III-BII-41`$HORARIO)) 
+
+`III-BII-41`$freq <- (`III-BII-41`$freq)/sum(`III-BII-41`$freq)
+
+names(`III-BII-41`)[1] <- "horario"
+
+`horario_CARTAGO_indus` <- left_join(`horario_CARTAGO_indus`, `III-BII-41`)
+names(`horario_CARTAGO_indus`)[5] <- "III-BII-41"
+
+`horario_CARTAGO_indus`$`III-BII-41`[is.na(`horario_CARTAGO_indus`$`III-BII-41`)] <- 0
+
+
+
+
+#AN-BAN-06
+
+`AN-BAN-06` <- as.data.frame(count(`CARTAGO-indus-materias-AN-BAN-06`$HORARIO)) 
+
+`AN-BAN-06`$freq <- (`AN-BAN-06`$freq)/sum(`AN-BAN-06`$freq)
+
+names(`AN-BAN-06`)[1] <- "horario"
+
+`horario_CARTAGO_indus` <- left_join(`horario_CARTAGO_indus`, `AN-BAN-06`)
+names(`horario_CARTAGO_indus`)[6] <- "AN-BAN-06"
+
+`horario_CARTAGO_indus`$`AN-BAN-06`[is.na(`horario_CARTAGO_indus`$`AN-BAN-06`)] <- 0
+
+
+##wide to long
+
+`horario_CARTAGO_indus`$id <- "UAM_CANAS_indus_pand_C2"
+`horario_CARTAGO_indus` <-  `horario_CARTAGO_indus`%>% dplyr::select(id, everything())
+
+`horario_CARTAGO_indus` <- melt(`horario_CARTAGO_indus`, id = c("id", "horario"))
+names(`horario_CARTAGO_indus`)[3] <- "materia"
+names(`horario_CARTAGO_indus`)[4] <- "asistencia"
+
+
+
+
+#CARTAGO-ingles
+
+`CARTAGO-ingles-materias` <- split(`CARTAGO-ingles`, f = `CARTAGO-ingles`$cod_padre) 
+names(`CARTAGO-ingles-materias`) <- paste0("CARTAGO-ingles-materias-",names(`CARTAGO-ingles-materias`)) 
+
+list2env(`CARTAGO-ingles-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_CARTAGO_ingles` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_CARTAGO_ingles`)[1] <- "horario"
+`horario_CARTAGO_ingles` <- unique(`horario_CARTAGO_ingles`)
+
+
+`obs_CARTAGO-ingles-materias` <- as.data.frame(sapply(`CARTAGO-ingles-materias`, NROW))
+
+`obs_CARTAGO-ingles-materias` <- tibble::rownames_to_column(`obs_CARTAGO-ingles-materias`, "materia")
+names(`obs_CARTAGO-ingles-materias`)[2] <- "obs"
+
+`obs_CARTAGO-ingles-materias`$materia <- str_remove(`obs_CARTAGO-ingles-materias`$materia, "CARTAGO-ingles-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_CARTAGO-ingles-materias` <- filter(`obs_CARTAGO-ingles-materias`, obs >= 10)
+`no_elegibles_CARTAGO-ingles-materias` <- filter(`obs_CARTAGO-ingles-materias`, obs < 10)
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`CARTAGO-ingles-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `AN-BAN-01`)
+names(`horario_CARTAGO_ingles`)[2] <- "AN-BAN-01"
+
+`horario_CARTAGO_ingles`$`AN-BAN-01`[is.na(`horario_CARTAGO_ingles`$`AN-BAN-01`)] <- 0
+
+
+#AN-BAN-02
+
+`AN-BAN-02` <- as.data.frame(count(`CARTAGO-ingles-materias-AN-BAN-02`$HORARIO)) 
+
+`AN-BAN-02`$freq <- (`AN-BAN-02`$freq)/sum(`AN-BAN-02`$freq)
+
+names(`AN-BAN-02`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `AN-BAN-02`)
+names(`horario_CARTAGO_ingles`)[3] <- "AN-BAN-02"
+
+`horario_CARTAGO_ingles`$`AN-BAN-02`[is.na(`horario_CARTAGO_ingles`$`AN-BAN-02`)] <- 0
+
+
+
+#EIG-BIN-01
+
+`EIG-BIN-01` <- as.data.frame(count(`CARTAGO-ingles-materias-EIG-BIN-01`$HORARIO)) 
+
+`EIG-BIN-01`$freq <- (`EIG-BIN-01`$freq)/sum(`EIG-BIN-01`$freq)
+
+names(`EIG-BIN-01`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `EIG-BIN-01`)
+names(`horario_CARTAGO_ingles`)[4] <- "EIG-BIN-01"
+
+`horario_CARTAGO_ingles`$`EIG-BIN-01`[is.na(`horario_CARTAGO_ingles`$`EIG-BIN-01`)] <- 0
+
+
+#CON-BAN-03
+
+`CON-BAN-03` <- as.data.frame(count(`CARTAGO-ingles-materias-CON-BAN-03`$HORARIO)) 
+
+`CON-BAN-03`$freq <- (`CON-BAN-03`$freq)/sum(`CON-BAN-03`$freq)
+
+names(`CON-BAN-03`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `CON-BAN-03`)
+names(`horario_CARTAGO_ingles`)[5] <- "CON-BAN-03"
+
+`horario_CARTAGO_ingles`$`CON-BAN-03`[is.na(`horario_CARTAGO_ingles`$`CON-BAN-03`)] <- 0
+
+
+
+#ISI-BAN-01
+
+`ISI-BAN-01` <- as.data.frame(count(`CARTAGO-ingles-materias-ISI-BAN-01`$HORARIO)) 
+
+`ISI-BAN-01`$freq <- (`ISI-BAN-01`$freq)/sum(`ISI-BAN-01`$freq)
+
+names(`ISI-BAN-01`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `ISI-BAN-01`)
+names(`horario_CARTAGO_ingles`)[6] <- "ISI-BAN-01"
+
+`horario_CARTAGO_ingles`$`ISI-BAN-01`[is.na(`horario_CARTAGO_ingles`$`ISI-BAN-01`)] <- 0
+
+
+#ISI-BAN-03
+
+`ISI-BAN-03` <- as.data.frame(count(`CARTAGO-ingles-materias-ISI-BAN-03`$HORARIO)) 
+
+`ISI-BAN-03`$freq <- (`ISI-BAN-03`$freq)/sum(`ISI-BAN-03`$freq)
+
+names(`ISI-BAN-03`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `ISI-BAN-03`)
+names(`horario_CARTAGO_ingles`)[7] <- "ISI-BAN-03"
+
+`horario_CARTAGO_ingles`$`ISI-BAN-03`[is.na(`horario_CARTAGO_ingles`$`ISI-BAN-03`)] <- 0
+
+
+#ISI-BAN-04
+
+`ISI-BAN-04` <- as.data.frame(count(`CARTAGO-ingles-materias-ISI-BAN-04`$HORARIO)) 
+
+`ISI-BAN-04`$freq <- (`ISI-BAN-04`$freq)/sum(`ISI-BAN-04`$freq)
+
+names(`ISI-BAN-04`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `ISI-BAN-04`)
+names(`horario_CARTAGO_ingles`)[8] <- "ISI-BAN-04"
+
+`horario_CARTAGO_ingles`$`ISI-BAN-04`[is.na(`horario_CARTAGO_ingles`$`ISI-BAN-04`)] <- 0
+
+
+
+#ISI-BSI-01
+
+`ISI-BSI-01` <- as.data.frame(count(`CARTAGO-ingles-materias-ISI-BSI-01`$HORARIO)) 
+
+`ISI-BSI-01`$freq <- (`ISI-BSI-01`$freq)/sum(`ISI-BSI-01`$freq)
+
+names(`ISI-BSI-01`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `ISI-BSI-01`)
+names(`horario_CARTAGO_ingles`)[9] <- "ISI-BSI-01"
+
+`horario_CARTAGO_ingles`$`ISI-BSI-01`[is.na(`horario_CARTAGO_ingles`$`ISI-BSI-01`)] <- 0
+
+
+
+#ISI-BSI-02
+
+`ISI-BSI-02` <- as.data.frame(count(`CARTAGO-ingles-materias-ISI-BSI-02`$HORARIO)) 
+
+`ISI-BSI-02`$freq <- (`ISI-BSI-02`$freq)/sum(`ISI-BSI-02`$freq)
+
+names(`ISI-BSI-02`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `ISI-BSI-02`)
+names(`horario_CARTAGO_ingles`)[10] <- "ISI-BSI-02"
+
+`horario_CARTAGO_ingles`$`ISI-BSI-02`[is.na(`horario_CARTAGO_ingles`$`ISI-BSI-02`)] <- 0
+
+
+
+#III-BII-40
+
+`III-BII-40` <- as.data.frame(count(`CARTAGO-ingles-materias-III-BII-40`$HORARIO)) 
+
+`III-BII-40`$freq <- (`III-BII-40`$freq)/sum(`III-BII-40`$freq)
+
+names(`III-BII-40`)[1] <- "horario"
+
+`horario_CARTAGO_ingles` <- left_join(`horario_CARTAGO_ingles`, `III-BII-40`)
+names(`horario_CARTAGO_ingles`)[11] <- "III-BII-40"
+
+`horario_CARTAGO_ingles`$`III-BII-40`[is.na(`horario_CARTAGO_ingles`$`III-BII-40`)] <- 0
+
+
+##wide to long
+
+`horario_CARTAGO_ingles`$id <- "UAM_CANAS_ingles_pand_C2"
+`horario_CARTAGO_ingles` <-  `horario_CARTAGO_ingles`%>% dplyr::select(id, everything())
+
+`horario_CARTAGO_ingles` <- melt(`horario_CARTAGO_ingles`, id = c("id", "horario"))
+names(`horario_CARTAGO_ingles`)[3] <- "materia"
+names(`horario_CARTAGO_ingles`)[4] <- "asistencia"
+
+
+
+
+
+#CARTAGO-sist
+
+`CARTAGO-sist-materias` <- split(`CARTAGO-sist`, f = `CARTAGO-sist`$cod_padre) 
+names(`CARTAGO-sist-materias`) <- paste0("CARTAGO-sist-materias-",names(`CARTAGO-sist-materias`)) 
+
+list2env(`CARTAGO-sist-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_CARTAGO_sist` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_CARTAGO_sist`)[1] <- "horario"
+`horario_CARTAGO_sist` <- unique(`horario_CARTAGO_sist`)
+
+
+`obs_CARTAGO-sist-materias` <- as.data.frame(sapply(`CARTAGO-sist-materias`, NROW))
+
+`obs_CARTAGO-sist-materias` <- tibble::rownames_to_column(`obs_CARTAGO-sist-materias`, "materia")
+names(`obs_CARTAGO-sist-materias`)[2] <- "obs"
+
+`obs_CARTAGO-sist-materias`$materia <- str_remove(`obs_CARTAGO-sist-materias`$materia, "CARTAGO-sist-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_CARTAGO-sist-materias` <- filter(`obs_CARTAGO-sist-materias`, obs >= 10)
+`no_elegibles_CARTAGO-sist-materias` <- filter(`obs_CARTAGO-sist-materias`, obs < 10)
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`CARTAGO-sist-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_CARTAGO_sist` <- left_join(`horario_CARTAGO_sist`, `AN-BAN-01`)
+names(`horario_CARTAGO_sist`)[2] <- "AN-BAN-01"
+
+`horario_CARTAGO_sist`$`AN-BAN-01`[is.na(`horario_CARTAGO_sist`$`AN-BAN-01`)] <- 0
+
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`CARTAGO-sist-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+`horario_CARTAGO_sist` <- left_join(`horario_CARTAGO_sist`, `AN-BAN-03`)
+names(`horario_CARTAGO_sist`)[3] <- "AN-BAN-03"
+
+`horario_CARTAGO_sist`$`AN-BAN-03`[is.na(`horario_CARTAGO_sist`$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`CARTAGO-sist-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_CARTAGO_sist` <- left_join(`horario_CARTAGO_sist`, `AN-BAN-04`)
+names(`horario_CARTAGO_sist`)[4] <- "AN-BAN-04"
+
+`horario_CARTAGO_sist`$`AN-BAN-04`[is.na(`horario_CARTAGO_sist`$`AN-BAN-04`)] <- 0
+
+
+
+#III-BII-01
+
+`III-BII-01` <- as.data.frame(count(`CARTAGO-sist-materias-III-BII-01`$HORARIO)) 
+
+`III-BII-01`$freq <- (`III-BII-01`$freq)/sum(`III-BII-01`$freq)
+
+names(`III-BII-01`)[1] <- "horario"
+
+`horario_CARTAGO_sist` <- left_join(`horario_CARTAGO_sist`, `III-BII-01`)
+names(`horario_CARTAGO_sist`)[5] <- "III-BII-01"
+
+`horario_CARTAGO_sist`$`III-BII-01`[is.na(`horario_CARTAGO_sist`$`III-BII-01`)] <- 0
+
+
+
+
+#ISI-BSI-01
+
+`ISI-BSI-01` <- as.data.frame(count(`CARTAGO-sist-materias-ISI-BSI-01`$HORARIO)) 
+
+`ISI-BSI-01`$freq <- (`ISI-BSI-01`$freq)/sum(`ISI-BSI-01`$freq)
+
+names(`ISI-BSI-01`)[1] <- "horario"
+
+`horario_CARTAGO_sist` <- left_join(`horario_CARTAGO_sist`, `ISI-BSI-01`)
+names(`horario_CARTAGO_sist`)[6] <- "ISI-BSI-01"
+
+`horario_CARTAGO_sist`$`ISI-BSI-01`[is.na(`horario_CARTAGO_sist`$`ISI-BSI-01`)] <- 0
+
+
+#ISI-BSI-02
+
+`ISI-BSI-02` <- as.data.frame(count(`CARTAGO-sist-materias-ISI-BSI-02`$HORARIO)) 
+
+`ISI-BSI-02`$freq <- (`ISI-BSI-02`$freq)/sum(`ISI-BSI-02`$freq)
+
+names(`ISI-BSI-02`)[1] <- "horario"
+
+`horario_CARTAGO_sist` <- left_join(`horario_CARTAGO_sist`, `ISI-BSI-02`)
+names(`horario_CARTAGO_sist`)[7] <- "ISI-BSI-02"
+
+`horario_CARTAGO_sist`$`ISI-BSI-02`[is.na(`horario_CARTAGO_sist`$`ISI-BSI-02`)] <- 0
+
+
+##wide to long
+
+`horario_CARTAGO_sist`$id <- "UAM_CANAS_sist_pand_C2"
+`horario_CARTAGO_sist` <-  `horario_CARTAGO_sist`%>% dplyr::select(id, everything())
+
+`horario_CARTAGO_sist` <- melt(`horario_CARTAGO_sist`, id = c("id", "horario"))
+names(`horario_CARTAGO_sist`)[3] <- "materia"
+names(`horario_CARTAGO_sist`)[4] <- "asistencia"
+
+
+
+#Consolidado de sede CARTAGO
+
+horario_CARTAGO <- rbind(`horario_CARTAGO_admin-neg`, horario_CARTAGO_conta, 
+                         horario_CARTAGO_indus, horario_CARTAGO_ingles,horario_CARTAGO_sist) 
+
+#total poblacion por carrera CARTAGO
+
+materias_CARTAGO_pand_C2 <- count(CARTAGO$cod_padre)
+names(materias_CARTAGO_pand_C2)[1] <- "materia"
+names(materias_CARTAGO_pand_C2)[2] <- "poblacion"
+
+
+#Left join entre los horarios y su correspondiente poblacion 
+
+horario_CARTAGO <- left_join(horario_CARTAGO, materias_CARTAGO_pand_C2)
+
+
+#Suma de las proporciones totales y sacamos una probabilidad de probabilidades condicionadas
+
+pob_asist2 <- aggregate(x = horario_CARTAGO$asistencia, by = list(horario_CARTAGO$materia), FUN = sum)      
+names(pob_asist2)[1] <- "materia"
+names(pob_asist2)[2] <- "sum_prop"
+
+
+#Probabilidad de la probabilidad para tener un compilado de probabilidades 
+
+horario_CARTAGO <- left_join(horario_CARTAGO, pob_asist2)
+
+horario_CARTAGO$asistencia2 <- horario_CARTAGO$asistencia/horario_CARTAGO$sum_prop
+horario_CARTAGO$asistencia2[horario_CARTAGO$asistencia2 == Inf] <- 0
+
+horario_CARTAGO$pob_asist <- round((horario_CARTAGO$asistencia2)*(horario_CARTAGO$poblacion),0)
+
+
+#Guardo todos los horarios en su folder correspondiente
+
+count(horario_CARTAGO$id)
+
+write_xlsx(horario_CARTAGO,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_CARTAGO/horario_CARTAGO_americana_pand_C2.xlsx")
+
+
+#Consolidado unicamente a nivel de horarios, manteniendo todo constante excepto carrera
+#Dividimos entre columnas
+
+split <- str_split_fixed(horario_CARTAGO$id, "_", 5)
+
+horario_CARTAGO <- cbind(split, horario_CARTAGO)
+names(horario_CARTAGO)[1] <- "marca"
+names(horario_CARTAGO)[2] <- "sede"
+names(horario_CARTAGO)[3] <- "carrera"
+names(horario_CARTAGO)[4] <- "modalidad"
+names(horario_CARTAGO)[5] <- "cuatrimestre"
+
+horario_CARTAGO <- horario_CARTAGO %>% dplyr::select(-id)
+
+
+horario_CARTAGO_unique <- subset(horario_CARTAGO, pob_asist != 0)
+
+horario_CARTAGO_unique <- horario_CARTAGO_unique %>% group_by(horario, materia) %>% summarise(Asistencia = sum(pob_asist))
+
+horario_CARTAGO_unique$marca <- "UAM"
+horario_CARTAGO_unique$sede <- "CARTAGO"
+horario_CARTAGO_unique$modalidad <- "pand"
+horario_CARTAGO_unique$cuatrimestre <- "C2"
+
+horario_CARTAGO_unique <- horario_CARTAGO_unique %>% dplyr::select(marca, sede, modalidad, cuatrimestre, horario, materia, Asistencia)
+
+horario_CARTAGO_unique <- horario_CARTAGO_unique[with(horario_CARTAGO_unique, order(materia, horario)), ]  
+
+horario_CARTAGO_unique <- horario_CARTAGO_unique %>% group_by(materia) %>% mutate(counter = row_number(materia))
+
+#Rangos horarios
+horario_CARTAGO_unique$unoanueve <- 0
+horario_CARTAGO_unique$unoanueve[horario_CARTAGO_unique$Asistencia <= 9] <- 1
+
+horario_CARTAGO_unique$dieza17 <- 0
+horario_CARTAGO_unique$dieza17[horario_CARTAGO_unique$Asistencia >= 10 & horario_CARTAGO_unique$Asistencia <= 17] <- 1
+
+horario_CARTAGO_unique$di18a30 <- 0
+horario_CARTAGO_unique$di18a30[horario_CARTAGO_unique$Asistencia >= 18 & horario_CARTAGO_unique$Asistencia <= 30] <- 1
+
+horario_CARTAGO_unique$di31a60 <- 0
+horario_CARTAGO_unique$di31a60[horario_CARTAGO_unique$Asistencia >= 31 & horario_CARTAGO_unique$Asistencia <= 60] <- 1
+
+horario_CARTAGO_unique$mas60 <- 0
+horario_CARTAGO_unique$mas60[horario_CARTAGO_unique$Asistencia >= 61] <- 1
+
+
+
+#Duplicados
+duplicados <- as.data.frame(table(horario_CARTAGO_unique$materia))
+names(duplicados)[1] <- "materia"
+names(duplicados)[2] <- "freq"
+
+duplicados$freq[duplicados$freq <= 1] <- 0
+duplicados$freq[duplicados$freq > 1] <- 1
+
+#Duplicados left join
+
+horario_CARTAGO_unique <- left_join(horario_CARTAGO_unique, duplicados, by = "materia")
+
+names(horario_CARTAGO_unique)[14] <- "duplicado"
+
+
+#Regla dura 
+
+#entre 1 y 9 
+
+horario_CARTAGO_unique$recomendacion <- 0
+horario_CARTAGO_unique$recomendacion[horario_CARTAGO_unique$unoanueve == 1 & horario_CARTAGO_unique$duplicado == 0] <- "cerrar horario"
+horario_CARTAGO_unique$recomendacion[horario_CARTAGO_unique$unoanueve == 1 & horario_CARTAGO_unique$duplicado == 1] <- "unir horario"
+
+#entre 10 y 17
+
+horario_CARTAGO_unique$recomendacion[horario_CARTAGO_unique$dieza17 == 1 & horario_CARTAGO_unique$duplicado == 0] <- "ofertar unicamente en ese horario"
+horario_CARTAGO_unique$recomendacion[horario_CARTAGO_unique$dieza17 == 1 & horario_CARTAGO_unique$duplicado == 1] <- "ofertar e intentar consolidar en 1 horario"
+
+#entre 18 y 30 se recomienda ofertar
+
+horario_CARTAGO_unique$recomendacion[horario_CARTAGO_unique$di18a30 == 1] <- "abrir unicamente en ese horario"
+
+#entre 30 y 60
+
+horario_CARTAGO_unique$recomendacion[horario_CARTAGO_unique$di31a60 == 1] <- "abrir 2 paralelos en este horario"
+
+#mas de 60
+
+horario_CARTAGO_unique$recomendacion[horario_CARTAGO_unique$mas60 == 1] <- "abrir 3 paralelos en este horario"
+
+
+#Base Final
+
+horario_CARTAGO_unique <- horario_CARTAGO_unique %>%  dplyr::select(marca, sede, modalidad, cuatrimestre,
+                                                                    horario, materia, Asistencia, recomendacion)
+
+
+horario_split <- as.data.frame(str_split_fixed(horario_CARTAGO_unique$horario, " ", 2))
+names(horario_split)[1] <- "dia"
+names(horario_split)[2] <- "hora"
+
+horario_CARTAGO_unique <- cbind(horario_CARTAGO_unique, horario_split)
+names(horario_CARTAGO_unique)
+
+horario_CARTAGO_unique$recom_d <- 0
+horario_CARTAGO_unique$recom_d[horario_CARTAGO_unique$recomendacion == "unir horario" | horario_CARTAGO_unique$recomendacion == "cerrar horario"] <- 0
+horario_CARTAGO_unique$recom_d[horario_CARTAGO_unique$recomendacion == "ofertar e intentar consolidar en 1 horario" | 
+                                 horario_CARTAGO_unique$recomendacion == "abrir unicamente en ese horario" ] <- 1
+horario_CARTAGO_unique$recom_d[horario_CARTAGO_unique$recomendacion == "abrir 2 paralelos en este horario"] <- 2
+horario_CARTAGO_unique$recom_d[horario_CARTAGO_unique$recomendacion == "abrir 3 paralelos en este horario"] <- 3
+
+horario_CARTAGO_unique <- horario_CARTAGO_unique %>% dplyr::select(marca, sede, modalidad, cuatrimestre, dia, hora, materia, Asistencia, recomendacion, recom_d)
+
+write_xlsx(horario_CARTAGO_unique,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_CARTAGO/recom_CARTAGO_americana_pand_C2.xlsx")
+
+
+###### Comparativo de cursos ofertados para usarlo contra la tabla dinamica CARTAGO ######
+
+horario_split_2 <- as.data.frame(str_split_fixed(CARTAGO$HORARIO, " ", 2))
+names(horario_split_2)[1] <- "dia"
+names(horario_split_2)[2] <- "hora"
+
+CARTAGO <- cbind(CARTAGO, horario_split_2)
+names(CARTAGO)
+
+CARTAGO$paralelo <- paste0(CARTAGO$AULA, "-", CARTAGO$HORARIO)
+
+
+write_xlsx(CARTAGO,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_CARTAGO/CARTAGO_mock.xlsx")
+
+
+pt <- PivotTable$new()
+pt$addData(CARTAGO)
+pt$addColumnDataGroups("dia")
+pt$addRowDataGroups("hora")
+pt$defineCalcuamion(calcuamionName="paralelos", summariseExpression="paralelo")
+pt$renderPivot()
+
+
+######## UAM SEDE HEREDIA#########
+
+
+#primer animado sede-carrera
+#Diferenciado entre bases de datos de cada una de las sedes y sus carreras #
+
+uam_HEREDIA_carr <- split(HEREDIA, f = HEREDIA$carrera) 
+names(uam_HEREDIA_carr) <- paste0("HEREDIA-",names(uam_HEREDIA_carr)) 
+
+list2env(uam_HEREDIA_carr,envir=.GlobalEnv)
+
+
+#segundo anidado Sede-carrera-materias#
+
+#HEREDIA-admin de negocios
+
+`HEREDIA-admin-neg-materias` <- split(`HEREDIA-admin-neg`, f = `HEREDIA-admin-neg`$cod_padre) 
+names(`HEREDIA-admin-neg-materias`) <- paste0("HEREDIA-admin-neg-materias-",names(`HEREDIA-admin-neg-materias`)) 
+
+list2env(`HEREDIA-admin-neg-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_HEREDIA_admin-neg` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_HEREDIA_admin-neg`)[1] <- "horario"
+`horario_HEREDIA_admin-neg` <- unique(`horario_HEREDIA_admin-neg`)
+
+
+`obs_HEREDIA-admin-neg-materias` <- as.data.frame(sapply(`HEREDIA-admin-neg-materias`, NROW))
+
+`obs_HEREDIA-admin-neg-materias` <- tibble::rownames_to_column(`obs_HEREDIA-admin-neg-materias`, "materia")
+names(`obs_HEREDIA-admin-neg-materias`)[2] <- "obs"
+
+`obs_HEREDIA-admin-neg-materias`$materia <- str_remove(`obs_HEREDIA-admin-neg-materias`$materia, "HEREDIA-admin-neg-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_HEREDIA-admin-neg-materias` <- filter(`obs_HEREDIA-admin-neg-materias`, obs >= 10)
+`no_elegibles_HEREDIA-admin-neg-materias` <- filter(`obs_HEREDIA-admin-neg-materias`, obs < 10)
+
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`HEREDIA-admin-neg-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_HEREDIA_admin-neg` <- left_join(`horario_HEREDIA_admin-neg`, `AN-BAN-01`)
+names(`horario_HEREDIA_admin-neg`)[2] <- "AN-BAN-01"
+
+`horario_HEREDIA_admin-neg`$`AN-BAN-01`[is.na(`horario_HEREDIA_admin-neg`$`AN-BAN-01`)] <- 0
+
+
+
+#AN-BAN-02
+
+`AN-BAN-02` <- as.data.frame(count(`HEREDIA-admin-neg-materias-AN-BAN-02`$HORARIO)) 
+
+`AN-BAN-02`$freq <- (`AN-BAN-02`$freq)/sum(`AN-BAN-02`$freq)
+
+names(`AN-BAN-02`)[1] <- "horario"
+
+`horario_HEREDIA_admin-neg` <- left_join(`horario_HEREDIA_admin-neg`, `AN-BAN-02`)
+names(`horario_HEREDIA_admin-neg`)[3] <- "AN-BAN-02"
+
+`horario_HEREDIA_admin-neg`$`AN-BAN-02`[is.na(`horario_HEREDIA_admin-neg`$`AN-BAN-02`)] <- 0
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`HEREDIA-admin-neg-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+`horario_HEREDIA_admin-neg` <- left_join(`horario_HEREDIA_admin-neg`, `AN-BAN-03`)
+names(`horario_HEREDIA_admin-neg`)[4] <- "AN-BAN-03"
+
+`horario_HEREDIA_admin-neg`$`AN-BAN-03`[is.na(`horario_HEREDIA_admin-neg`$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`HEREDIA-admin-neg-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_HEREDIA_admin-neg` <- left_join(`horario_HEREDIA_admin-neg`, `AN-BAN-04`)
+names(`horario_HEREDIA_admin-neg`)[5] <- "AN-BAN-04"
+
+`horario_HEREDIA_admin-neg`$`AN-BAN-04`[is.na(`horario_HEREDIA_admin-neg`$`AN-BAN-04`)] <- 0
+
+
+
+#AN-BAN-05
+
+`AN-BAN-05` <- as.data.frame(count(`HEREDIA-admin-neg-materias-AN-BAN-05`$HORARIO)) 
+
+`AN-BAN-05`$freq <- (`AN-BAN-05`$freq)/sum(`AN-BAN-05`$freq)
+
+names(`AN-BAN-05`)[1] <- "horario"
+
+`horario_HEREDIA_admin-neg` <- left_join(`horario_HEREDIA_admin-neg`, `AN-BAN-05`)
+names(`horario_HEREDIA_admin-neg`)[6] <- "AN-BAN-05"
+
+`horario_HEREDIA_admin-neg`$`AN-BAN-05`[is.na(`horario_HEREDIA_admin-neg`$`AN-BAN-05`)] <- 0
+
+
+
+##wide to long
+
+`horario_HEREDIA_admin-neg`$id <- "UAM_CANAS_admin-neg_pand_C2"
+`horario_HEREDIA_admin-neg` <-  `horario_HEREDIA_admin-neg`%>% dplyr::select(id, everything())
+
+`horario_HEREDIA_admin-neg` <- melt(`horario_HEREDIA_admin-neg`, id = c("id", "horario"))
+names(`horario_HEREDIA_admin-neg`)[3] <- "materia"
+names(`horario_HEREDIA_admin-neg`)[4] <- "asistencia"
+
+
+#HEREDIA-conta
+
+`HEREDIA-conta-materias` <- split(`HEREDIA-conta`, f = `HEREDIA-conta`$cod_padre) 
+names(`HEREDIA-conta-materias`) <- paste0("HEREDIA-conta-materias-",names(`HEREDIA-conta-materias`)) 
+
+list2env(`HEREDIA-conta-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_HEREDIA_conta` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_HEREDIA_conta`)[1] <- "horario"
+`horario_HEREDIA_conta` <- unique(`horario_HEREDIA_conta`)
+
+
+`obs_HEREDIA-conta-materias` <- as.data.frame(sapply(`HEREDIA-conta-materias`, NROW))
+
+`obs_HEREDIA-conta-materias` <- tibble::rownames_to_column(`obs_HEREDIA-conta-materias`, "materia")
+names(`obs_HEREDIA-conta-materias`)[2] <- "obs"
+
+`obs_HEREDIA-conta-materias`$materia <- str_remove(`obs_HEREDIA-conta-materias`$materia, "HEREDIA-conta-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_HEREDIA-conta-materias` <- filter(`obs_HEREDIA-conta-materias`, obs >= 10)
+`no_elegibles_HEREDIA-conta-materias` <- filter(`obs_HEREDIA-conta-materias`, obs < 10)
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`HEREDIA-conta-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_HEREDIA_conta` <- left_join(`horario_HEREDIA_conta`, `AN-BAN-01`)
+names(`horario_HEREDIA_conta`)[2] <- "AN-BAN-01"
+
+`horario_HEREDIA_conta`$`AN-BAN-01`[is.na(`horario_HEREDIA_conta`$`AN-BAN-01`)] <- 0
+
+
+
+#AN-BAN-02
+
+`AN-BAN-02` <- as.data.frame(count(`HEREDIA-conta-materias-AN-BAN-02`$HORARIO)) 
+
+`AN-BAN-02`$freq <- (`AN-BAN-02`$freq)/sum(`AN-BAN-02`$freq)
+
+names(`AN-BAN-02`)[1] <- "horario"
+
+`horario_HEREDIA_conta` <- left_join(`horario_HEREDIA_conta`, `AN-BAN-02`)
+names(`horario_HEREDIA_conta`)[3] <- "AN-BAN-02"
+
+`horario_HEREDIA_conta`$`AN-BAN-02`[is.na(`horario_HEREDIA_conta`$`AN-BAN-02`)] <- 0
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`HEREDIA-conta-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+`horario_HEREDIA_conta` <- left_join(`horario_HEREDIA_conta`, `AN-BAN-03`)
+names(`horario_HEREDIA_conta`)[4] <- "AN-BAN-03"
+
+`horario_HEREDIA_conta`$`AN-BAN-03`[is.na(`horario_HEREDIA_conta`$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`HEREDIA-conta-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_HEREDIA_conta` <- left_join(`horario_HEREDIA_conta`, `AN-BAN-04`)
+names(`horario_HEREDIA_conta`)[5] <- "AN-BAN-04"
+
+`horario_HEREDIA_conta`$`AN-BAN-04`[is.na(`horario_HEREDIA_conta`$`AN-BAN-04`)] <- 0
+
+
+
+##wide to long
+
+`horario_HEREDIA_conta`$id <- "UAM_CANAS_conta_pand_C2"
+`horario_HEREDIA_conta` <-  `horario_HEREDIA_conta`%>% dplyr::select(id, everything())
+
+`horario_HEREDIA_conta` <- melt(`horario_HEREDIA_conta`, id = c("id", "horario"))
+names(`horario_HEREDIA_conta`)[3] <- "materia"
+names(`horario_HEREDIA_conta`)[4] <- "asistencia"
+
+
+
+#HEREDIA-gest-proc
+
+`HEREDIA-gest-proc-materias` <- split(`HEREDIA-gest-proc`, f = `HEREDIA-gest-proc`$cod_padre) 
+names(`HEREDIA-gest-proc-materias`) <- paste0("HEREDIA-gest-proc-materias-",names(`HEREDIA-gest-proc-materias`)) 
+
+list2env(`HEREDIA-gest-proc-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_HEREDIA_gest-proc` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_HEREDIA_gest-proc`)[1] <- "horario"
+`horario_HEREDIA_gest-proc` <- unique(`horario_HEREDIA_gest-proc`)
+
+
+`obs_HEREDIA-gest-proc-materias` <- as.data.frame(sapply(`HEREDIA-gest-proc-materias`, NROW))
+
+`obs_HEREDIA-gest-proc-materias` <- tibble::rownames_to_column(`obs_HEREDIA-gest-proc-materias`, "materia")
+names(`obs_HEREDIA-gest-proc-materias`)[2] <- "obs"
+
+`obs_HEREDIA-gest-proc-materias`$materia <- str_remove(`obs_HEREDIA-gest-proc-materias`$materia, "HEREDIA-gest-proc-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_HEREDIA-gest-proc-materias` <- filter(`obs_HEREDIA-gest-proc-materias`, obs >= 10)
+`no_elegibles_HEREDIA-gest-proc-materias` <- filter(`obs_HEREDIA-gest-proc-materias`, obs < 10)
+
+
+#NO HAY SUFICIENTE INFORMACION PARA DEFINIR
+
+
+#HEREDIA-indus
+
+`HEREDIA-indus-materias` <- split(`HEREDIA-indus`, f = `HEREDIA-indus`$cod_padre) 
+names(`HEREDIA-indus-materias`) <- paste0("HEREDIA-indus-materias-",names(`HEREDIA-indus-materias`)) 
+
+list2env(`HEREDIA-indus-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_HEREDIA_indus` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_HEREDIA_indus`)[1] <- "horario"
+`horario_HEREDIA_indus` <- unique(`horario_HEREDIA_indus`)
+
+
+`obs_HEREDIA-indus-materias` <- as.data.frame(sapply(`HEREDIA-indus-materias`, NROW))
+
+`obs_HEREDIA-indus-materias` <- tibble::rownames_to_column(`obs_HEREDIA-indus-materias`, "materia")
+names(`obs_HEREDIA-indus-materias`)[2] <- "obs"
+
+`obs_HEREDIA-indus-materias`$materia <- str_remove(`obs_HEREDIA-indus-materias`$materia, "HEREDIA-indus-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_HEREDIA-indus-materias` <- filter(`obs_HEREDIA-indus-materias`, obs >= 10)
+`no_elegibles_HEREDIA-indus-materias` <- filter(`obs_HEREDIA-indus-materias`, obs < 10)
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`HEREDIA-indus-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_HEREDIA_indus` <- left_join(`horario_HEREDIA_indus`, `AN-BAN-04`)
+names(`horario_HEREDIA_indus`)[2] <- "AN-BAN-04"
+
+`horario_HEREDIA_indus`$`AN-BAN-04`[is.na(`horario_HEREDIA_indus`$`AN-BAN-04`)] <- 0
+
+
+
+#AN-BAN-06
+
+`AN-BAN-06` <- as.data.frame(count(`HEREDIA-indus-materias-AN-BAN-06`$HORARIO)) 
+
+`AN-BAN-06`$freq <- (`AN-BAN-06`$freq)/sum(`AN-BAN-06`$freq)
+
+names(`AN-BAN-06`)[1] <- "horario"
+
+`horario_HEREDIA_indus` <- left_join(`horario_HEREDIA_indus`, `AN-BAN-06`)
+names(`horario_HEREDIA_indus`)[3] <- "AN-BAN-06"
+
+`horario_HEREDIA_indus`$`AN-BAN-06`[is.na(`horario_HEREDIA_indus`$`AN-BAN-06`)] <- 0
+
+
+#III-BII-01
+
+`III-BII-01` <- as.data.frame(count(`HEREDIA-indus-materias-III-BII-01`$HORARIO)) 
+
+`III-BII-01`$freq <- (`III-BII-01`$freq)/sum(`III-BII-01`$freq)
+
+names(`III-BII-01`)[1] <- "horario"
+
+`horario_HEREDIA_indus` <- left_join(`horario_HEREDIA_indus`, `III-BII-01`)
+names(`horario_HEREDIA_indus`)[4] <- "III-BII-01"
+
+`horario_HEREDIA_indus`$`III-BII-01`[is.na(`horario_HEREDIA_indus`$`III-BII-01`)] <- 0
+
+
+
+#III-BII-41
+
+`III-BII-41` <- as.data.frame(count(`HEREDIA-indus-materias-III-BII-41`$HORARIO)) 
+
+`III-BII-41`$freq <- (`III-BII-41`$freq)/sum(`III-BII-41`$freq)
+
+names(`III-BII-41`)[1] <- "horario"
+
+`horario_HEREDIA_indus` <- left_join(`horario_HEREDIA_indus`, `III-BII-41`)
+names(`horario_HEREDIA_indus`)[5] <- "III-BII-41"
+
+`horario_HEREDIA_indus`$`III-BII-41`[is.na(`horario_HEREDIA_indus`$`III-BII-41`)] <- 0
+
+##wide to long
+
+`horario_HEREDIA_indus`$id <- "UAM_CANAS_indus_pand_C2"
+`horario_HEREDIA_indus` <-  `horario_HEREDIA_indus`%>% dplyr::select(id, everything())
+
+`horario_HEREDIA_indus` <- melt(`horario_HEREDIA_indus`, id = c("id", "horario"))
+names(`horario_HEREDIA_indus`)[3] <- "materia"
+names(`horario_HEREDIA_indus`)[4] <- "asistencia"
+
+
+
+
+#HEREDIA-ingles
+
+`HEREDIA-ingles-materias` <- split(`HEREDIA-ingles`, f = `HEREDIA-ingles`$cod_padre) 
+names(`HEREDIA-ingles-materias`) <- paste0("HEREDIA-ingles-materias-",names(`HEREDIA-ingles-materias`)) 
+
+list2env(`HEREDIA-ingles-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_HEREDIA_ingles` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_HEREDIA_ingles`)[1] <- "horario"
+`horario_HEREDIA_ingles` <- unique(`horario_HEREDIA_ingles`)
+
+
+`obs_HEREDIA-ingles-materias` <- as.data.frame(sapply(`HEREDIA-ingles-materias`, NROW))
+
+`obs_HEREDIA-ingles-materias` <- tibble::rownames_to_column(`obs_HEREDIA-ingles-materias`, "materia")
+names(`obs_HEREDIA-ingles-materias`)[2] <- "obs"
+
+`obs_HEREDIA-ingles-materias`$materia <- str_remove(`obs_HEREDIA-ingles-materias`$materia, "HEREDIA-ingles-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_HEREDIA-ingles-materias` <- filter(`obs_HEREDIA-ingles-materias`, obs >= 10)
+`no_elegibles_HEREDIA-ingles-materias` <- filter(`obs_HEREDIA-ingles-materias`, obs < 10)
+
+
+#NO HAY SUFICIENTE INFORMACION PARA DEFINIR
+
+
+#HEREDIA-sist
+
+`HEREDIA-sist-materias` <- split(`HEREDIA-sist`, f = `HEREDIA-sist`$cod_padre) 
+names(`HEREDIA-sist-materias`) <- paste0("HEREDIA-sist-materias-",names(`HEREDIA-sist-materias`)) 
+
+list2env(`HEREDIA-sist-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_HEREDIA_sist` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_HEREDIA_sist`)[1] <- "horario"
+`horario_HEREDIA_sist` <- unique(`horario_HEREDIA_sist`)
+
+
+`obs_HEREDIA-sist-materias` <- as.data.frame(sapply(`HEREDIA-sist-materias`, NROW))
+
+`obs_HEREDIA-sist-materias` <- tibble::rownames_to_column(`obs_HEREDIA-sist-materias`, "materia")
+names(`obs_HEREDIA-sist-materias`)[2] <- "obs"
+
+`obs_HEREDIA-sist-materias`$materia <- str_remove(`obs_HEREDIA-sist-materias`$materia, "HEREDIA-sist-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_HEREDIA-sist-materias` <- filter(`obs_HEREDIA-sist-materias`, obs >= 10)
+`no_elegibles_HEREDIA-sist-materias` <- filter(`obs_HEREDIA-sist-materias`, obs < 10)
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`HEREDIA-sist-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_HEREDIA_sist` <- left_join(`horario_HEREDIA_sist`, `AN-BAN-01`)
+names(`horario_HEREDIA_sist`)[2] <- "AN-BAN-01"
+
+`horario_HEREDIA_sist`$`AN-BAN-01`[is.na(`horario_HEREDIA_sist`$`AN-BAN-01`)] <- 0
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`HEREDIA-sist-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+`horario_HEREDIA_sist` <- left_join(`horario_HEREDIA_sist`, `AN-BAN-03`)
+names(`horario_HEREDIA_sist`)[3] <- "AN-BAN-03"
+
+`horario_HEREDIA_sist`$`AN-BAN-03`[is.na(`horario_HEREDIA_sist`$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`HEREDIA-sist-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_HEREDIA_sist` <- left_join(`horario_HEREDIA_sist`, `AN-BAN-04`)
+names(`horario_HEREDIA_sist`)[4] <- "AN-BAN-04"
+
+`horario_HEREDIA_sist`$`AN-BAN-04`[is.na(`horario_HEREDIA_sist`$`AN-BAN-04`)] <- 0
+
+
+#III-BII-01
+
+`III-BII-01` <- as.data.frame(count(`HEREDIA-sist-materias-III-BII-01`$HORARIO)) 
+
+`III-BII-01`$freq <- (`III-BII-01`$freq)/sum(`III-BII-01`$freq)
+
+names(`III-BII-01`)[1] <- "horario"
+
+`horario_HEREDIA_sist` <- left_join(`horario_HEREDIA_sist`, `III-BII-01`)
+names(`horario_HEREDIA_sist`)[5] <- "III-BII-01"
+
+`horario_HEREDIA_sist`$`III-BII-01`[is.na(`horario_HEREDIA_sist`$`III-BII-01`)] <- 0
+
+
+#ISI-BSI-01
+
+`ISI-BSI-01` <- as.data.frame(count(`HEREDIA-sist-materias-ISI-BSI-01`$HORARIO)) 
+
+`ISI-BSI-01`$freq <- (`ISI-BSI-01`$freq)/sum(`ISI-BSI-01`$freq)
+
+names(`ISI-BSI-01`)[1] <- "horario"
+
+`horario_HEREDIA_sist` <- left_join(`horario_HEREDIA_sist`, `ISI-BSI-01`)
+names(`horario_HEREDIA_sist`)[6] <- "ISI-BSI-01"
+
+`horario_HEREDIA_sist`$`ISI-BSI-01`[is.na(`horario_HEREDIA_sist`$`ISI-BSI-01`)] <- 0
+
+
+#ISI-BSI-02
+
+`ISI-BSI-02` <- as.data.frame(count(`HEREDIA-sist-materias-ISI-BSI-02`$HORARIO)) 
+
+`ISI-BSI-02`$freq <- (`ISI-BSI-02`$freq)/sum(`ISI-BSI-02`$freq)
+
+names(`ISI-BSI-02`)[1] <- "horario"
+
+`horario_HEREDIA_sist` <- left_join(`horario_HEREDIA_sist`, `ISI-BSI-02`)
+names(`horario_HEREDIA_sist`)[7] <- "ISI-BSI-02"
+
+`horario_HEREDIA_sist`$`ISI-BSI-02`[is.na(`horario_HEREDIA_sist`$`ISI-BSI-02`)] <- 0
+
+
+##wide to long
+
+`horario_HEREDIA_sist`$id <- "UAM_CANAS_sist_pand_C2"
+`horario_HEREDIA_sist` <-  `horario_HEREDIA_sist`%>% dplyr::select(id, everything())
+
+`horario_HEREDIA_sist` <- melt(`horario_HEREDIA_sist`, id = c("id", "horario"))
+names(`horario_HEREDIA_sist`)[3] <- "materia"
+names(`horario_HEREDIA_sist`)[4] <- "asistencia"
+
+
+
+#HEREDIA-ccss-educ
+
+`HEREDIA-ccss-educ-materias` <- split(`HEREDIA-ccss-educ`, f = `HEREDIA-ccss-educ`$cod_padre) 
+names(`HEREDIA-ccss-educ-materias`) <- paste0("HEREDIA-ccss-educ-materias-",names(`HEREDIA-ccss-educ-materias`)) 
+
+list2env(`HEREDIA-ccss-educ-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_HEREDIA_ccss-educ` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_HEREDIA_ccss-educ`)[1] <- "horario"
+`horario_HEREDIA_ccss-educ` <- unique(`horario_HEREDIA_ccss-educ`)
+
+
+`obs_HEREDIA-ccss-educ-materias` <- as.data.frame(sapply(`HEREDIA-ccss-educ-materias`, NROW))
+
+`obs_HEREDIA-ccss-educ-materias` <- tibble::rownames_to_column(`obs_HEREDIA-ccss-educ-materias`, "materia")
+names(`obs_HEREDIA-ccss-educ-materias`)[2] <- "obs"
+
+`obs_HEREDIA-ccss-educ-materias`$materia <- str_remove(`obs_HEREDIA-ccss-educ-materias`$materia, "HEREDIA-ccss-educ-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_HEREDIA-ccss-educ-materias` <- filter(`obs_HEREDIA-ccss-educ-materias`, obs >= 10)
+`no_elegibles_HEREDIA-ccss-educ-materias` <- filter(`obs_HEREDIA-ccss-educ-materias`, obs < 10)
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`HEREDIA-ccss-educ-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_HEREDIA_ccss-educ` <- left_join(`horario_HEREDIA_ccss-educ`, `AN-BAN-04`)
+names(`horario_HEREDIA_ccss-educ`)[2] <- "AN-BAN-04"
+
+`horario_HEREDIA_ccss-educ`$`AN-BAN-04`[is.na(`horario_HEREDIA_ccss-educ`$`AN-BAN-04`)] <- 0
+
+##wide to long
+
+`horario_HEREDIA_ccss-educ`$id <- "UAM_CANAS_ccss-educ_pand_C2"
+`horario_HEREDIA_ccss-educ` <-  `horario_HEREDIA_ccss-educ`%>% dplyr::select(id, everything())
+
+`horario_HEREDIA_ccss-educ` <- melt(`horario_HEREDIA_ccss-educ`, id = c("id", "horario"))
+names(`horario_HEREDIA_ccss-educ`)[3] <- "materia"
+names(`horario_HEREDIA_ccss-educ`)[4] <- "accss-educencia"
+
+
+
+#HEREDIA-derecho
+
+`HEREDIA-derecho-materias` <- split(`HEREDIA-derecho`, f = `HEREDIA-derecho`$cod_padre) 
+names(`HEREDIA-derecho-materias`) <- paste0("HEREDIA-derecho-materias-",names(`HEREDIA-derecho-materias`)) 
+
+list2env(`HEREDIA-derecho-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_HEREDIA_derecho` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_HEREDIA_derecho`)[1] <- "horario"
+`horario_HEREDIA_derecho` <- unique(`horario_HEREDIA_derecho`)
+
+
+`obs_HEREDIA-derecho-materias` <- as.data.frame(sapply(`HEREDIA-derecho-materias`, NROW))
+
+`obs_HEREDIA-derecho-materias` <- tibble::rownames_to_column(`obs_HEREDIA-derecho-materias`, "materia")
+names(`obs_HEREDIA-derecho-materias`)[2] <- "obs"
+
+`obs_HEREDIA-derecho-materias`$materia <- str_remove(`obs_HEREDIA-derecho-materias`$materia, "HEREDIA-derecho-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_HEREDIA-derecho-materias` <- filter(`obs_HEREDIA-derecho-materias`, obs >= 10)
+`no_elegibles_HEREDIA-derecho-materias` <- filter(`obs_HEREDIA-derecho-materias`, obs < 10)
+
+
+#no hay SUFICIENTE INFORMACION PARA INFERIR
+
+
+#Consolidado de sede HEREDIA
+
+
+
+names(`horario_HEREDIA_admin-neg`) <- names(`horario_HEREDIA_admin-neg`)
+names(horario_HEREDIA_conta) <- names(`horario_HEREDIA_admin-neg`)
+names(`horario_HEREDIA_ccss-educ`) <- names(`horario_HEREDIA_admin-neg`)
+names(horario_HEREDIA_indus) <- names(`horario_HEREDIA_admin-neg`)
+names(horario_HEREDIA_sist) <- names(`horario_HEREDIA_admin-neg`)
+
+horario_HEREDIA <- rbind(`horario_HEREDIA_admin-neg`, horario_HEREDIA_conta,  `horario_HEREDIA_ccss-educ`,
+                         horario_HEREDIA_indus,horario_HEREDIA_sist) 
+
+#total poblacion por carrera HEREDIA
+
+materias_HEREDIA_pand_C2 <- count(HEREDIA$cod_padre)
+names(materias_HEREDIA_pand_C2)[1] <- "materia"
+names(materias_HEREDIA_pand_C2)[2] <- "poblacion"
+
+
+#Left join entre los horarios y su correspondiente poblacion 
+
+horario_HEREDIA <- left_join(horario_HEREDIA, materias_HEREDIA_pand_C2)
+
+
+#Suma de las proporciones totales y sacamos una probabilidad de probabilidades condicionadas
+
+pob_asist2 <- aggregate(x = horario_HEREDIA$asistencia, by = list(horario_HEREDIA$materia), FUN = sum)      
+names(pob_asist2)[1] <- "materia"
+names(pob_asist2)[2] <- "sum_prop"
+
+
+#Probabilidad de la probabilidad para tener un compilado de probabilidades 
+
+horario_HEREDIA <- left_join(horario_HEREDIA, pob_asist2)
+
+horario_HEREDIA$asistencia2 <- horario_HEREDIA$asistencia/horario_HEREDIA$sum_prop
+horario_HEREDIA$asistencia2[horario_HEREDIA$asistencia2 == Inf] <- 0
+
+horario_HEREDIA$pob_asist <- round((horario_HEREDIA$asistencia2)*(horario_HEREDIA$poblacion),0)
+
+
+#Guardo todos los horarios en su folder correspondiente
+
+count(horario_HEREDIA$id)
+
+write_xlsx(horario_HEREDIA,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_HEREDIA/horario_HEREDIA_americana_pand_C2.xlsx")
+
+
+#Consolidado unicamente a nivel de horarios, manteniendo todo constante excepto carrera
+#Dividimos entre columnas
+
+split <- str_split_fixed(horario_HEREDIA$id, "_", 5)
+
+horario_HEREDIA <- cbind(split, horario_HEREDIA)
+names(horario_HEREDIA)[1] <- "marca"
+names(horario_HEREDIA)[2] <- "sede"
+names(horario_HEREDIA)[3] <- "carrera"
+names(horario_HEREDIA)[4] <- "modalidad"
+names(horario_HEREDIA)[5] <- "cuatrimestre"
+
+horario_HEREDIA <- horario_HEREDIA %>% dplyr::select(-id)
+
+
+horario_HEREDIA_unique <- subset(horario_HEREDIA, pob_asist != 0)
+
+horario_HEREDIA_unique <- horario_HEREDIA_unique %>% group_by(horario, materia) %>% summarise(Asistencia = sum(pob_asist))
+
+horario_HEREDIA_unique$marca <- "UAM"
+horario_HEREDIA_unique$sede <- "HEREDIA"
+horario_HEREDIA_unique$modalidad <- "pand"
+horario_HEREDIA_unique$cuatrimestre <- "C2"
+
+horario_HEREDIA_unique <- horario_HEREDIA_unique %>% dplyr::select(marca, sede, modalidad, cuatrimestre, horario, materia, Asistencia)
+
+horario_HEREDIA_unique <- horario_HEREDIA_unique[with(horario_HEREDIA_unique, order(materia, horario)), ]  
+
+horario_HEREDIA_unique <- horario_HEREDIA_unique %>% group_by(materia) %>% mutate(counter = row_number(materia))
+
+#Rangos horarios
+horario_HEREDIA_unique$unoanueve <- 0
+horario_HEREDIA_unique$unoanueve[horario_HEREDIA_unique$Asistencia <= 9] <- 1
+
+horario_HEREDIA_unique$dieza17 <- 0
+horario_HEREDIA_unique$dieza17[horario_HEREDIA_unique$Asistencia >= 10 & horario_HEREDIA_unique$Asistencia <= 17] <- 1
+
+horario_HEREDIA_unique$di18a30 <- 0
+horario_HEREDIA_unique$di18a30[horario_HEREDIA_unique$Asistencia >= 18 & horario_HEREDIA_unique$Asistencia <= 30] <- 1
+
+horario_HEREDIA_unique$di31a60 <- 0
+horario_HEREDIA_unique$di31a60[horario_HEREDIA_unique$Asistencia >= 31 & horario_HEREDIA_unique$Asistencia <= 60] <- 1
+
+horario_HEREDIA_unique$mas60 <- 0
+horario_HEREDIA_unique$mas60[horario_HEREDIA_unique$Asistencia >= 61] <- 1
+
+
+
+#Duplicados
+duplicados <- as.data.frame(table(horario_HEREDIA_unique$materia))
+names(duplicados)[1] <- "materia"
+names(duplicados)[2] <- "freq"
+
+duplicados$freq[duplicados$freq <= 1] <- 0
+duplicados$freq[duplicados$freq > 1] <- 1
+
+#Duplicados left join
+
+horario_HEREDIA_unique <- left_join(horario_HEREDIA_unique, duplicados, by = "materia")
+
+names(horario_HEREDIA_unique)[14] <- "duplicado"
+
+
+#Regla dura 
+
+#entre 1 y 9 
+
+horario_HEREDIA_unique$recomendacion <- 0
+horario_HEREDIA_unique$recomendacion[horario_HEREDIA_unique$unoanueve == 1 & horario_HEREDIA_unique$duplicado == 0] <- "cerrar horario"
+horario_HEREDIA_unique$recomendacion[horario_HEREDIA_unique$unoanueve == 1 & horario_HEREDIA_unique$duplicado == 1] <- "unir horario"
+
+#entre 10 y 17
+
+horario_HEREDIA_unique$recomendacion[horario_HEREDIA_unique$dieza17 == 1 & horario_HEREDIA_unique$duplicado == 0] <- "ofertar unicamente en ese horario"
+horario_HEREDIA_unique$recomendacion[horario_HEREDIA_unique$dieza17 == 1 & horario_HEREDIA_unique$duplicado == 1] <- "ofertar e intentar consolidar en 1 horario"
+
+#entre 18 y 30 se recomienda ofertar
+
+horario_HEREDIA_unique$recomendacion[horario_HEREDIA_unique$di18a30 == 1] <- "abrir unicamente en ese horario"
+
+#entre 30 y 60
+
+horario_HEREDIA_unique$recomendacion[horario_HEREDIA_unique$di31a60 == 1] <- "abrir 2 paralelos en este horario"
+
+#mas de 60
+
+horario_HEREDIA_unique$recomendacion[horario_HEREDIA_unique$mas60 == 1] <- "abrir 3 paralelos en este horario"
+
+
+#Base Final
+
+horario_HEREDIA_unique <- horario_HEREDIA_unique %>%  dplyr::select(marca, sede, modalidad, cuatrimestre,
+                                                                    horario, materia, Asistencia, recomendacion)
+
+
+horario_split <- as.data.frame(str_split_fixed(horario_HEREDIA_unique$horario, " ", 2))
+names(horario_split)[1] <- "dia"
+names(horario_split)[2] <- "hora"
+
+horario_HEREDIA_unique <- cbind(horario_HEREDIA_unique, horario_split)
+names(horario_HEREDIA_unique)
+
+horario_HEREDIA_unique$recom_d <- 0
+horario_HEREDIA_unique$recom_d[horario_HEREDIA_unique$recomendacion == "unir horario" | horario_HEREDIA_unique$recomendacion == "cerrar horario"] <- 0
+horario_HEREDIA_unique$recom_d[horario_HEREDIA_unique$recomendacion == "ofertar e intentar consolidar en 1 horario" | 
+                                 horario_HEREDIA_unique$recomendacion == "abrir unicamente en ese horario" ] <- 1
+horario_HEREDIA_unique$recom_d[horario_HEREDIA_unique$recomendacion == "abrir 2 paralelos en este horario"] <- 2
+horario_HEREDIA_unique$recom_d[horario_HEREDIA_unique$recomendacion == "abrir 3 paralelos en este horario"] <- 3
+
+horario_HEREDIA_unique <- horario_HEREDIA_unique %>% dplyr::select(marca, sede, modalidad, cuatrimestre, dia, hora, materia, Asistencia, recomendacion, recom_d)
+
+write_xlsx(horario_HEREDIA_unique,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_HEREDIA/recom_HEREDIA_americana_pand_C2.xlsx")
+
+
+###### Comparativo de cursos ofertados para usarlo contra la tabla dinamica HEREDIA ######
+
+horario_split_2 <- as.data.frame(str_split_fixed(HEREDIA$HORARIO, " ", 2))
+names(horario_split_2)[1] <- "dia"
+names(horario_split_2)[2] <- "hora"
+
+HEREDIA <- cbind(HEREDIA, horario_split_2)
+names(HEREDIA)
+
+HEREDIA$paralelo <- paste0(HEREDIA$AULA, "-", HEREDIA$HORARIO)
+
+
+write_xlsx(HEREDIA,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_HEREDIA/HEREDIA_mock.xlsx")
+
+
+pt <- PivotTable$new()
+pt$addData(HEREDIA)
+pt$addColumnDataGroups("dia")
+pt$addRowDataGroups("hora")
+pt$defineCalcuamion(calcuamionName="paralelos", summariseExpression="paralelo")
+pt$renderPivot()
+
+
+######## UAM SEDE SANJOSE #########
+
+
+#primer animado sede-carrera
+#Diferenciado entre bases de datos de cada una de las sedes y sus carreras #
+
+uam_SANJOSE_carr <- split(SANJOSE, f = SANJOSE$carrera) 
+names(uam_SANJOSE_carr) <- paste0("SANJOSE-",names(uam_SANJOSE_carr)) 
+
+list2env(uam_SANJOSE_carr,envir=.GlobalEnv)
+
+
+#segundo anidado Sede-carrera-materias#
+
+#SANJOSE-admin-neg
+
+
+`SANJOSE-admin-neg-materias` <- split(`SANJOSE-admin-neg`, f = `SANJOSE-admin-neg`$cod_padre) 
+names(`SANJOSE-admin-neg-materias`) <- paste0("SANJOSE-admin-neg-materias-",names(`SANJOSE-admin-neg-materias`)) 
+
+list2env(`SANJOSE-admin-neg-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_SANJOSE_admin-neg` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_SANJOSE_admin-neg`)[1] <- "horario"
+`horario_SANJOSE_admin-neg` <- unique(`horario_SANJOSE_admin-neg`)
+
+
+`obs_SANJOSE-admin-neg-materias` <- as.data.frame(sapply(`SANJOSE-admin-neg-materias`, NROW))
+
+`obs_SANJOSE-admin-neg-materias` <- tibble::rownames_to_column(`obs_SANJOSE-admin-neg-materias`, "materia")
+names(`obs_SANJOSE-admin-neg-materias`)[2] <- "obs"
+
+`obs_SANJOSE-admin-neg-materias`$materia <- str_remove(`obs_SANJOSE-admin-neg-materias`$materia, "SANJOSE-admin-neg-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-admin-neg-materias` <- filter(`obs_SANJOSE-admin-neg-materias`, obs >= 10)
+`no_elegibles_SANJOSE-admin-neg-materias` <- filter(`obs_SANJOSE-admin-neg-materias`, obs < 10)
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`SANJOSE-admin-neg-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_SANJOSE_admin-neg` <- left_join(`horario_SANJOSE_admin-neg`, `AN-BAN-01`)
+names(`horario_SANJOSE_admin-neg`)[2] <- "AN-BAN-01"
+
+`horario_SANJOSE_admin-neg`$`AN-BAN-01`[is.na(`horario_SANJOSE_admin-neg`$`AN-BAN-01`)] <- 0
+
+
+#AN-BAN-02
+
+`AN-BAN-02` <- as.data.frame(count(`SANJOSE-admin-neg-materias-AN-BAN-02`$HORARIO)) 
+
+`AN-BAN-02`$freq <- (`AN-BAN-02`$freq)/sum(`AN-BAN-02`$freq)
+
+names(`AN-BAN-02`)[1] <- "horario"
+
+`horario_SANJOSE_admin-neg` <- left_join(`horario_SANJOSE_admin-neg`, `AN-BAN-02`)
+names(`horario_SANJOSE_admin-neg`)[3] <- "AN-BAN-02"
+
+`horario_SANJOSE_admin-neg`$`AN-BAN-02`[is.na(`horario_SANJOSE_admin-neg`$`AN-BAN-02`)] <- 0
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`SANJOSE-admin-neg-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+`horario_SANJOSE_admin-neg` <- left_join(`horario_SANJOSE_admin-neg`, `AN-BAN-03`)
+names(`horario_SANJOSE_admin-neg`)[4] <- "AN-BAN-03"
+
+`horario_SANJOSE_admin-neg`$`AN-BAN-03`[is.na(`horario_SANJOSE_admin-neg`$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`SANJOSE-admin-neg-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_SANJOSE_admin-neg` <- left_join(`horario_SANJOSE_admin-neg`, `AN-BAN-04`)
+names(`horario_SANJOSE_admin-neg`)[5] <- "AN-BAN-04"
+
+`horario_SANJOSE_admin-neg`$`AN-BAN-04`[is.na(`horario_SANJOSE_admin-neg`$`AN-BAN-04`)] <- 0
+
+
+#AN-BAN-05
+
+`AN-BAN-05` <- as.data.frame(count(`SANJOSE-admin-neg-materias-AN-BAN-05`$HORARIO)) 
+
+`AN-BAN-05`$freq <- (`AN-BAN-05`$freq)/sum(`AN-BAN-05`$freq)
+
+names(`AN-BAN-05`)[1] <- "horario"
+
+`horario_SANJOSE_admin-neg` <- left_join(`horario_SANJOSE_admin-neg`, `AN-BAN-05`)
+names(`horario_SANJOSE_admin-neg`)[6] <- "AN-BAN-05"
+
+`horario_SANJOSE_admin-neg`$`AN-BAN-05`[is.na(`horario_SANJOSE_admin-neg`$`AN-BAN-05`)] <- 0
+
+
+##wide to long
+
+`horario_SANJOSE_admin-neg`$id <- "UAM_SANJOSE_admin-neg_pand_C2"
+`horario_SANJOSE_admin-neg` <-  `horario_SANJOSE_admin-neg`%>% dplyr::select(id, everything())
+
+`horario_SANJOSE_admin-neg` <- melt(`horario_SANJOSE_admin-neg`, id = c("id", "horario"))
+names(`horario_SANJOSE_admin-neg`)[3] <- "materia"
+names(`horario_SANJOSE_admin-neg`)[4] <- "asistencia"
+
+
+#SANJOSE-ingles
+
+
+`SANJOSE-ingles-materias` <- split(`SANJOSE-ingles`, f = `SANJOSE-ingles`$cod_padre) 
+names(`SANJOSE-ingles-materias`) <- paste0("SANJOSE-ingles-materias-",names(`SANJOSE-ingles-materias`)) 
+
+list2env(`SANJOSE-ingles-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+horario_SANJOSE_ingles <- as.data.frame(pf_americana$HORARIO)
+names(horario_SANJOSE_ingles)[1] <- "horario"
+horario_SANJOSE_ingles <- unique(horario_SANJOSE_ingles)
+
+
+`obs_SANJOSE-ingles-materias` <- as.data.frame(sapply(`SANJOSE-ingles-materias`, NROW))
+
+`obs_SANJOSE-ingles-materias` <- tibble::rownames_to_column(`obs_SANJOSE-ingles-materias`, "materia")
+names(`obs_SANJOSE-ingles-materias`)[2] <- "obs"
+
+`obs_SANJOSE-ingles-materias`$materia <- str_remove(`obs_SANJOSE-ingles-materias`$materia, "SANJOSE-ingles-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-ingles-materias` <- filter(`obs_SANJOSE-ingles-materias`, obs >= 10)
+`no_elegibles_SANJOSE-ingles-materias` <- filter(`obs_SANJOSE-ingles-materias`, obs < 10)
+
+
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`SANJOSE-ingles-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `AN-BAN-01`)
+names(horario_SANJOSE_ingles)[2] <- "AN-BAN-01"
+
+horario_SANJOSE_ingles$`AN-BAN-01`[is.na(horario_SANJOSE_ingles$`AN-BAN-01`)] <- 0
+
+
+#AN-BAN-02
+
+`AN-BAN-02` <- as.data.frame(count(`SANJOSE-ingles-materias-AN-BAN-02`$HORARIO)) 
+
+`AN-BAN-02`$freq <- (`AN-BAN-02`$freq)/sum(`AN-BAN-02`$freq)
+
+names(`AN-BAN-02`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `AN-BAN-02`)
+names(horario_SANJOSE_ingles)[3] <- "AN-BAN-02"
+
+horario_SANJOSE_ingles$`AN-BAN-02`[is.na(horario_SANJOSE_ingles$`AN-BAN-02`)] <- 0
+
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`SANJOSE-ingles-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `AN-BAN-03`)
+names(horario_SANJOSE_ingles)[4] <- "AN-BAN-03"
+
+horario_SANJOSE_ingles$`AN-BAN-03`[is.na(horario_SANJOSE_ingles$`AN-BAN-03`)] <- 0
+
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`SANJOSE-ingles-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `AN-BAN-04`)
+names(horario_SANJOSE_ingles)[5] <- "AN-BAN-04"
+
+horario_SANJOSE_ingles$`AN-BAN-04`[is.na(horario_SANJOSE_ingles$`AN-BAN-04`)] <- 0
+
+
+
+
+#AN-BAN-05
+
+`AN-BAN-05` <- as.data.frame(count(`SANJOSE-ingles-materias-AN-BAN-05`$HORARIO)) 
+
+`AN-BAN-05`$freq <- (`AN-BAN-05`$freq)/sum(`AN-BAN-05`$freq)
+
+names(`AN-BAN-05`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `AN-BAN-05`)
+names(horario_SANJOSE_ingles)[6] <- "AN-BAN-05"
+
+horario_SANJOSE_ingles$`AN-BAN-05`[is.na(horario_SANJOSE_ingles$`AN-BAN-05`)] <- 0
+
+
+#CON-BAN-01
+
+`CON-BAN-01` <- as.data.frame(count(`SANJOSE-ingles-materias-CON-BAN-01`$HORARIO)) 
+
+`CON-BAN-01`$freq <- (`CON-BAN-01`$freq)/sum(`CON-BAN-01`$freq)
+
+names(`CON-BAN-01`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `CON-BAN-01`)
+names(horario_SANJOSE_ingles)[7] <- "CON-BAN-01"
+
+horario_SANJOSE_ingles$`CON-BAN-01`[is.na(horario_SANJOSE_ingles$`CON-BAN-01`)] <- 0
+
+
+#CON-BAN-02
+
+`CON-BAN-02` <- as.data.frame(count(`SANJOSE-ingles-materias-CON-BAN-02`$HORARIO)) 
+
+`CON-BAN-02`$freq <- (`CON-BAN-02`$freq)/sum(`CON-BAN-02`$freq)
+
+names(`CON-BAN-02`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `CON-BAN-02`)
+names(horario_SANJOSE_ingles)[8] <- "CON-BAN-02"
+
+horario_SANJOSE_ingles$`CON-BAN-02`[is.na(horario_SANJOSE_ingles$`CON-BAN-02`)] <- 0
+
+
+
+#CON-BAN-03
+
+`CON-BAN-03` <- as.data.frame(count(`SANJOSE-ingles-materias-CON-BAN-03`$HORARIO)) 
+
+`CON-BAN-03`$freq <- (`CON-BAN-03`$freq)/sum(`CON-BAN-03`$freq)
+
+names(`CON-BAN-03`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `CON-BAN-03`)
+names(horario_SANJOSE_ingles)[9] <- "CON-BAN-03"
+
+horario_SANJOSE_ingles$`CON-BAN-03`[is.na(horario_SANJOSE_ingles$`CON-BAN-03`)] <- 0
+
+
+
+#CON-BAN-04
+
+`CON-BAN-04` <- as.data.frame(count(`SANJOSE-ingles-materias-CON-BAN-04`$HORARIO)) 
+
+`CON-BAN-04`$freq <- (`CON-BAN-04`$freq)/sum(`CON-BAN-04`$freq)
+
+names(`CON-BAN-04`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `CON-BAN-04`)
+names(horario_SANJOSE_ingles)[10] <- "CON-BAN-04"
+
+horario_SANJOSE_ingles$`CON-BAN-04`[is.na(horario_SANJOSE_ingles$`CON-BAN-04`)] <- 0
+
+
+
+#DER-BDE-01
+
+`DER-BDE-01` <- as.data.frame(count(`SANJOSE-ingles-materias-DER-BDE-01`$HORARIO)) 
+
+`DER-BDE-01`$freq <- (`DER-BDE-01`$freq)/sum(`DER-BDE-01`$freq)
+
+names(`DER-BDE-01`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `DER-BDE-01`)
+names(horario_SANJOSE_ingles)[11] <- "DER-BDE-01"
+
+horario_SANJOSE_ingles$`DER-BDE-01`[is.na(horario_SANJOSE_ingles$`DER-BDE-01`)] <- 0
+
+
+
+#EES-BMA-01
+
+`EES-BMA-01` <- as.data.frame(count(`SANJOSE-ingles-materias-EES-BMA-01`$HORARIO)) 
+
+`EES-BMA-01`$freq <- (`EES-BMA-01`$freq)/sum(`EES-BMA-01`$freq)
+
+names(`EES-BMA-01`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `EES-BMA-01`)
+names(horario_SANJOSE_ingles)[12] <- "EES-BMA-01"
+
+horario_SANJOSE_ingles$`EES-BMA-01`[is.na(horario_SANJOSE_ingles$`EES-BMA-01`)] <- 0
+
+
+#EIG-BIN-01
+
+`EIG-BIN-01` <- as.data.frame(count(`SANJOSE-ingles-materias-EIG-BIN-01`$HORARIO)) 
+
+`EIG-BIN-01`$freq <- (`EIG-BIN-01`$freq)/sum(`EIG-BIN-01`$freq)
+
+names(`EIG-BIN-01`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `EIG-BIN-01`)
+names(horario_SANJOSE_ingles)[13] <- "EIG-BIN-01"
+
+horario_SANJOSE_ingles$`EIG-BIN-01`[is.na(horario_SANJOSE_ingles$`EIG-BIN-01`)] <- 0
+
+
+
+#EIG-BIN-02
+
+`EIG-BIN-02` <- as.data.frame(count(`SANJOSE-ingles-materias-EIG-BIN-02`$HORARIO)) 
+
+`EIG-BIN-02`$freq <- (`EIG-BIN-02`$freq)/sum(`EIG-BIN-02`$freq)
+
+names(`EIG-BIN-02`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `EIG-BIN-02`)
+names(horario_SANJOSE_ingles)[14] <- "EIG-BIN-02"
+
+horario_SANJOSE_ingles$`EIG-BIN-02`[is.na(horario_SANJOSE_ingles$`EIG-BIN-02`)] <- 0
+
+
+
+#EIG-BIN-03
+
+`EIG-BIN-03` <- as.data.frame(count(`SANJOSE-ingles-materias-EIG-BIN-03`$HORARIO)) 
+
+`EIG-BIN-03`$freq <- (`EIG-BIN-03`$freq)/sum(`EIG-BIN-03`$freq)
+
+names(`EIG-BIN-03`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `EIG-BIN-03`)
+names(horario_SANJOSE_ingles)[15] <- "EIG-BIN-03"
+
+horario_SANJOSE_ingles$`EIG-BIN-03`[is.na(horario_SANJOSE_ingles$`EIG-BIN-03`)] <- 0
+
+
+
+#EIG-BIN-04
+
+`EIG-BIN-04` <- as.data.frame(count(`SANJOSE-ingles-materias-EIG-BIN-04`$HORARIO)) 
+
+`EIG-BIN-04`$freq <- (`EIG-BIN-04`$freq)/sum(`EIG-BIN-04`$freq)
+
+names(`EIG-BIN-04`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `EIG-BIN-04`)
+names(horario_SANJOSE_ingles)[16] <- "EIG-BIN-04"
+
+horario_SANJOSE_ingles$`EIG-BIN-04`[is.na(horario_SANJOSE_ingles$`EIG-BIN-04`)] <- 0
+
+
+#III-BII-01
+
+`III-BII-01` <- as.data.frame(count(`SANJOSE-ingles-materias-III-BII-01`$HORARIO)) 
+
+`III-BII-01`$freq <- (`III-BII-01`$freq)/sum(`III-BII-01`$freq)
+
+names(`III-BII-01`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `III-BII-01`)
+names(horario_SANJOSE_ingles)[17] <- "III-BII-01"
+
+horario_SANJOSE_ingles$`III-BII-01`[is.na(horario_SANJOSE_ingles$`III-BII-01`)] <- 0
+
+
+
+#III-BII-05
+
+`III-BII-05` <- as.data.frame(count(`SANJOSE-ingles-materias-III-BII-05`$HORARIO)) 
+
+`III-BII-05`$freq <- (`III-BII-05`$freq)/sum(`III-BII-05`$freq)
+
+names(`III-BII-05`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `III-BII-05`)
+names(horario_SANJOSE_ingles)[18] <- "III-BII-05"
+
+horario_SANJOSE_ingles$`III-BII-05`[is.na(horario_SANJOSE_ingles$`III-BII-05`)] <- 0
+
+
+#III-BII-40
+
+`III-BII-40` <- as.data.frame(count(`SANJOSE-ingles-materias-III-BII-40`$HORARIO)) 
+
+`III-BII-40`$freq <- (`III-BII-40`$freq)/sum(`III-BII-40`$freq)
+
+names(`III-BII-40`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `III-BII-40`)
+names(horario_SANJOSE_ingles)[19] <- "III-BII-40"
+
+horario_SANJOSE_ingles$`III-BII-40`[is.na(horario_SANJOSE_ingles$`III-BII-40`)] <- 0
+
+
+#III-BII-41
+
+`III-BII-41` <- as.data.frame(count(`SANJOSE-ingles-materias-III-BII-41`$HORARIO)) 
+
+`III-BII-41`$freq <- (`III-BII-41`$freq)/sum(`III-BII-41`$freq)
+
+names(`III-BII-41`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `III-BII-41`)
+names(horario_SANJOSE_ingles)[20] <- "III-BII-41"
+
+horario_SANJOSE_ingles$`III-BII-41`[is.na(horario_SANJOSE_ingles$`III-BII-41`)] <- 0
+
+
+
+#ISI-BAN-01
+
+`ISI-BAN-01` <- as.data.frame(count(`SANJOSE-ingles-materias-ISI-BAN-01`$HORARIO)) 
+
+`ISI-BAN-01`$freq <- (`ISI-BAN-01`$freq)/sum(`ISI-BAN-01`$freq)
+
+names(`ISI-BAN-01`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `ISI-BAN-01`)
+names(horario_SANJOSE_ingles)[21] <- "ISI-BAN-01"
+
+horario_SANJOSE_ingles$`ISI-BAN-01`[is.na(horario_SANJOSE_ingles$`ISI-BAN-01`)] <- 0
+
+
+
+#ISI-BAN-03
+
+`ISI-BAN-03` <- as.data.frame(count(`SANJOSE-ingles-materias-ISI-BAN-03`$HORARIO)) 
+
+`ISI-BAN-03`$freq <- (`ISI-BAN-03`$freq)/sum(`ISI-BAN-03`$freq)
+
+names(`ISI-BAN-03`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `ISI-BAN-03`)
+names(horario_SANJOSE_ingles)[22] <- "ISI-BAN-03"
+
+horario_SANJOSE_ingles$`ISI-BAN-03`[is.na(horario_SANJOSE_ingles$`ISI-BAN-03`)] <- 0
+
+
+
+#ISI-BAN-04
+
+`ISI-BAN-04` <- as.data.frame(count(`SANJOSE-ingles-materias-ISI-BAN-04`$HORARIO)) 
+
+`ISI-BAN-04`$freq <- (`ISI-BAN-04`$freq)/sum(`ISI-BAN-04`$freq)
+
+names(`ISI-BAN-04`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `ISI-BAN-04`)
+names(horario_SANJOSE_ingles)[23] <- "ISI-BAN-04"
+
+horario_SANJOSE_ingles$`ISI-BAN-04`[is.na(horario_SANJOSE_ingles$`ISI-BAN-04`)] <- 0
+
+
+
+#ISI-BSI-01
+
+`ISI-BSI-01` <- as.data.frame(count(`SANJOSE-ingles-materias-ISI-BSI-01`$HORARIO)) 
+
+`ISI-BSI-01`$freq <- (`ISI-BSI-01`$freq)/sum(`ISI-BSI-01`$freq)
+
+names(`ISI-BSI-01`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `ISI-BSI-01`)
+names(horario_SANJOSE_ingles)[24] <- "ISI-BSI-01"
+
+horario_SANJOSE_ingles$`ISI-BSI-01`[is.na(horario_SANJOSE_ingles$`ISI-BSI-01`)] <- 0
+
+
+
+#ISI-BSI-02
+
+`ISI-BSI-02` <- as.data.frame(count(`SANJOSE-ingles-materias-ISI-BSI-02`$HORARIO)) 
+
+`ISI-BSI-02`$freq <- (`ISI-BSI-02`$freq)/sum(`ISI-BSI-02`$freq)
+
+names(`ISI-BSI-02`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `ISI-BSI-02`)
+names(horario_SANJOSE_ingles)[25] <- "ISI-BSI-02"
+
+horario_SANJOSE_ingles$`ISI-BSI-02`[is.na(horario_SANJOSE_ingles$`ISI-BSI-02`)] <- 0
+
+
+
+#TER-TF-001
+
+`TER-TF-001` <- as.data.frame(count(`SANJOSE-ingles-materias-TER-TF-001`$HORARIO)) 
+
+`TER-TF-001`$freq <- (`TER-TF-001`$freq)/sum(`TER-TF-001`$freq)
+
+names(`TER-TF-001`)[1] <- "horario"
+
+horario_SANJOSE_ingles <- left_join(horario_SANJOSE_ingles, `TER-TF-001`)
+names(horario_SANJOSE_ingles)[26] <- "TER-TF-001"
+
+horario_SANJOSE_ingles$`TER-TF-001`[is.na(horario_SANJOSE_ingles$`TER-TF-001`)] <- 0
+
+
+
+
+##wide to long
+
+horario_SANJOSE_ingles$id <- "UAM_SANJOSE_ingles_pand_C2"
+horario_SANJOSE_ingles <-  horario_SANJOSE_ingles%>% dplyr::select(id, everything())
+
+horario_SANJOSE_ingles <- melt(horario_SANJOSE_ingles, id = c("id", "horario"))
+names(horario_SANJOSE_ingles)[3] <- "materia"
+names(horario_SANJOSE_ingles)[4] <- "asistencia"
+
+
+
+#SANJOSE-conta
+
+
+`SANJOSE-conta-materias` <- split(`SANJOSE-conta`, f = `SANJOSE-conta`$cod_padre) 
+names(`SANJOSE-conta-materias`) <- paste0("SANJOSE-conta-materias-",names(`SANJOSE-conta-materias`)) 
+
+list2env(`SANJOSE-conta-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+horario_SANJOSE_conta <- as.data.frame(pf_americana$HORARIO)
+names(horario_SANJOSE_conta)[1] <- "horario"
+horario_SANJOSE_conta <- unique(horario_SANJOSE_conta)
+
+
+`obs_SANJOSE-conta-materias` <- as.data.frame(sapply(`SANJOSE-conta-materias`, NROW))
+
+`obs_SANJOSE-conta-materias` <- tibble::rownames_to_column(`obs_SANJOSE-conta-materias`, "materia")
+names(`obs_SANJOSE-conta-materias`)[2] <- "obs"
+
+`obs_SANJOSE-conta-materias`$materia <- str_remove(`obs_SANJOSE-conta-materias`$materia, "SANJOSE-conta-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-conta-materias` <- filter(`obs_SANJOSE-conta-materias`, obs >= 10)
+`no_elegibles_SANJOSE-conta-materias` <- filter(`obs_SANJOSE-conta-materias`, obs < 10)
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`SANJOSE-conta-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+horario_SANJOSE_conta <- left_join(horario_SANJOSE_conta, `AN-BAN-01`)
+names(horario_SANJOSE_conta)[2] <- "AN-BAN-01"
+
+horario_SANJOSE_conta$`AN-BAN-01`[is.na(horario_SANJOSE_conta$`AN-BAN-01`)] <- 0
+
+
+#AN-BAN-02
+
+`AN-BAN-02` <- as.data.frame(count(`SANJOSE-conta-materias-AN-BAN-02`$HORARIO)) 
+
+`AN-BAN-02`$freq <- (`AN-BAN-02`$freq)/sum(`AN-BAN-02`$freq)
+
+names(`AN-BAN-02`)[1] <- "horario"
+
+horario_SANJOSE_conta <- left_join(horario_SANJOSE_conta, `AN-BAN-02`)
+names(horario_SANJOSE_conta)[3] <- "AN-BAN-02"
+
+horario_SANJOSE_conta$`AN-BAN-02`[is.na(horario_SANJOSE_conta$`AN-BAN-02`)] <- 0
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`SANJOSE-conta-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+horario_SANJOSE_conta <- left_join(horario_SANJOSE_conta, `AN-BAN-03`)
+names(horario_SANJOSE_conta)[4] <- "AN-BAN-03"
+
+horario_SANJOSE_conta$`AN-BAN-03`[is.na(horario_SANJOSE_conta$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`SANJOSE-conta-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+horario_SANJOSE_conta <- left_join(horario_SANJOSE_conta, `AN-BAN-04`)
+names(horario_SANJOSE_conta)[5] <- "AN-BAN-04"
+
+horario_SANJOSE_conta$`AN-BAN-04`[is.na(horario_SANJOSE_conta$`AN-BAN-04`)] <- 0
+
+
+##wide to long
+
+horario_SANJOSE_conta$id <- "UAM_SANJOSE_conta_pand_C2"
+horario_SANJOSE_conta <-  horario_SANJOSE_conta%>% dplyr::select(id, everything())
+
+horario_SANJOSE_conta <- melt(horario_SANJOSE_conta, id = c("id", "horario"))
+names(horario_SANJOSE_conta)[3] <- "materia"
+names(horario_SANJOSE_conta)[4] <- "asistencia"
+
+
+#SANJOSE-conta-pub
+
+
+`SANJOSE-conta-pub-materias` <- split(`SANJOSE-conta-pub`, f = `SANJOSE-conta-pub`$cod_padre) 
+names(`SANJOSE-conta-pub-materias`) <- paste0("SANJOSE-conta-pub-materias-",names(`SANJOSE-conta-pub-materias`)) 
+
+list2env(`SANJOSE-conta-pub-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_SANJOSE_conta-pub` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_SANJOSE_conta-pub`)[1] <- "horario"
+`horario_SANJOSE_conta-pub` <- unique(`horario_SANJOSE_conta-pub`)
+
+
+`obs_SANJOSE-conta-pub-materias` <- as.data.frame(sapply(`SANJOSE-conta-pub-materias`, NROW))
+
+`obs_SANJOSE-conta-pub-materias` <- tibble::rownames_to_column(`obs_SANJOSE-conta-pub-materias`, "materia")
+names(`obs_SANJOSE-conta-pub-materias`)[2] <- "obs"
+
+`obs_SANJOSE-conta-pub-materias`$materia <- str_remove(`obs_SANJOSE-conta-pub-materias`$materia, "SANJOSE-conta-pub-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-conta-pub-materias` <- filter(`obs_SANJOSE-conta-pub-materias`, obs >= 10)
+`no_elegibles_SANJOSE-conta-pub-materias` <- filter(`obs_SANJOSE-conta-pub-materias`, obs < 10)
+
+
+#NO HAY SUFICIENTE DATOS PARA INFERIR
+
+
+
+#SANJOSE-derecho
+
+
+`SANJOSE-derecho-materias` <- split(`SANJOSE-derecho`, f = `SANJOSE-derecho`$cod_padre) 
+names(`SANJOSE-derecho-materias`) <- paste0("SANJOSE-derecho-materias-",names(`SANJOSE-derecho-materias`)) 
+
+list2env(`SANJOSE-derecho-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+horario_SANJOSE_derecho <- as.data.frame(pf_americana$HORARIO)
+names(horario_SANJOSE_derecho)[1] <- "horario"
+horario_SANJOSE_derecho <- unique(horario_SANJOSE_derecho)
+
+
+`obs_SANJOSE-derecho-materias` <- as.data.frame(sapply(`SANJOSE-derecho-materias`, NROW))
+
+`obs_SANJOSE-derecho-materias` <- tibble::rownames_to_column(`obs_SANJOSE-derecho-materias`, "materia")
+names(`obs_SANJOSE-derecho-materias`)[2] <- "obs"
+
+`obs_SANJOSE-derecho-materias`$materia <- str_remove(`obs_SANJOSE-derecho-materias`$materia, "SANJOSE-derecho-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-derecho-materias` <- filter(`obs_SANJOSE-derecho-materias`, obs >= 10)
+`no_elegibles_SANJOSE-derecho-materias` <- filter(`obs_SANJOSE-derecho-materias`, obs < 10)
+
+
+
+
+#NO HAY SUFICIENTE INFORMACION PARA INFERIR
+
+#SANJOSE-indus
+
+
+`SANJOSE-indus-materias` <- split(`SANJOSE-indus`, f = `SANJOSE-indus`$cod_padre) 
+names(`SANJOSE-indus-materias`) <- paste0("SANJOSE-indus-materias-",names(`SANJOSE-indus-materias`)) 
+
+list2env(`SANJOSE-indus-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+horario_SANJOSE_indus <- as.data.frame(pf_americana$HORARIO)
+names(horario_SANJOSE_indus)[1] <- "horario"
+horario_SANJOSE_indus <- unique(horario_SANJOSE_indus)
+
+
+`obs_SANJOSE-indus-materias` <- as.data.frame(sapply(`SANJOSE-indus-materias`, NROW))
+
+`obs_SANJOSE-indus-materias` <- tibble::rownames_to_column(`obs_SANJOSE-indus-materias`, "materia")
+names(`obs_SANJOSE-indus-materias`)[2] <- "obs"
+
+`obs_SANJOSE-indus-materias`$materia <- str_remove(`obs_SANJOSE-indus-materias`$materia, "SANJOSE-indus-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-indus-materias` <- filter(`obs_SANJOSE-indus-materias`, obs >= 10)
+`no_elegibles_SANJOSE-indus-materias` <- filter(`obs_SANJOSE-indus-materias`, obs < 10)
+
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`SANJOSE-indus-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+horario_SANJOSE_indus <- left_join(horario_SANJOSE_indus, `AN-BAN-04`)
+names(horario_SANJOSE_indus)[2] <- "AN-BAN-04"
+
+horario_SANJOSE_indus$`AN-BAN-04`[is.na(horario_SANJOSE_indus$`AN-BAN-04`)] <- 0
+
+
+#AN-BAN-06
+
+`AN-BAN-06` <- as.data.frame(count(`SANJOSE-indus-materias-AN-BAN-06`$HORARIO)) 
+
+`AN-BAN-06`$freq <- (`AN-BAN-06`$freq)/sum(`AN-BAN-06`$freq)
+
+names(`AN-BAN-06`)[1] <- "horario"
+
+horario_SANJOSE_indus <- left_join(horario_SANJOSE_indus, `AN-BAN-06`)
+names(horario_SANJOSE_indus)[3] <- "AN-BAN-06"
+
+horario_SANJOSE_indus$`AN-BAN-06`[is.na(horario_SANJOSE_indus$`AN-BAN-06`)] <- 0
+
+
+#III-BII-01
+
+`III-BII-01` <- as.data.frame(count(`SANJOSE-indus-materias-III-BII-01`$HORARIO)) 
+
+`III-BII-01`$freq <- (`III-BII-01`$freq)/sum(`III-BII-01`$freq)
+
+names(`III-BII-01`)[1] <- "horario"
+
+horario_SANJOSE_indus <- left_join(horario_SANJOSE_indus, `III-BII-01`)
+names(horario_SANJOSE_indus)[4] <- "III-BII-01"
+
+horario_SANJOSE_indus$`III-BII-01`[is.na(horario_SANJOSE_indus$`III-BII-01`)] <- 0
+
+
+#III-BII-40
+
+`III-BII-40` <- as.data.frame(count(`SANJOSE-indus-materias-III-BII-40`$HORARIO)) 
+
+`III-BII-40`$freq <- (`III-BII-40`$freq)/sum(`III-BII-40`$freq)
+
+names(`III-BII-40`)[1] <- "horario"
+
+horario_SANJOSE_indus <- left_join(horario_SANJOSE_indus, `III-BII-40`)
+names(horario_SANJOSE_indus)[5] <- "III-BII-40"
+
+horario_SANJOSE_indus$`III-BII-40`[is.na(horario_SANJOSE_indus$`III-BII-40`)] <- 0
+
+
+#III-BII-41
+
+`III-BII-41` <- as.data.frame(count(`SANJOSE-indus-materias-III-BII-41`$HORARIO)) 
+
+`III-BII-41`$freq <- (`III-BII-41`$freq)/sum(`III-BII-41`$freq)
+
+names(`III-BII-41`)[1] <- "horario"
+
+horario_SANJOSE_indus <- left_join(horario_SANJOSE_indus, `III-BII-41`)
+names(horario_SANJOSE_indus)[6] <- "III-BII-41"
+
+horario_SANJOSE_indus$`III-BII-41`[is.na(horario_SANJOSE_indus$`III-BII-41`)] <- 0
+
+
+##wide to long
+
+horario_SANJOSE_indus$id <- "UAM_SANJOSE_indus_pand_C2"
+horario_SANJOSE_indus <-  horario_SANJOSE_indus%>% dplyr::select(id, everything())
+
+horario_SANJOSE_indus <- melt(horario_SANJOSE_indus, id = c("id", "horario"))
+names(horario_SANJOSE_indus)[3] <- "materia"
+names(horario_SANJOSE_indus)[4] <- "asistencia"
+
+
+#SANJOSE-com-mercadeo
+
+
+`SANJOSE-com-mercadeo-materias` <- split(`SANJOSE-com-mercadeo`, f = `SANJOSE-com-mercadeo`$cod_padre) 
+names(`SANJOSE-com-mercadeo-materias`) <- paste0("SANJOSE-com-mercadeo-materias-",names(`SANJOSE-com-mercadeo-materias`)) 
+
+list2env(`SANJOSE-com-mercadeo-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_SANJOSE_com-mercadeo` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_SANJOSE_com-mercadeo`)[1] <- "horario"
+`horario_SANJOSE_com-mercadeo` <- unique(`horario_SANJOSE_com-mercadeo`)
+
+
+`obs_SANJOSE-com-mercadeo-materias` <- as.data.frame(sapply(`SANJOSE-com-mercadeo-materias`, NROW))
+
+`obs_SANJOSE-com-mercadeo-materias` <- tibble::rownames_to_column(`obs_SANJOSE-com-mercadeo-materias`, "materia")
+names(`obs_SANJOSE-com-mercadeo-materias`)[2] <- "obs"
+
+`obs_SANJOSE-com-mercadeo-materias`$materia <- str_remove(`obs_SANJOSE-com-mercadeo-materias`$materia, "SANJOSE-com-mercadeo-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-com-mercadeo-materias` <- filter(`obs_SANJOSE-com-mercadeo-materias`, obs >= 10)
+`no_elegibles_SANJOSE-com-mercadeo-materias` <- filter(`obs_SANJOSE-com-mercadeo-materias`, obs < 10)
+
+#no hay suficiente informacion para inferir
+
+
+#SANJOSE-publ
+
+
+`SANJOSE-publ-materias` <- split(`SANJOSE-publ`, f = `SANJOSE-publ`$cod_padre) 
+names(`SANJOSE-publ-materias`) <- paste0("SANJOSE-publ-materias-",names(`SANJOSE-publ-materias`)) 
+
+list2env(`SANJOSE-publ-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+horario_SANJOSE_publ <- as.data.frame(pf_americana$HORARIO)
+names(horario_SANJOSE_publ)[1] <- "horario"
+horario_SANJOSE_publ <- unique(horario_SANJOSE_publ)
+
+
+`obs_SANJOSE-publ-materias` <- as.data.frame(sapply(`SANJOSE-publ-materias`, NROW))
+
+`obs_SANJOSE-publ-materias` <- tibble::rownames_to_column(`obs_SANJOSE-publ-materias`, "materia")
+names(`obs_SANJOSE-publ-materias`)[2] <- "obs"
+
+`obs_SANJOSE-publ-materias`$materia <- str_remove(`obs_SANJOSE-publ-materias`$materia, "SANJOSE-publ-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-publ-materias` <- filter(`obs_SANJOSE-publ-materias`, obs >= 10)
+`no_elegibles_SANJOSE-publ-materias` <- filter(`obs_SANJOSE-publ-materias`, obs < 10)
+
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`SANJOSE-publ-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+horario_SANJOSE_publ <- left_join(horario_SANJOSE_publ, `AN-BAN-01`)
+names(horario_SANJOSE_publ)[2] <- "AN-BAN-01"
+
+horario_SANJOSE_publ$`AN-BAN-01`[is.na(horario_SANJOSE_publ$`AN-BAN-01`)] <- 0
+
+
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`SANJOSE-publ-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+horario_SANJOSE_publ <- left_join(horario_SANJOSE_publ, `AN-BAN-04`)
+names(horario_SANJOSE_publ)[3] <- "AN-BAN-04"
+
+horario_SANJOSE_publ$`AN-BAN-04`[is.na(horario_SANJOSE_publ$`AN-BAN-04`)] <- 0
+
+
+#PUB-BPU-02
+
+`PUB-BPU-02` <- as.data.frame(count(`SANJOSE-publ-materias-PUB-BPU-02`$HORARIO)) 
+
+`PUB-BPU-02`$freq <- (`PUB-BPU-02`$freq)/sum(`PUB-BPU-02`$freq)
+
+names(`PUB-BPU-02`)[1] <- "horario"
+
+horario_SANJOSE_publ <- left_join(horario_SANJOSE_publ, `PUB-BPU-02`)
+names(horario_SANJOSE_publ)[4] <- "PUB-BPU-02"
+
+horario_SANJOSE_publ$`PUB-BPU-02`[is.na(horario_SANJOSE_publ$`PUB-BPU-02`)] <- 0
+
+
+
+#PUB-BPU-01
+
+`PUB-BPU-01` <- as.data.frame(count(`SANJOSE-publ-materias-PUB-BPU-01`$HORARIO)) 
+
+`PUB-BPU-01`$freq <- (`PUB-BPU-01`$freq)/sum(`PUB-BPU-01`$freq)
+
+names(`PUB-BPU-01`)[1] <- "horario"
+
+horario_SANJOSE_publ <- left_join(horario_SANJOSE_publ, `PUB-BPU-01`)
+names(horario_SANJOSE_publ)[5] <- "PUB-BPU-01"
+
+horario_SANJOSE_publ$`PUB-BPU-01`[is.na(horario_SANJOSE_publ$`PUB-BPU-01`)] <- 0
+
+
+
+#PUB-BPU-03
+
+`PUB-BPU-03` <- as.data.frame(count(`SANJOSE-publ-materias-PUB-BPU-03`$HORARIO)) 
+
+`PUB-BPU-03`$freq <- (`PUB-BPU-03`$freq)/sum(`PUB-BPU-03`$freq)
+
+names(`PUB-BPU-03`)[1] <- "horario"
+
+horario_SANJOSE_publ <- left_join(horario_SANJOSE_publ, `PUB-BPU-03`)
+names(horario_SANJOSE_publ)[6] <- "PUB-BPU-03"
+
+horario_SANJOSE_publ$`PUB-BPU-03`[is.na(horario_SANJOSE_publ$`PUB-BPU-03`)] <- 0
+
+
+
+##wide to long
+
+horario_SANJOSE_publ$id <- "UAM_SANJOSE_publ_pand_C2"
+horario_SANJOSE_publ <-  horario_SANJOSE_publ%>% dplyr::select(id, everything())
+
+horario_SANJOSE_publ <- melt(horario_SANJOSE_publ, id = c("id", "horario"))
+names(horario_SANJOSE_publ)[3] <- "materia"
+names(horario_SANJOSE_publ)[4] <- "asistencia"
+
+
+
+#SANJOSE-ccss-edu-ens
+
+
+`SANJOSE-ccss-edu-ens-materias` <- split(`SANJOSE-ccss-edu-ens`, f = `SANJOSE-ccss-edu-ens`$cod_padre) 
+names(`SANJOSE-ccss-edu-ens-materias`) <- paste0("SANJOSE-ccss-edu-ens-materias-",names(`SANJOSE-ccss-edu-ens-materias`)) 
+
+list2env(`SANJOSE-ccss-edu-ens-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_SANJOSE_ccss-edu-ens` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_SANJOSE_ccss-edu-ens`)[1] <- "horario"
+`horario_SANJOSE_ccss-edu-ens` <- unique(`horario_SANJOSE_ccss-edu-ens`)
+
+
+`obs_SANJOSE-ccss-edu-ens-materias` <- as.data.frame(sapply(`SANJOSE-ccss-edu-ens-materias`, NROW))
+
+`obs_SANJOSE-ccss-edu-ens-materias` <- tibble::rownames_to_column(`obs_SANJOSE-ccss-edu-ens-materias`, "materia")
+names(`obs_SANJOSE-ccss-edu-ens-materias`)[2] <- "obs"
+
+`obs_SANJOSE-ccss-edu-ens-materias`$materia <- str_remove(`obs_SANJOSE-ccss-edu-ens-materias`$materia, "SANJOSE-ccss-edu-ens-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-ccss-edu-ens-materias` <- filter(`obs_SANJOSE-ccss-edu-ens-materias`, obs >= 10)
+`no_elegibles_SANJOSE-ccss-edu-ens-materias` <- filter(`obs_SANJOSE-ccss-edu-ens-materias`, obs < 10)
+
+
+
+
+#ECN-LCE-04
+
+`ECN-LCE-04` <- as.data.frame(count(`SANJOSE-ccss-edu-ens-materias-ECN-LCE-04`$HORARIO)) 
+
+`ECN-LCE-04`$freq <- (`ECN-LCE-04`$freq)/sum(`ECN-LCE-04`$freq)
+
+names(`ECN-LCE-04`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-edu-ens` <- left_join(`horario_SANJOSE_ccss-edu-ens`, `ECN-LCE-04`)
+names(`horario_SANJOSE_ccss-edu-ens`)[2] <- "ECN-LCE-04"
+
+`horario_SANJOSE_ccss-edu-ens`$`ECN-LCE-04`[is.na(`horario_SANJOSE_ccss-edu-ens`$`ECN-LCE-04`)] <- 0
+
+
+#SANJOSE-estad
+
+
+`SANJOSE-estad-materias` <- split(`SANJOSE-estad`, f = `SANJOSE-estad`$cod_padre) 
+names(`SANJOSE-estad-materias`) <- paste0("SANJOSE-estad-materias-",names(`SANJOSE-estad-materias`)) 
+
+list2env(`SANJOSE-estad-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+horario_SANJOSE_estad <- as.data.frame(pf_americana$HORARIO)
+names(horario_SANJOSE_estad)[1] <- "horario"
+horario_SANJOSE_estad <- unique(horario_SANJOSE_estad)
+
+
+`obs_SANJOSE-estad-materias` <- as.data.frame(sapply(`SANJOSE-estad-materias`, NROW))
+
+`obs_SANJOSE-estad-materias` <- tibble::rownames_to_column(`obs_SANJOSE-estad-materias`, "materia")
+names(`obs_SANJOSE-estad-materias`)[2] <- "obs"
+
+`obs_SANJOSE-estad-materias`$materia <- str_remove(`obs_SANJOSE-estad-materias`$materia, "SANJOSE-estad-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-estad-materias` <- filter(`obs_SANJOSE-estad-materias`, obs >= 10)
+`no_elegibles_SANJOSE-estad-materias` <- filter(`obs_SANJOSE-estad-materias`, obs < 10)
+
+
+#SIN SUFICIENTE INFORMACION PARA INFERIR 
+
+
+#SANJOSE-sist
+
+
+`SANJOSE-sist-materias` <- split(`SANJOSE-sist`, f = `SANJOSE-sist`$cod_padre) 
+names(`SANJOSE-sist-materias`) <- paste0("SANJOSE-sist-materias-",names(`SANJOSE-sist-materias`)) 
+
+list2env(`SANJOSE-sist-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+horario_SANJOSE_sist <- as.data.frame(pf_americana$HORARIO)
+names(horario_SANJOSE_sist)[1] <- "horario"
+horario_SANJOSE_sist <- unique(horario_SANJOSE_sist)
+
+
+`obs_SANJOSE-sist-materias` <- as.data.frame(sapply(`SANJOSE-sist-materias`, NROW))
+
+`obs_SANJOSE-sist-materias` <- tibble::rownames_to_column(`obs_SANJOSE-sist-materias`, "materia")
+names(`obs_SANJOSE-sist-materias`)[2] <- "obs"
+
+`obs_SANJOSE-sist-materias`$materia <- str_remove(`obs_SANJOSE-sist-materias`$materia, "SANJOSE-sist-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-sist-materias` <- filter(`obs_SANJOSE-sist-materias`, obs >= 10)
+`no_elegibles_SANJOSE-sist-materias` <- filter(`obs_SANJOSE-sist-materias`, obs < 10)
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`SANJOSE-sist-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+horario_SANJOSE_sist <- left_join(horario_SANJOSE_sist, `AN-BAN-01`)
+names(horario_SANJOSE_sist)[2] <- "AN-BAN-01"
+
+horario_SANJOSE_sist$`AN-BAN-01`[is.na(horario_SANJOSE_sist$`AN-BAN-01`)] <- 0
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`SANJOSE-sist-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+horario_SANJOSE_sist <- left_join(horario_SANJOSE_sist, `AN-BAN-03`)
+names(horario_SANJOSE_sist)[3] <- "AN-BAN-03"
+
+horario_SANJOSE_sist$`AN-BAN-03`[is.na(horario_SANJOSE_sist$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`SANJOSE-sist-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+horario_SANJOSE_sist <- left_join(horario_SANJOSE_sist, `AN-BAN-04`)
+names(horario_SANJOSE_sist)[4] <- "AN-BAN-04"
+
+horario_SANJOSE_sist$`AN-BAN-04`[is.na(horario_SANJOSE_sist$`AN-BAN-04`)] <- 0
+
+
+#III-BII-01
+
+`III-BII-01` <- as.data.frame(count(`SANJOSE-sist-materias-III-BII-01`$HORARIO)) 
+
+`III-BII-01`$freq <- (`III-BII-01`$freq)/sum(`III-BII-01`$freq)
+
+names(`III-BII-01`)[1] <- "horario"
+
+horario_SANJOSE_sist <- left_join(horario_SANJOSE_sist, `III-BII-01`)
+names(horario_SANJOSE_sist)[5] <- "III-BII-01"
+
+horario_SANJOSE_sist$`III-BII-01`[is.na(horario_SANJOSE_sist$`III-BII-01`)] <- 0
+
+
+#ISI-BSI-01
+
+`ISI-BSI-01` <- as.data.frame(count(`SANJOSE-sist-materias-ISI-BSI-01`$HORARIO)) 
+
+`ISI-BSI-01`$freq <- (`ISI-BSI-01`$freq)/sum(`ISI-BSI-01`$freq)
+
+names(`ISI-BSI-01`)[1] <- "horario"
+
+horario_SANJOSE_sist <- left_join(horario_SANJOSE_sist, `ISI-BSI-01`)
+names(horario_SANJOSE_sist)[6] <- "ISI-BSI-01"
+
+horario_SANJOSE_sist$`ISI-BSI-01`[is.na(horario_SANJOSE_sist$`ISI-BSI-01`)] <- 0
+
+
+#ISI-BSI-02
+
+`ISI-BSI-02` <- as.data.frame(count(`SANJOSE-sist-materias-ISI-BSI-02`$HORARIO)) 
+
+`ISI-BSI-02`$freq <- (`ISI-BSI-02`$freq)/sum(`ISI-BSI-02`$freq)
+
+names(`ISI-BSI-02`)[1] <- "horario"
+
+horario_SANJOSE_sist <- left_join(horario_SANJOSE_sist, `ISI-BSI-02`)
+names(horario_SANJOSE_sist)[7] <- "ISI-BSI-02"
+
+horario_SANJOSE_sist$`ISI-BSI-02`[is.na(horario_SANJOSE_sist$`ISI-BSI-02`)] <- 0
+
+
+
+##wide to long
+
+horario_SANJOSE_sist$id <- "UAM_SANJOSE_sist_pand_C2"
+horario_SANJOSE_sist <-  horario_SANJOSE_sist%>% dplyr::select(id, everything())
+
+horario_SANJOSE_sist <- melt(horario_SANJOSE_sist, id = c("id", "horario"))
+names(horario_SANJOSE_sist)[3] <- "materia"
+names(horario_SANJOSE_sist)[4] <- "asistencia"
+
+
+##TERFIS CCSSEDUC DISPUBL GESTPROC TOMAR COMO EJEMPLO ADMINNEG
+
+#SANJOSE-ter-fis
+
+
+`SANJOSE-ter-fis-materias` <- split(`SANJOSE-ter-fis`, f = `SANJOSE-ter-fis`$cod_padre) 
+names(`SANJOSE-ter-fis-materias`) <- paste0("SANJOSE-ter-fis-materias-",names(`SANJOSE-ter-fis-materias`)) 
+
+list2env(`SANJOSE-ter-fis-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_SANJOSE_ter-fis` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_SANJOSE_ter-fis`)[1] <- "horario"
+`horario_SANJOSE_ter-fis` <- unique(`horario_SANJOSE_ter-fis`)
+
+
+`obs_SANJOSE-ter-fis-materias` <- as.data.frame(sapply(`SANJOSE-ter-fis-materias`, NROW))
+
+`obs_SANJOSE-ter-fis-materias` <- tibble::rownames_to_column(`obs_SANJOSE-ter-fis-materias`, "materia")
+names(`obs_SANJOSE-ter-fis-materias`)[2] <- "obs"
+
+`obs_SANJOSE-ter-fis-materias`$materia <- str_remove(`obs_SANJOSE-ter-fis-materias`$materia, "SANJOSE-ter-fis-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-ter-fis-materias` <- filter(`obs_SANJOSE-ter-fis-materias`, obs >= 10)
+`no_elegibles_SANJOSE-ter-fis-materias` <- filter(`obs_SANJOSE-ter-fis-materias`, obs < 10)
+
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`SANJOSE-ter-fis-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_SANJOSE_ter-fis` <- left_join(`horario_SANJOSE_ter-fis`, `AN-BAN-01`)
+names(`horario_SANJOSE_ter-fis`)[2] <- "AN-BAN-01"
+
+`horario_SANJOSE_ter-fis`$`AN-BAN-01`[is.na(`horario_SANJOSE_ter-fis`$`AN-BAN-01`)] <- 0
+
+
+#III-BAN-04
+
+`III-BAN-04` <- as.data.frame(count(`SANJOSE-ter-fis-materias-III-BAN-04`$HORARIO)) 
+
+`III-BAN-04`$freq <- (`III-BAN-04`$freq)/sum(`III-BAN-04`$freq)
+
+names(`III-BAN-04`)[1] <- "horario"
+
+`horario_SANJOSE_ter-fis` <- left_join(`horario_SANJOSE_ter-fis`, `III-BAN-04`)
+names(`horario_SANJOSE_ter-fis`)[3] <- "III-BAN-04"
+
+`horario_SANJOSE_ter-fis`$`III-BAN-04`[is.na(`horario_SANJOSE_ter-fis`$`III-BAN-04`)] <- 0
+
+
+#III-BII-05
+
+`III-BII-05` <- as.data.frame(count(`SANJOSE-ter-fis-materias-III-BII-05`$HORARIO)) 
+
+`III-BII-05`$freq <- (`III-BII-05`$freq)/sum(`III-BII-05`$freq)
+
+names(`III-BII-05`)[1] <- "horario"
+
+`horario_SANJOSE_ter-fis` <- left_join(`horario_SANJOSE_ter-fis`, `III-BII-05`)
+names(`horario_SANJOSE_ter-fis`)[4] <- "III-BII-05"
+
+`horario_SANJOSE_ter-fis`$`III-BII-05`[is.na(`horario_SANJOSE_ter-fis`$`III-BII-05`)] <- 0
+
+
+#ISI-BAN-01
+
+`ISI-BAN-01` <- as.data.frame(count(`SANJOSE-ter-fis-materias-ISI-BAN-01`$HORARIO)) 
+
+`ISI-BAN-01`$freq <- (`ISI-BAN-01`$freq)/sum(`ISI-BAN-01`$freq)
+
+names(`ISI-BAN-01`)[1] <- "horario"
+
+`horario_SANJOSE_ter-fis` <- left_join(`horario_SANJOSE_ter-fis`, `ISI-BAN-01`)
+names(`horario_SANJOSE_ter-fis`)[5] <- "ISI-BAN-01"
+
+`horario_SANJOSE_ter-fis`$`ISI-BAN-01`[is.na(`horario_SANJOSE_ter-fis`$`ISI-BAN-01`)] <- 0
+
+
+
+#ISI-BSI-02
+
+`ISI-BSI-02` <- as.data.frame(count(`SANJOSE-ter-fis-materias-ISI-BSI-02`$HORARIO)) 
+
+`ISI-BSI-02`$freq <- (`ISI-BSI-02`$freq)/sum(`ISI-BSI-02`$freq)
+
+names(`ISI-BSI-02`)[1] <- "horario"
+
+`horario_SANJOSE_ter-fis` <- left_join(`horario_SANJOSE_ter-fis`, `ISI-BSI-02`)
+names(`horario_SANJOSE_ter-fis`)[6] <- "ISI-BSI-02"
+
+`horario_SANJOSE_ter-fis`$`ISI-BSI-02`[is.na(`horario_SANJOSE_ter-fis`$`ISI-BSI-02`)] <- 0
+
+
+##wide to long
+
+`horario_SANJOSE_ter-fis`$id <- "UAM_SANJOSE_ter-fis_pand_C2"
+`horario_SANJOSE_ter-fis` <-  `horario_SANJOSE_ter-fis`%>% dplyr::select(id, everything())
+
+`horario_SANJOSE_ter-fis` <- melt(`horario_SANJOSE_ter-fis`, id = c("id", "horario"))
+names(`horario_SANJOSE_ter-fis`)[3] <- "materia"
+names(`horario_SANJOSE_ter-fis`)[4] <- "asistencia"
+
+
+#SANJOSE-ccss-educ
+
+
+`SANJOSE-ccss-educ-materias` <- split(`SANJOSE-ccss-educ`, f = `SANJOSE-ccss-educ`$cod_padre) 
+names(`SANJOSE-ccss-educ-materias`) <- paste0("SANJOSE-ccss-educ-materias-",names(`SANJOSE-ccss-educ-materias`)) 
+
+list2env(`SANJOSE-ccss-educ-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_SANJOSE_ccss-educ` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_SANJOSE_ccss-educ`)[1] <- "horario"
+`horario_SANJOSE_ccss-educ` <- unique(`horario_SANJOSE_ccss-educ`)
+
+
+`obs_SANJOSE-ccss-educ-materias` <- as.data.frame(sapply(`SANJOSE-ccss-educ-materias`, NROW))
+
+`obs_SANJOSE-ccss-educ-materias` <- tibble::rownames_to_column(`obs_SANJOSE-ccss-educ-materias`, "materia")
+names(`obs_SANJOSE-ccss-educ-materias`)[2] <- "obs"
+
+`obs_SANJOSE-ccss-educ-materias`$materia <- str_remove(`obs_SANJOSE-ccss-educ-materias`$materia, "SANJOSE-ccss-educ-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-ccss-educ-materias` <- filter(`obs_SANJOSE-ccss-educ-materias`, obs >= 10)
+`no_elegibles_SANJOSE-ccss-educ-materias` <- filter(`obs_SANJOSE-ccss-educ-materias`, obs < 10)
+
+
+
+#AN-BAN-01
+
+`AN-BAN-01` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-AN-BAN-01`$HORARIO)) 
+
+`AN-BAN-01`$freq <- (`AN-BAN-01`$freq)/sum(`AN-BAN-01`$freq)
+
+names(`AN-BAN-01`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `AN-BAN-01`)
+names(`horario_SANJOSE_ccss-educ`)[2] <- "AN-BAN-01"
+
+`horario_SANJOSE_ccss-educ`$`AN-BAN-01`[is.na(`horario_SANJOSE_ccss-educ`$`AN-BAN-01`)] <- 0
+
+
+#AN-BAN-02
+
+`AN-BAN-02` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-AN-BAN-02`$HORARIO)) 
+
+`AN-BAN-02`$freq <- (`AN-BAN-02`$freq)/sum(`AN-BAN-02`$freq)
+
+names(`AN-BAN-02`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `AN-BAN-02`)
+names(`horario_SANJOSE_ccss-educ`)[3] <- "AN-BAN-02"
+
+`horario_SANJOSE_ccss-educ`$`AN-BAN-02`[is.na(`horario_SANJOSE_ccss-educ`$`AN-BAN-02`)] <- 0
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `AN-BAN-03`)
+names(`horario_SANJOSE_ccss-educ`)[4] <- "AN-BAN-03"
+
+`horario_SANJOSE_ccss-educ`$`AN-BAN-03`[is.na(`horario_SANJOSE_ccss-educ`$`AN-BAN-03`)] <- 0
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `AN-BAN-04`)
+names(`horario_SANJOSE_ccss-educ`)[5] <- "AN-BAN-04"
+
+`horario_SANJOSE_ccss-educ`$`AN-BAN-04`[is.na(`horario_SANJOSE_ccss-educ`$`AN-BAN-04`)] <- 0
+
+
+#CON-BAN-01
+
+`CON-BAN-01` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-CON-BAN-01`$HORARIO)) 
+
+`CON-BAN-01`$freq <- (`CON-BAN-01`$freq)/sum(`CON-BAN-01`$freq)
+
+names(`CON-BAN-01`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `CON-BAN-01`)
+names(`horario_SANJOSE_ccss-educ`)[6] <- "CON-BAN-01"
+
+`horario_SANJOSE_ccss-educ`$`CON-BAN-01`[is.na(`horario_SANJOSE_ccss-educ`$`CON-BAN-01`)] <- 0
+
+
+
+#CON-BAN-02
+
+`CON-BAN-02` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-CON-BAN-02`$HORARIO)) 
+
+`CON-BAN-02`$freq <- (`CON-BAN-02`$freq)/sum(`CON-BAN-02`$freq)
+
+names(`CON-BAN-02`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `CON-BAN-02`)
+names(`horario_SANJOSE_ccss-educ`)[7] <- "CON-BAN-02"
+
+`horario_SANJOSE_ccss-educ`$`CON-BAN-02`[is.na(`horario_SANJOSE_ccss-educ`$`CON-BAN-02`)] <- 0
+
+
+#CON-BAN-03
+
+`CON-BAN-03` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-CON-BAN-03`$HORARIO)) 
+
+`CON-BAN-03`$freq <- (`CON-BAN-03`$freq)/sum(`CON-BAN-03`$freq)
+
+names(`CON-BAN-03`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `CON-BAN-03`)
+names(`horario_SANJOSE_ccss-educ`)[8] <- "CON-BAN-03"
+
+`horario_SANJOSE_ccss-educ`$`CON-BAN-03`[is.na(`horario_SANJOSE_ccss-educ`$`CON-BAN-03`)] <- 0
+
+
+#CON-BAN-04
+
+`CON-BAN-04` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-CON-BAN-04`$HORARIO)) 
+
+`CON-BAN-04`$freq <- (`CON-BAN-04`$freq)/sum(`CON-BAN-04`$freq)
+
+names(`CON-BAN-04`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `CON-BAN-04`)
+names(`horario_SANJOSE_ccss-educ`)[9] <- "CON-BAN-04"
+
+`horario_SANJOSE_ccss-educ`$`CON-BAN-04`[is.na(`horario_SANJOSE_ccss-educ`$`CON-BAN-04`)] <- 0
+
+
+
+#DER-BDE-02
+
+`DER-BDE-02` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-DER-BDE-02`$HORARIO)) 
+
+`DER-BDE-02`$freq <- (`DER-BDE-02`$freq)/sum(`DER-BDE-02`$freq)
+
+names(`DER-BDE-02`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `DER-BDE-02`)
+names(`horario_SANJOSE_ccss-educ`)[10] <- "DER-BDE-02"
+
+`horario_SANJOSE_ccss-educ`$`DER-BDE-02`[is.na(`horario_SANJOSE_ccss-educ`$`DER-BDE-02`)] <- 0
+
+
+
+
+#EES-BMA-01
+
+`EES-BMA-01` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-EES-BMA-01`$HORARIO)) 
+
+`EES-BMA-01`$freq <- (`EES-BMA-01`$freq)/sum(`EES-BMA-01`$freq)
+
+names(`EES-BMA-01`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `EES-BMA-01`)
+names(`horario_SANJOSE_ccss-educ`)[11] <- "EES-BMA-01"
+
+`horario_SANJOSE_ccss-educ`$`EES-BMA-01`[is.na(`horario_SANJOSE_ccss-educ`$`EES-BMA-01`)] <- 0
+
+
+
+#EES-BMA-02
+
+`EES-BMA-02` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-EES-BMA-02`$HORARIO)) 
+
+`EES-BMA-02`$freq <- (`EES-BMA-02`$freq)/sum(`EES-BMA-02`$freq)
+
+names(`EES-BMA-02`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `EES-BMA-02`)
+names(`horario_SANJOSE_ccss-educ`)[12] <- "EES-BMA-02"
+
+`horario_SANJOSE_ccss-educ`$`EES-BMA-02`[is.na(`horario_SANJOSE_ccss-educ`$`EES-BMA-02`)] <- 0
+
+
+
+#EIG-BIN-01
+
+`EIG-BIN-01` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-EIG-BIN-01`$HORARIO)) 
+
+`EIG-BIN-01`$freq <- (`EIG-BIN-01`$freq)/sum(`EIG-BIN-01`$freq)
+
+names(`EIG-BIN-01`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `EIG-BIN-01`)
+names(`horario_SANJOSE_ccss-educ`)[13] <- "EIG-BIN-01"
+
+`horario_SANJOSE_ccss-educ`$`EIG-BIN-01`[is.na(`horario_SANJOSE_ccss-educ`$`EIG-BIN-01`)] <- 0
+
+
+#EMM-BED-08
+
+`EMM-BED-08` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-EMM-BED-08`$HORARIO)) 
+
+`EMM-BED-08`$freq <- (`EMM-BED-08`$freq)/sum(`EMM-BED-08`$freq)
+
+names(`EMM-BED-08`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `EMM-BED-08`)
+names(`horario_SANJOSE_ccss-educ`)[14] <- "EMM-BED-08"
+
+`horario_SANJOSE_ccss-educ`$`EMM-BED-08`[is.na(`horario_SANJOSE_ccss-educ`$`EMM-BED-08`)] <- 0
+
+
+
+#EMM-BMA-01
+
+`EMM-BMA-01` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-EMM-BMA-01`$HORARIO)) 
+
+`EMM-BMA-01`$freq <- (`EMM-BMA-01`$freq)/sum(`EMM-BMA-01`$freq)
+
+names(`EMM-BMA-01`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `EMM-BMA-01`)
+names(`horario_SANJOSE_ccss-educ`)[15] <- "EMM-BMA-01"
+
+`horario_SANJOSE_ccss-educ`$`EMM-BMA-01`[is.na(`horario_SANJOSE_ccss-educ`$`EMM-BMA-01`)] <- 0
+
+
+
+
+#EMM-BMA-02
+
+`EMM-BMA-02` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-EMM-BMA-02`$HORARIO)) 
+
+`EMM-BMA-02`$freq <- (`EMM-BMA-02`$freq)/sum(`EMM-BMA-02`$freq)
+
+names(`EMM-BMA-02`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `EMM-BMA-02`)
+names(`horario_SANJOSE_ccss-educ`)[16] <- "EMM-BMA-02"
+
+`horario_SANJOSE_ccss-educ`$`EMM-BMA-02`[is.na(`horario_SANJOSE_ccss-educ`$`EMM-BMA-02`)] <- 0
+
+
+
+#III-BAN-04
+
+`III-BAN-04` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-III-BAN-04`$HORARIO)) 
+
+`III-BAN-04`$freq <- (`III-BAN-04`$freq)/sum(`III-BAN-04`$freq)
+
+names(`III-BAN-04`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `III-BAN-04`)
+names(`horario_SANJOSE_ccss-educ`)[17] <- "III-BAN-04"
+
+`horario_SANJOSE_ccss-educ`$`III-BAN-04`[is.na(`horario_SANJOSE_ccss-educ`$`III-BAN-04`)] <- 0
+
+
+
+#III-BII-01
+
+`III-BII-01` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-III-BII-01`$HORARIO)) 
+
+`III-BII-01`$freq <- (`III-BII-01`$freq)/sum(`III-BII-01`$freq)
+
+names(`III-BII-01`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `III-BII-01`)
+names(`horario_SANJOSE_ccss-educ`)[18] <- "III-BII-01"
+
+`horario_SANJOSE_ccss-educ`$`III-BII-01`[is.na(`horario_SANJOSE_ccss-educ`$`III-BII-01`)] <- 0
+
+
+#III-BII-05
+
+`III-BII-05` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-III-BII-05`$HORARIO)) 
+
+`III-BII-05`$freq <- (`III-BII-05`$freq)/sum(`III-BII-05`$freq)
+
+names(`III-BII-05`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `III-BII-05`)
+names(`horario_SANJOSE_ccss-educ`)[19] <- "III-BII-05"
+
+`horario_SANJOSE_ccss-educ`$`III-BII-05`[is.na(`horario_SANJOSE_ccss-educ`$`III-BII-05`)] <- 0
+
+
+#III-BII-40
+
+`III-BII-40` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-III-BII-40`$HORARIO)) 
+
+`III-BII-40`$freq <- (`III-BII-40`$freq)/sum(`III-BII-40`$freq)
+
+names(`III-BII-40`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `III-BII-40`)
+names(`horario_SANJOSE_ccss-educ`)[20] <- "III-BII-40"
+
+`horario_SANJOSE_ccss-educ`$`III-BII-40`[is.na(`horario_SANJOSE_ccss-educ`$`III-BII-40`)] <- 0
+
+
+#III-BII-41
+
+`III-BII-41` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-III-BII-41`$HORARIO)) 
+
+`III-BII-41`$freq <- (`III-BII-41`$freq)/sum(`III-BII-41`$freq)
+
+names(`III-BII-41`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `III-BII-41`)
+names(`horario_SANJOSE_ccss-educ`)[21] <- "III-BII-41"
+
+`horario_SANJOSE_ccss-educ`$`III-BII-41`[is.na(`horario_SANJOSE_ccss-educ`$`III-BII-41`)] <- 0
+
+
+#ISI-BAN-01
+
+`ISI-BAN-01` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-ISI-BAN-01`$HORARIO)) 
+
+`ISI-BAN-01`$freq <- (`ISI-BAN-01`$freq)/sum(`ISI-BAN-01`$freq)
+
+names(`ISI-BAN-01`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `ISI-BAN-01`)
+names(`horario_SANJOSE_ccss-educ`)[22] <- "ISI-BAN-01"
+
+`horario_SANJOSE_ccss-educ`$`ISI-BAN-01`[is.na(`horario_SANJOSE_ccss-educ`$`ISI-BAN-01`)] <- 0
+
+
+#ISI-BAN-03
+
+`ISI-BAN-03` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-ISI-BAN-03`$HORARIO)) 
+
+`ISI-BAN-03`$freq <- (`ISI-BAN-03`$freq)/sum(`ISI-BAN-03`$freq)
+
+names(`ISI-BAN-03`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `ISI-BAN-03`)
+names(`horario_SANJOSE_ccss-educ`)[23] <- "ISI-BAN-03"
+
+`horario_SANJOSE_ccss-educ`$`ISI-BAN-03`[is.na(`horario_SANJOSE_ccss-educ`$`ISI-BAN-03`)] <- 0
+
+
+#ISI-BAN-04
+
+`ISI-BAN-04` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-ISI-BAN-04`$HORARIO)) 
+
+`ISI-BAN-04`$freq <- (`ISI-BAN-04`$freq)/sum(`ISI-BAN-04`$freq)
+
+names(`ISI-BAN-04`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `ISI-BAN-04`)
+names(`horario_SANJOSE_ccss-educ`)[24] <- "ISI-BAN-04"
+
+`horario_SANJOSE_ccss-educ`$`ISI-BAN-04`[is.na(`horario_SANJOSE_ccss-educ`$`ISI-BAN-04`)] <- 0
+
+
+#ISI-BSI-01
+
+`ISI-BSI-01` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-ISI-BSI-01`$HORARIO)) 
+
+`ISI-BSI-01`$freq <- (`ISI-BSI-01`$freq)/sum(`ISI-BSI-01`$freq)
+
+names(`ISI-BSI-01`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `ISI-BSI-01`)
+names(`horario_SANJOSE_ccss-educ`)[25] <- "ISI-BSI-01"
+
+`horario_SANJOSE_ccss-educ`$`ISI-BSI-01`[is.na(`horario_SANJOSE_ccss-educ`$`ISI-BSI-01`)] <- 0
+
+
+
+#ISI-BSI-02
+
+`ISI-BSI-02` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-ISI-BSI-02`$HORARIO)) 
+
+`ISI-BSI-02`$freq <- (`ISI-BSI-02`$freq)/sum(`ISI-BSI-02`$freq)
+
+names(`ISI-BSI-02`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `ISI-BSI-02`)
+names(`horario_SANJOSE_ccss-educ`)[26] <- "ISI-BSI-02"
+
+`horario_SANJOSE_ccss-educ`$`ISI-BSI-02`[is.na(`horario_SANJOSE_ccss-educ`$`ISI-BSI-02`)] <- 0
+
+
+
+#PRI-BED-01
+
+`PRI-BED-01` <- as.data.frame(count(`SANJOSE-ccss-educ-materias-PRI-BED-01`$HORARIO)) 
+
+`PRI-BED-01`$freq <- (`PRI-BED-01`$freq)/sum(`PRI-BED-01`$freq)
+
+names(`PRI-BED-01`)[1] <- "horario"
+
+`horario_SANJOSE_ccss-educ` <- left_join(`horario_SANJOSE_ccss-educ`, `PRI-BED-01`)
+names(`horario_SANJOSE_ccss-educ`)[27] <- "PRI-BED-01"
+
+`horario_SANJOSE_ccss-educ`$`PRI-BED-01`[is.na(`horario_SANJOSE_ccss-educ`$`PRI-BED-01`)] <- 0
+
+
+
+
+##wide to long
+
+`horario_SANJOSE_ccss-educ`$id <- "UAM_SANJOSE_ccss-educ_pand_C2"
+`horario_SANJOSE_ccss-educ` <-  `horario_SANJOSE_ccss-educ`%>% dplyr::select(id, everything())
+
+`horario_SANJOSE_ccss-educ` <- melt(`horario_SANJOSE_ccss-educ`, id = c("id", "horario"))
+names(`horario_SANJOSE_ccss-educ`)[3] <- "materia"
+names(`horario_SANJOSE_ccss-educ`)[4] <- "asistencia"
+
+
+
+
+#SANJOSE-dis-publ
+
+
+`SANJOSE-dis-publ-materias` <- split(`SANJOSE-dis-publ`, f = `SANJOSE-dis-publ`$cod_padre) 
+names(`SANJOSE-dis-publ-materias`) <- paste0("SANJOSE-dis-publ-materias-",names(`SANJOSE-dis-publ-materias`)) 
+
+list2env(`SANJOSE-dis-publ-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_SANJOSE_dis-publ` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_SANJOSE_dis-publ`)[1] <- "horario"
+`horario_SANJOSE_dis-publ` <- unique(`horario_SANJOSE_dis-publ`)
+
+
+`obs_SANJOSE-dis-publ-materias` <- as.data.frame(sapply(`SANJOSE-dis-publ-materias`, NROW))
+
+`obs_SANJOSE-dis-publ-materias` <- tibble::rownames_to_column(`obs_SANJOSE-dis-publ-materias`, "materia")
+names(`obs_SANJOSE-dis-publ-materias`)[2] <- "obs"
+
+`obs_SANJOSE-dis-publ-materias`$materia <- str_remove(`obs_SANJOSE-dis-publ-materias`$materia, "SANJOSE-dis-publ-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-dis-publ-materias` <- filter(`obs_SANJOSE-dis-publ-materias`, obs >= 10)
+`no_elegibles_SANJOSE-dis-publ-materias` <- filter(`obs_SANJOSE-dis-publ-materias`, obs < 10)
+
+
+#PUB-BPU-02
+
+`PUB-BPU-02` <- as.data.frame(count(`SANJOSE-dis-publ-materias-PUB-BPU-02`$HORARIO)) 
+
+`PUB-BPU-02`$freq <- (`PUB-BPU-02`$freq)/sum(`PUB-BPU-02`$freq)
+
+names(`PUB-BPU-02`)[1] <- "horario"
+
+`horario_SANJOSE_dis-publ` <- left_join(`horario_SANJOSE_dis-publ`, `PUB-BPU-02`)
+names(`horario_SANJOSE_dis-publ`)[2] <- "PUB-BPU-02"
+
+`horario_SANJOSE_dis-publ`$`PUB-BPU-02`[is.na(`horario_SANJOSE_dis-publ`$`PUB-BPU-02`)] <- 0
+
+
+#EIG-BIN-01
+
+`EIG-BIN-01` <- as.data.frame(count(`SANJOSE-dis-publ-materias-EIG-BIN-01`$HORARIO)) 
+
+`EIG-BIN-01`$freq <- (`EIG-BIN-01`$freq)/sum(`EIG-BIN-01`$freq)
+
+names(`EIG-BIN-01`)[1] <- "horario"
+
+`horario_SANJOSE_dis-publ` <- left_join(`horario_SANJOSE_dis-publ`, `EIG-BIN-01`)
+names(`horario_SANJOSE_dis-publ`)[3] <- "EIG-BIN-01"
+
+`horario_SANJOSE_dis-publ`$`EIG-BIN-01`[is.na(`horario_SANJOSE_dis-publ`$`EIG-BIN-01`)] <- 0
+
+
+
+##wide to long
+
+`horario_SANJOSE_dis-publ`$id <- "UAM_SANJOSE_dis-publ_pand_C2"
+`horario_SANJOSE_dis-publ` <-  `horario_SANJOSE_dis-publ`%>% dplyr::select(id, everything())
+
+`horario_SANJOSE_dis-publ` <- melt(`horario_SANJOSE_dis-publ`, id = c("id", "horario"))
+names(`horario_SANJOSE_dis-publ`)[3] <- "materia"
+names(`horario_SANJOSE_dis-publ`)[4] <- "asistencia"
+
+
+
+
+#SANJOSE-gest-proc
+
+
+`SANJOSE-gest-proc-materias` <- split(`SANJOSE-gest-proc`, f = `SANJOSE-gest-proc`$cod_padre) 
+names(`SANJOSE-gest-proc-materias`) <- paste0("SANJOSE-gest-proc-materias-",names(`SANJOSE-gest-proc-materias`)) 
+
+list2env(`SANJOSE-gest-proc-materias`,envir=.GlobalEnv)
+
+
+#Probabilidades de horarios anidadas para cada una de las materias de administracion de negocios 
+
+`horario_SANJOSE_gest-proc` <- as.data.frame(pf_americana$HORARIO)
+names(`horario_SANJOSE_gest-proc`)[1] <- "horario"
+`horario_SANJOSE_gest-proc` <- unique(`horario_SANJOSE_gest-proc`)
+
+
+`obs_SANJOSE-gest-proc-materias` <- as.data.frame(sapply(`SANJOSE-gest-proc-materias`, NROW))
+
+`obs_SANJOSE-gest-proc-materias` <- tibble::rownames_to_column(`obs_SANJOSE-gest-proc-materias`, "materia")
+names(`obs_SANJOSE-gest-proc-materias`)[2] <- "obs"
+
+`obs_SANJOSE-gest-proc-materias`$materia <- str_remove(`obs_SANJOSE-gest-proc-materias`$materia, "SANJOSE-gest-proc-materias-")
+
+#materias elegibles y no para la matriz de probabilidades
+`elegibles_SANJOSE-gest-proc-materias` <- filter(`obs_SANJOSE-gest-proc-materias`, obs >= 10)
+`no_elegibles_SANJOSE-gest-proc-materias` <- filter(`obs_SANJOSE-gest-proc-materias`, obs < 10)
+
+
+
+#AN-BAN-04
+
+`AN-BAN-04` <- as.data.frame(count(`SANJOSE-gest-proc-materias-AN-BAN-04`$HORARIO)) 
+
+`AN-BAN-04`$freq <- (`AN-BAN-04`$freq)/sum(`AN-BAN-04`$freq)
+
+names(`AN-BAN-04`)[1] <- "horario"
+
+`horario_SANJOSE_gest-proc` <- left_join(`horario_SANJOSE_gest-proc`, `AN-BAN-04`)
+names(`horario_SANJOSE_gest-proc`)[2] <- "AN-BAN-04"
+
+`horario_SANJOSE_gest-proc`$`AN-BAN-04`[is.na(`horario_SANJOSE_gest-proc`$`AN-BAN-04`)] <- 0
+
+
+#AN-BAN-03
+
+`AN-BAN-03` <- as.data.frame(count(`SANJOSE-gest-proc-materias-AN-BAN-03`$HORARIO)) 
+
+`AN-BAN-03`$freq <- (`AN-BAN-03`$freq)/sum(`AN-BAN-03`$freq)
+
+names(`AN-BAN-03`)[1] <- "horario"
+
+`horario_SANJOSE_gest-proc` <- left_join(`horario_SANJOSE_gest-proc`, `AN-BAN-03`)
+names(`horario_SANJOSE_gest-proc`)[3] <- "AN-BAN-03"
+
+`horario_SANJOSE_gest-proc`$`AN-BAN-03`[is.na(`horario_SANJOSE_gest-proc`$`AN-BAN-03`)] <- 0
+
+
+#GP-1102
+
+`GP-1102` <- as.data.frame(count(`SANJOSE-gest-proc-materias-GP-1102`$HORARIO)) 
+
+`GP-1102`$freq <- (`GP-1102`$freq)/sum(`GP-1102`$freq)
+
+names(`GP-1102`)[1] <- "horario"
+
+`horario_SANJOSE_gest-proc` <- left_join(`horario_SANJOSE_gest-proc`, `GP-1102`)
+names(`horario_SANJOSE_gest-proc`)[4] <- "GP-1102"
+
+`horario_SANJOSE_gest-proc`$`GP-1102`[is.na(`horario_SANJOSE_gest-proc`$`GP-1102`)] <- 0
+
+
+#GP-1103
+
+`GP-1103` <- as.data.frame(count(`SANJOSE-gest-proc-materias-GP-1103`$HORARIO)) 
+
+`GP-1103`$freq <- (`GP-1103`$freq)/sum(`GP-1103`$freq)
+
+names(`GP-1103`)[1] <- "horario"
+
+`horario_SANJOSE_gest-proc` <- left_join(`horario_SANJOSE_gest-proc`, `GP-1103`)
+names(`horario_SANJOSE_gest-proc`)[5] <- "GP-1103"
+
+`horario_SANJOSE_gest-proc`$`GP-1103`[is.na(`horario_SANJOSE_gest-proc`$`GP-1103`)] <- 0
+
+
+##wide to long
+
+`horario_SANJOSE_gest-proc`$id <- "UAM_SANJOSE_gest-proc_pand_C2"
+`horario_SANJOSE_gest-proc` <-  `horario_SANJOSE_gest-proc`%>% dplyr::select(id, everything())
+
+`horario_SANJOSE_gest-proc` <- melt(`horario_SANJOSE_gest-proc`, id = c("id", "horario"))
+names(`horario_SANJOSE_gest-proc`)[3] <- "materia"
+names(`horario_SANJOSE_gest-proc`)[4] <- "asistencia"
+
+
+
+
+#Consolidado de sede SANJOSE
+
+horario_SANJOSE <- rbind(`horario_SANJOSE_admin-neg`,`horario_SANJOSE_ccss-educ`,
+                         horario_SANJOSE_conta,`horario_SANJOSE_dis-publ`,
+                         `horario_SANJOSE_gest-proc`,horario_SANJOSE_indus,horario_SANJOSE_ingles,
+                         horario_SANJOSE_publ,horario_SANJOSE_sist,`horario_SANJOSE_ter-fis`)
+
+#total poblacion por carrera SANJOSE
+
+materias_SANJOSE_pand_C2 <- count(SANJOSE$cod_padre)
+names(materias_SANJOSE_pand_C2)[1] <- "materia"
+names(materias_SANJOSE_pand_C2)[2] <- "poblacion"
+
+
+#Left join entre los horarios y su correspondiente poblacion 
+
+horario_SANJOSE <- left_join(horario_SANJOSE, materias_SANJOSE_pand_C2)
+
+
+#Suma de las proporciones totales y sacamos una probabilidad de probabilidades condicionadas
+
+pob_asist2 <- aggregate(x = horario_SANJOSE$asistencia, by = list(horario_SANJOSE$materia), FUN = sum)      
+names(pob_asist2)[1] <- "materia"
+names(pob_asist2)[2] <- "sum_prop"
+
+
+#Probabilidad de la probabilidad para tener un compilado de probabilidades 
+
+horario_SANJOSE <- left_join(horario_SANJOSE, pob_asist2)
+
+horario_SANJOSE$asistencia2 <- horario_SANJOSE$asistencia/horario_SANJOSE$sum_prop
+horario_SANJOSE$asistencia2[horario_SANJOSE$asistencia2 == Inf] <- 0
+
+horario_SANJOSE$pob_asist <- round((horario_SANJOSE$asistencia2)*(horario_SANJOSE$poblacion),0)
+
+
+#Guardo todos los horarios en su folder correspondiente
+
+count(horario_SANJOSE$id)
+Replaces <- data.frame(from = c("UAM_SANJOSE_admin_neg_pand_C2","UAM_SANJOSE_ter_fis_pand_C2", 
+                                "UAM_SANJOSE_conta_pub_pand_C2","UAM_SANJOSE_admin_hoteleria_pand_C2",
+                                "UAM_SANJOSE_anim_dig_pand_C2", "UAM_SANJOSE_civil_pand_C2"
+                                ,"UAM_SANJOSE_dis_graf_pand_C2","UAM_SANJOSE_dis_int_pand_C2"
+                                ,"UAM_SANJOSE_elect_mec_pand_C2","UAM_SANJOSE_mec_adm_pand_C2"
+                                ,"UAM_SANJOSE_c_biolo_pand_C2","UAM_SANJOSE_com_dig_pand_C2"
+                                ,"UAM_SANJOSE_com_mercadeo_pand_C2","UAM_SANJOSE_dis_graf_pand_C2"
+                                ,"UAM_SANJOSE_educ_pre_pand_C2","UAM_SANJOSE_elect_med_pand_C2"
+                                ,"UAM_SANJOSE_tur_sos_pand_C2"), 
+                       
+                       to = c("UAM_SANJOSE_admin-neg_pand_C2", "UAM_SANJOSE_ter-fis_pand_C2", 
+                              "UAM_SANJOSE_conta_pub-pand_C2","UAM_SANJOSE_admin-hoteleria_pand_C2",
+                              "UAM_SANJOSE_anim-dig_pand_C2","UAM_SANJOSE_c-com_pand_C2",
+                              "UAM_SANJOSE_dis-graf_pand_C2","UAM_SANJOSE_dis-int_pand_C2"
+                              ,"UAM_SANJOSE_elect-mec_pand_C2","UAM_SANJOSE_mec-adm_pand_C2",
+                              "UAM_SANJOSE_c-biolo_pand_C2","UAM_SANJOSE_com-dig_pand_C2"
+                              ,"UAM_SANJOSE_com-mercadeo_pand_C2","UAM_SANJOSE_dis-graf_pand_C2"
+                              ,"UAM_SANJOSE_educ-pre_pand_C2","UAM_SANJOSE_elect-med_pand_C2"
+                              ,"UAM_SANJOSE_tur-sos_pand_C2"))
+
+horario_SANJOSE <- FindReplace(data = horario_SANJOSE, Var = "id", replaceData = Replaces,
+                               from = "from", to = "to", exact = FALSE)
+
+
+count(horario_SANJOSE$id)
+
+write_xlsx(horario_SANJOSE,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/horario_SANJOSE_americana_pand_C2.xlsx")
+
+# write_xlsx(horario_SANJOSE_admin_neg,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/admin_neg_C2.xlsx")
+# write_xlsx(horario_SANJOSE_conta,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/contabilidad_C2.xlsx")
+# write_xlsx(horario_SANJOSE_derecho,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/derecho_C2.xlsx")
+# write_xlsx(horario_SANJOSE_indus,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/industrial_C2.xlsx")
+# write_xlsx(horario_SANJOSE_ingles,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/ingles_C2.xlsx")
+
+
+#Consolidado unicamente a nivel de horarios, manteniendo todo constante excepto carrera
+#Dividimos entre columnas
+
+split <- str_split_fixed(horario_SANJOSE$id, "_", 5)
+
+horario_SANJOSE <- cbind(split, horario_SANJOSE)
+names(horario_SANJOSE)[1] <- "marca"
+names(horario_SANJOSE)[2] <- "sede"
+names(horario_SANJOSE)[3] <- "carrera"
+names(horario_SANJOSE)[4] <- "modalidad"
+names(horario_SANJOSE)[5] <- "cuatrimestre"
+
+horario_SANJOSE <- horario_SANJOSE %>% dplyr::select(-id)
+
+
+horario_SANJOSE_unique <- subset(horario_SANJOSE, pob_asist != 0)
+
+horario_SANJOSE_unique <- horario_SANJOSE_unique %>% group_by(horario, materia) %>% summarise(Asistencia = sum(pob_asist))
+
+horario_SANJOSE_unique$marca <- "UAM"
+horario_SANJOSE_unique$sede <- "SANJOSE"
+horario_SANJOSE_unique$modalidad <- "pand"
+horario_SANJOSE_unique$cuatrimestre <- "C2"
+
+horario_SANJOSE_unique <- horario_SANJOSE_unique %>% dplyr::select(marca, sede, modalidad, cuatrimestre, horario, materia, Asistencia)
+
+horario_SANJOSE_unique <- horario_SANJOSE_unique[with(horario_SANJOSE_unique, order(materia, horario)), ]  
+
+horario_SANJOSE_unique <- horario_SANJOSE_unique %>% group_by(materia) %>% mutate(counter = row_number(materia))
+
+#Rangos horarios
+horario_SANJOSE_unique$unoanueve <- 0
+horario_SANJOSE_unique$unoanueve[horario_SANJOSE_unique$Asistencia <= 9] <- 1
+
+horario_SANJOSE_unique$dieza17 <- 0
+horario_SANJOSE_unique$dieza17[horario_SANJOSE_unique$Asistencia >= 10 & horario_SANJOSE_unique$Asistencia <= 17] <- 1
+
+horario_SANJOSE_unique$di18a30 <- 0
+horario_SANJOSE_unique$di18a30[horario_SANJOSE_unique$Asistencia >= 18 & horario_SANJOSE_unique$Asistencia <= 30] <- 1
+
+horario_SANJOSE_unique$di31a60 <- 0
+horario_SANJOSE_unique$di31a60[horario_SANJOSE_unique$Asistencia >= 31 & horario_SANJOSE_unique$Asistencia <= 60] <- 1
+
+horario_SANJOSE_unique$mas60 <- 0
+horario_SANJOSE_unique$mas60[horario_SANJOSE_unique$Asistencia >= 61] <- 1
+
+
+
+#Duplicados
+duplicados <- as.data.frame(table(horario_SANJOSE_unique$materia))
+names(duplicados)[1] <- "materia"
+names(duplicados)[2] <- "freq"
+
+duplicados$freq[duplicados$freq <= 1] <- 0
+duplicados$freq[duplicados$freq > 1] <- 1
+
+#Duplicados left join
+
+horario_SANJOSE_unique <- left_join(horario_SANJOSE_unique, duplicados, by = "materia")
+
+names(horario_SANJOSE_unique)[14] <- "duplicado"
+
+
+#Regla dura 
+
+#entre 1 y 9 
+
+horario_SANJOSE_unique$recomendacion <- 0
+horario_SANJOSE_unique$recomendacion[horario_SANJOSE_unique$unoanueve == 1 & horario_SANJOSE_unique$duplicado == 0] <- "cerrar horario"
+horario_SANJOSE_unique$recomendacion[horario_SANJOSE_unique$unoanueve == 1 & horario_SANJOSE_unique$duplicado == 1] <- "unir horario"
+
+#entre 10 y 17
+
+horario_SANJOSE_unique$recomendacion[horario_SANJOSE_unique$dieza17 == 1 & horario_SANJOSE_unique$duplicado == 0] <- "ofertar unicamente en ese horario"
+horario_SANJOSE_unique$recomendacion[horario_SANJOSE_unique$dieza17 == 1 & horario_SANJOSE_unique$duplicado == 1] <- "ofertar e intentar consolidar en 1 horario"
+
+#entre 18 y 30 se recomienda ofertar
+
+horario_SANJOSE_unique$recomendacion[horario_SANJOSE_unique$di18a30 == 1] <- "abrir unicamente en ese horario"
+
+#entre 30 y 60
+
+horario_SANJOSE_unique$recomendacion[horario_SANJOSE_unique$di31a60 == 1] <- "abrir 2 paralelos en este horario"
+
+#mas de 60
+
+horario_SANJOSE_unique$recomendacion[horario_SANJOSE_unique$mas60 == 1] <- "abrir 3 paralelos en este horario"
+
+
+#Base Final
+
+horario_SANJOSE_unique <- horario_SANJOSE_unique %>%  dplyr::select(marca, sede, modalidad, cuatrimestre,
+                                                                    horario, materia, Asistencia, recomendacion)
+
+
+horario_split <- as.data.frame(str_split_fixed(horario_SANJOSE_unique$horario, " ", 2))
+names(horario_split)[1] <- "dia"
+names(horario_split)[2] <- "hora"
+
+horario_SANJOSE_unique <- cbind(horario_SANJOSE_unique, horario_split)
+names(horario_SANJOSE_unique)
+
+horario_SANJOSE_unique$recom_d <- 0
+horario_SANJOSE_unique$recom_d[horario_SANJOSE_unique$recomendacion == "unir horario" | horario_SANJOSE_unique$recomendacion == "cerrar horario"] <- 0
+horario_SANJOSE_unique$recom_d[horario_SANJOSE_unique$recomendacion == "ofertar e intentar consolidar en 1 horario" | 
+                                 horario_SANJOSE_unique$recomendacion == "abrir unicamente en ese horario" ] <- 1
+horario_SANJOSE_unique$recom_d[horario_SANJOSE_unique$recomendacion == "abrir 2 paralelos en este horario"] <- 2
+horario_SANJOSE_unique$recom_d[horario_SANJOSE_unique$recomendacion == "abrir 3 paralelos en este horario"] <- 3
+
+horario_SANJOSE_unique <- horario_SANJOSE_unique %>% dplyr::select(marca, sede, modalidad, cuatrimestre, dia, hora, materia, Asistencia, recomendacion, recom_d)
+
+write_xlsx(horario_SANJOSE_unique,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/recom_SANJOSE_americana_pand_C2.xlsx")
+
+
+
+###### Comparativo de cursos ofertados para usarlo contra la tabla dinamica SANJOSE ######
+
+horario_split_2 <- as.data.frame(str_split_fixed(SANJOSE$HORARIO, " ", 2))
+names(horario_split_2)[1] <- "dia"
+names(horario_split_2)[2] <- "hora"
+
+SANJOSE <- cbind(SANJOSE, horario_split_2)
+names(SANJOSE)
+
+SANJOSE$paralelo <- paste0(SANJOSE$AULA, "-", SANJOSE$HORARIO)
+
+
+write_xlsx(SANJOSE,"COORDINACION DE PROYECTOS/CurriculumPers/UAM/s_SANJOSE/SANJOSE_mock.xlsx")
+
+
+pt <- PivotTable$new()
+pt$addData(SANJOSE)
+pt$addColumnDataGroups("dia")
+pt$addRowDataGroups("hora")
+pt$defineCalcuamion(calcuamionName="paralelos", summariseExpression="paralelo")
+pt$renderPivot()
+
+
+
+
+
+
+
