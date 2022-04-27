@@ -320,45 +320,59 @@ write.table(core, "clipboard", sep="\t", row.names=FALSE)
 
 ##Trabajo con la base de resultados academicos 
 
-academico <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ADMINISTRACION).xlsx", sheet = "Administracion")
+academico <- read.csv("COORDINACION DE PROYECTOS/CurriculumPers/Bases/Mobius.csv")
+names(academico)[1] <- "Carnet"
+academico$Carrera[academico$Carrera == "ADMINISTRACIÃ“N DE NEGOCIOS"] <- "Administración de Negocios"
+academico$Carrera[academico$Carrera == "INGENIERÃ\u008dA INDUSTRIAL"] <- "Ingeniería Industrial"
+
+academico <- filter(academico, Carrera == "Administración de Negocios")
+
+#academico <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ADMINISTRACION).xlsx", sheet = "Administracion")
+
+academico <- filter(academico,  Plan.de.Estudio == "BAC01")
 
 #Uno con su homologado correspondiente para las materias que son del plan de bachillerato correspondiente
 #Hay 3 posibles mallas de homolagacion
 #Hay que tener CUDIADO CR toma codigos antiguos y los pone en otras materias, por eso hay que consolidar a nivel
 #Plan de programa 
 
-table(academico$`Plan de Estudio`)
-table(academico$`Codigo Curso`,academico$`Plan de Estudio`)
+table(academico$Plan.de.Estudio)
+table(academico$Codigo.Curso,academico$Plan.de.Estudio)
 #Tab de solo bachillerato
-table(academico$`Grado Academico`, academico$`Plan de Estudio`)
+table(academico$Grado.Academico, academico$Plan.de.Estudio)
 
 
-homologado <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/malla_admin_neg.xlsx", sheet = "malla")
-
-
+# homologado <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/malla_admin_neg.xlsx", sheet = "malla")
+# 
+# 
 names(academico)[21] <- "cod"
-names(academico)[17] <- "malla"
-
-academico <-  left_join(academico, homologado, by = c("cod","malla"))
-
-names(academico)[21] <- "c"
-names(academico)[33] <- "cod"
-
-academico <- academico[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,33,22,23,24,25,26,27,28,29,30,31,32,21)]
-
-academico <- academico %>% dplyr::select(-c(c))
+# names(academico)[17] <- "malla"
+# 
+# academico <-  left_join(academico, homologado, by = c("cod","malla"))
+# 
+# names(academico)[21] <- "c"
+# names(academico)[33] <- "cod"
+# 
+# academico <- academico[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,33,22,23,24,25,26,27,28,29,30,31,32,21)]
+# 
+# academico <- academico %>% dplyr::select(-c(c))
 
 #Join con el bloque que le corresponde
 
 bloques <- core %>% dplyr:: select(cod, bloque)
 
-academico <- left_join(academico, bloques, by = 'cod')
+bloques <- bloques %>% mutate(cod= trimws(as.character(cod)))
+bloques <- bloques %>% mutate(bloque= trimws(as.character(bloque)))
+
+academico <- academico %>% mutate(cod = trimws(as.character(cod)))
+
+academico <- left_join(academico, bloques, by = "cod")
 #names(academico)[33] <- "x"
 
 
 academico <- unique(academico)
 
-academico <- academico %>% dplyr::select(-c(Grupo,Aula,Dia,'Hora Inicio','Hora Final' )) 
+academico <- academico %>% dplyr::select(-c(Grupo,Aula,Dia,Hora.Inicio,Hora.Final )) 
 academico <- unique(academico)
 
 academico <- academico %>% dplyr::select(Carnet, Estudiante,Periodo,bloque,cod,Curso, Nota ,Evaluacion ) 
@@ -367,13 +381,16 @@ academico <- unique(academico)
 count(academico$Evaluacion)
 
 academico$Evaluacion[academico$Evaluacion == "APROBADO (CURSO LIBRE)"] <- "APROBADO"
-academico$Evaluacion[academico$Evaluacion == "CONVALIDACIÓN INTERNA"] <- "CONVALIDACIÓN"
-academico$Evaluacion[academico$Evaluacion == "CONVALIDACIÓN PROVISIONAL"] <- "CONVALIDACIÓN"
+academico$Evaluacion[academico$Evaluacion == "CONVALIDACIÃN"] <- "CONVALIDACIÓN"
+academico$Evaluacion[academico$Evaluacion == "CONVALIDACIÃN INTERNA"] <- "CONVALIDACIÓN"
+academico$Evaluacion[academico$Evaluacion == "CONVALIDACIÃN PROVISIONAL"] <- "CONVALIDACIÓN"
 academico$Evaluacion[academico$Evaluacion == "CURSO ACTUAL PENDIENTE"] <- "CURSO ACTUAL"
 academico$Evaluacion[academico$Evaluacion == "EXTRAORDINARIO"] <- "REPROBADO"
-academico$Evaluacion[academico$Evaluacion == "NO SE PRESENTÓ"] <- "REPROBADO"
+academico$Evaluacion[academico$Evaluacion == "NO SE PRESENTÃ"] <- "REPROBADO"
 academico$Evaluacion[academico$Evaluacion == "REPROBADO (CURSO LIBRE)"] <- "REPROBADO"
 academico$Evaluacion[academico$Evaluacion == "RETIRO JUSTIFICADO"] <- "RETIRO"
+academico$Evaluacion[academico$Evaluacion == "CONGELAMIENTO"] <- "REPROBADO"
+
 
 academico$d_rep<- 0 
 academico$d_rep[academico$Evaluacion == "REPROBADO"] <-1
@@ -393,7 +410,57 @@ table(academico$cod, academico$Periodo)
 table(academico$cod, academico$Curso)
 
 
-#solo me interesa hacer un analisis sobre aprobadosy reprobados
+#solo me interesa hacer un analisis sobre aprobados, reprobados.
+
+#OJO AQUI HAGO TRABAJO SOBRE LOS CURSOS ACTUALES PARA PODER UTILIZAR MOBIUS EN TODOS LOS NIVELES 
+
+table(academico$Evaluacion,academico$Periodo)
+
+########## UNICAMENTE CAMBIOS PROVISIOANLES DADO DISCREPANCIAS DE SUBIDA DE NOTAS
+
+#Solo recomendacion para ultimo periodo 2022-1
+
+#Tabla auxiliar de promedio de notas por Carnet
+#Primero corto la base para evitar sesgos de 0 
+
+academico_aux <- filter(academico, Periodo != "2022-1")
+
+aux_notas_id <- aggregate(academico_aux$Nota, list(academico_aux$Carnet), mean)
+names(aux_notas_id)[1] <- "Carnet"
+names(aux_notas_id)[2] <- "NotaMedia"
+
+#Tabla auxiliar de promedio de notas por materia 
+
+aux_notas_mat <- aggregate(academico_aux$Nota, list(academico_aux$cod), mean)
+names(aux_notas_mat)[1] <- "cod"
+names(aux_notas_mat)[2] <- "NotaMedia_mat"
+
+
+#left join con la base de academico, aunque luego solo hare el reemplazo para los correspondientes
+
+academico <- left_join(academico, aux_notas_id)
+academico <- left_join(academico, aux_notas_mat)
+academico$nota_media_reep <- (academico$NotaMedia + academico$NotaMedia_mat)/2
+
+#Si esta vacio el promedio llenar solo con la nota existente 
+
+academico$nota_media_reep[is.na(academico$nota_media_reep)] <- academico$NotaMedia_mat
+academico$nota_media_reep[is.na(academico$nota_media_reep)] <- academico$NotaMedia
+
+
+#llenamos la categoria de Nota general con la susticion de nota_media_reep si y solo si es Curso Actual y su periodo es 2022-1
+
+
+academico$Nota[academico$Evaluacion == "CURSO ACTUAL" & academico$Periodo == "2022-1"] <- academico$nota_media_reep
+
+#Con estas notas cambiaremos los estados de curso actual para un aprobado y reprobado provisional 
+
+academico$Evaluacion[academico$Evaluacion == "CURSO ACTUAL" & academico$Nota >= 70] <- "APROBADO"
+academico$Evaluacion[academico$Evaluacion == "CURSO ACTUAL" & academico$Nota < 70] <- "REPROBADO"
+
+##########
+
+#Trabajo sobre la base
 
 academico_ap_rep <- filter(academico, Evaluacion == c("APROBADO", "REPROBADO"))
 vigente_academico_ap_rep <- filter(academico_vigente, Evaluacion == c("APROBADO", "REPROBADO"))
@@ -533,9 +600,6 @@ core_resum_c5 <- filter(core_resum, bloque == "V Cuatrimestre")
 core_resum_c6 <- filter(core_resum, bloque == "VI Cuatrimestre")
 core_resum_c7 <- filter(core_resum, bloque == "VII Cuatrimestre")
 core_resum_c8 <- filter(core_resum, bloque == "VIII Cuatrimestre")
-
-#Informe Core
-create_report(core_resum)
 
 
 ##Comparacion para saber notas para posible reprobacion 
@@ -752,21 +816,75 @@ count(resum_notas_rep$tipo)
 setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
 
 #Base alumnos
-admin <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ADMINISTRACION).xlsx", sheet = "Administracion")
+
+#admin <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ADMINISTRACION).xlsx", sheet = "Administracion")
+#admin <- filter(admin, Plan.de.Estudio == "BAC01")
+
+admin <- read.csv("COORDINACION DE PROYECTOS/CurriculumPers/Bases/Mobius.csv")
+names(admin)[1] <- "Carnet"
+admin$Carrera[admin$Carrera == "ADMINISTRACIÃ“N DE NEGOCIOS"] <- "Administración de Negocios"
+
+admin <- filter(admin, Carrera == "Administración de Negocios")
+
+
+admin <- filter(admin,  Plan.de.Estudio == "BAC01")
+
 
 names(admin)[21] <- "cod"
-names(admin)[17] <- "malla"
+#names(admin)[17] <- "malla"
 
-admin <-  left_join(admin, homologado, by = c("cod","malla"))
+# admin <-  left_join(admin, homologado, by = c("cod","malla"))
+# 
+# names(admin)[21] <- "c"
+# names(admin)[33] <- "cod"
+# 
+# admin <- admin[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,33,22,23,24,25,26,27,28,29,30,31,32,21)]
+# 
+# admin <- admin %>% dplyr::select(-c(c))
 
-names(admin)[21] <- "c"
-names(admin)[33] <- "cod"
+########## UNICAMENTE CAMBIOS PROVISIOANLES DADO DISCREPANCIAS DE SUBIDA DE NOTAS
 
-admin <- admin[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,33,22,23,24,25,26,27,28,29,30,31,32,21)]
+#Solo recomendacion para ultimo periodo 2022-1
 
-admin <- admin %>% dplyr::select(-c(c))
+#Tabla auxiliar de promedio de notas por Carnet
+#Primero corto la base para evitar sesgos de 0 
+
+admin_aux <- filter(admin, Periodo != "2022-1")
+
+aux_notas_id <- aggregate(admin_aux$Nota, list(admin_aux$Carnet), mean)
+names(aux_notas_id)[1] <- "Carnet"
+names(aux_notas_id)[2] <- "NotaMedia"
+
+#Tabla auxiliar de promedio de notas por materia 
+
+aux_notas_mat <- aggregate(admin_aux$Nota, list(admin_aux$cod), mean)
+names(aux_notas_mat)[1] <- "cod"
+names(aux_notas_mat)[2] <- "NotaMedia_mat"
 
 
+#left join con la base de admin, aunque luego solo hare el reemplazo para los correspondientes
+
+admin <- left_join(admin, aux_notas_id)
+admin <- left_join(admin, aux_notas_mat)
+admin$nota_media_reep <- (admin$NotaMedia + admin$NotaMedia_mat)/2
+
+#Si esta vacio el promedio llenar solo con la nota existente 
+
+admin$nota_media_reep[is.na(admin$nota_media_reep)] <- admin$NotaMedia_mat
+admin$nota_media_reep[is.na(admin$nota_media_reep)] <- admin$NotaMedia
+
+
+#llenamos la categoria de Nota general con la susticion de nota_media_reep si y solo si es Curso Actual y su periodo es 2022-1
+
+
+admin$Nota[admin$Evaluacion == "CURSO ACTUAL" & admin$Periodo == "2022-1"] <- admin$nota_media_reep
+
+#Con estas notas cambiaremos los estados de curso actual para un aprobado y reprobado provisional 
+
+admin$Evaluacion[admin$Evaluacion == "CURSO ACTUAL" & admin$Nota >= 70] <- "APROBADO"
+admin$Evaluacion[admin$Evaluacion == "CURSO ACTUAL" & admin$Nota < 70] <- "REPROBADO"
+
+######
 
 #Bases de mallas
 admin_malla <-  read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ADMINISTRACION).xlsx", sheet = "CURRICULA (FCEA-AN-AN-BAC01)")
@@ -796,15 +914,23 @@ names(admin_malla)[10] <- 'req5'
 names(admin)[21]<- 'cod'
 names(admin)[22]<- 'carr'
 
+
 admin$Evaluacion[admin$Evaluacion == "APROBADO (CURSO LIBRE)"] <- "APROBADO"
-admin$Evaluacion[admin$Evaluacion == "CONVALIDACIÓN INTERNA"] <- "CONVALIDACIÓN"
-admin$Evaluacion[admin$Evaluacion == "CONVALIDACIÓN PROVISIONAL"] <- "CONVALIDACIÓN"
+admin$Evaluacion[admin$Evaluacion == "CONVALIDACIÃN"] <- "CONVALIDACIÓN"
+admin$Evaluacion[admin$Evaluacion == "CONVALIDACIÃN INTERNA"] <- "CONVALIDACIÓN"
+admin$Evaluacion[admin$Evaluacion == "CONVALIDACIÃN PROVISIONAL"] <- "CONVALIDACIÓN"
 admin$Evaluacion[admin$Evaluacion == "CURSO ACTUAL PENDIENTE"] <- "CURSO ACTUAL"
 admin$Evaluacion[admin$Evaluacion == "EXTRAORDINARIO"] <- "REPROBADO"
-admin$Evaluacion[admin$Evaluacion == "NO SE PRESENTÓ"] <- "REPROBADO"
+admin$Evaluacion[admin$Evaluacion == "NO SE PRESENTÃ"] <- "REPROBADO"
 admin$Evaluacion[admin$Evaluacion == "REPROBADO (CURSO LIBRE)"] <- "REPROBADO"
 admin$Evaluacion[admin$Evaluacion == "RETIRO JUSTIFICADO"] <- "RETIRO"
+admin$Evaluacion[admin$Evaluacion == "CONGELAMIENTO"] <- "REPROBADO"
 
+count(admin$Evaluacion)
+
+
+admin <- admin %>% mutate(cod= trimws(as.character(cod)))
+admin_malla <- admin_malla %>% mutate(bloque= trimws(as.character(bloque)))
 
 admin <- admin %>% left_join(admin_malla, by = c('cod' = 'cod'))
 
@@ -845,6 +971,13 @@ admin <- filter(admin, bloque_num != 7)
 admin <- filter(admin, Nota <= 75)
 
 #Join con followup y con core, que salen de un proceso previo (paso0) de la malla
+
+
+admin <- admin %>% mutate(cod= trimws(as.character(cod)))
+followup <- followup %>% mutate(cod= trimws(as.character(cod)))
+core <- core %>% mutate(cod= trimws(as.character(cod)))
+
+
 admin <- join(admin, followup, by = 'cod')
 admin <- join(admin, core, by = "cod")
 
@@ -1091,6 +1224,10 @@ pool_bruto$aux2[pool_bruto$bloque == "VI Cuatrimestre"] <- "VIII Cuatrimestre"
 names(pool_bruto)[3] <- "x"
 names(pool_bruto)[4] <- "bloque"
 
+
+pool_bruto <- pool_bruto %>% mutate(bloque= trimws(as.character(bloque)))
+bloque_malla <- bloque_malla %>% mutate(bloque= trimws(as.character(bloque)))
+
 pool_bruto <- left_join(pool_bruto, bloque_malla)
 
 names(pool_bruto)[3] <- "bloque"
@@ -1163,7 +1300,7 @@ pool_bruto3 <- filter(pool_bruto3, !is.empty(cod))
 
 #################### Base limpia para reemplazo #################
 
-pool_elegibles <- pool_bruto3 %>% dplyr:: select(-c(Estudiante.y,cod,variable))
+pool_elegibles <- pool_bruto3 %>% dplyr:: select(-c(Estudiante.y,cod))
 
 pool_elegibles <- unique(pool_elegibles)
 
@@ -1271,9 +1408,9 @@ names(tabla_resumen_varios)[12] <- 'materia_suprimida'
 #
 
 tabla_resumen_varios <- tabla_resumen_varios %>% dplyr::select(Carnet,Estudiante,cod_materia_vinculada,materia_vinculada,
-                                                 bloque_materia_vinculada,cod_materia_suprimida,materia_suprimida,
-                                                 score_supresion,cod_materia_reemplazo,materia_reemplazo,
-                                                 bloque_materia_reemplazo,score_reemplazo)
+                                                               bloque_materia_vinculada,cod_materia_suprimida,materia_suprimida,
+                                                               score_supresion,cod_materia_reemplazo,materia_reemplazo,
+                                                               bloque_materia_reemplazo,score_reemplazo)
 
 tabla_resumen_varios <- unique(tabla_resumen_varios)
 
@@ -1297,15 +1434,27 @@ write.table(tabla_resumen_varios, "clipboard", sep="\t", row.names=FALSE)
 
 
 #Bases de mallas
-campos <-  read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ADMINISTRACION).xlsx", sheet = "Administracion")
+campos <- read.csv("COORDINACION DE PROYECTOS/CurriculumPers/Bases/Mobius.csv")
+names(campos)[1] <- "Carnet"
+campos$Carrera[campos$Carrera == "ADMINISTRACIÃ“N DE NEGOCIOS"] <- "Administración de Negocios"
 
-campos <- campos %>% dplyr::select('Codigo Curso', Curso, 'Codigo Carrera', 'Codigo Facultad',Facultad,
-                                   'Codigo Enfasis', Enfasis, 'Plan de Estudio')
+campos <- filter(campos, Carrera == "Administración de Negocios")
+
+campos <- filter(campos,  Plan.de.Estudio == "BAC01")
+
+campos <- campos %>% dplyr::select(Codigo.Curso, Curso, Codigo.Carrera, Codigo.Facultad,Facultad,
+                                   Codigo.Enfasis, Enfasis, Plan.de.Estudio)
+
+campos <- filter(campos, Plan.de.Estudio == "BAC01")
 
 campos <- unique(campos)
 
 names(campos)[1] <- "cod_materia_reemplazo"
 
+
+
+reemplazos <- reemplazos %>% mutate(cod_materia_reemplazo= trimws(as.character(cod_materia_reemplazo)))
+campos <- campos %>% mutate(cod_materia_reemplazo= trimws(as.character(cod_materia_reemplazo)))
 
 reemplazos <- left_join(reemplazos, campos, by = "cod_materia_reemplazo")
 
