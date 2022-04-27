@@ -1,0 +1,1498 @@
+rm(list = ls()) #limpia los objetos 
+graphics.off() #limpiar el dispositivo de graficas
+gc() #limpiar la memoria virtual 
+cat("\014") #limpiar la consola
+
+start_time <- Sys.time()
+
+library(tidyverse)
+library(tidyr)
+library(benford)
+library(readxl)
+library(benford.analysis)
+library(janitor)
+library(data.table)
+library(plyr)
+library(reshape2)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(readxl)
+library(ggExtra)
+library(dplyr)
+library(ggplotlyExtra)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(xts)
+library(tsbox)
+library(streamgraph)
+library(devtools)
+library(rgdal) #readOGR
+library(RColorBrewer)
+library(classInt)
+library(raster)
+library(sqldf)
+library(RColorBrewer)
+library(writexl)
+library(tidyverse)
+library(stringr)
+library(igraph)
+library(rapport)
+library(rapportools)
+library(tcltk2)
+library(CINNA)
+library(psych)
+library(PerformanceAnalytics)
+library(Hmisc)
+library(DataExplorer)
+library(networkD3)
+#------------------------------------------------------------------------------
+#NETWORK ANALYSIS CURRICULA CR
+#INGENIERIA INDUSRIAL
+#COORDINACION DE PROYECTOS
+#INTELIGENCIA DE LA INFORMACION 
+#UDLA
+#------------------------------------------------------------------------------
+
+
+
+##################### INGENIERIA INDUSTRIAL ############################
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+
+
+nodes <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/curricula_indus_cr.xlsx", sheet = "Nodes")
+links <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/curricula_indus_cr.xlsx", sheet = "Links")
+
+#Trabajo con links 
+
+req_split <- as.data.frame(str_split_fixed(links$req, "       ", 5))
+
+links <- cbind(links, req_split)
+
+# links <- rename(links, req1 = 'V1')
+# links <- rename(links, req2 = 'V2')
+# links <- rename(links, req3 = 'V3')
+# links <- rename(links, req4 = 'V4')
+# links <- rename(links, req5 = 'V5')
+
+names(links)[6] <- 'req1'
+names(links)[7] <- 'req2'
+names(links)[8] <- 'req3'
+names(links)[9] <- 'req4'
+names(links)[10] <- 'req5'
+
+names(links)
+names(nodes)
+
+links <- links %>% dplyr:: select(-req)
+
+links <- melt(links, id.vars = c("bloque","cod","nom","cred"))
+names(links)[6] <- "req"
+
+
+links <- links[!is.empty(links$req),]
+
+
+links <- links %>% dplyr:: select(req,cod,cred,nom,variable,bloque)
+nodes <- nodes %>% dplyr:: select(cod,cred,nom,bloque)
+
+# links$cod <- as.factor(links$cod)
+# nodes$cod <- as.factor(nodes$cod)
+
+#Examino la data
+
+nrow(nodes); length(unique(nodes$cod))
+nrow(links); nrow(unique(links[,c("cod", "req")]))
+
+links <- links[order(links$cod, links$req),]
+
+links$req <- ifelse(links$req == "-", links$cod, links$req)
+
+
+#Grafico
+
+net <- graph_from_data_frame(d=links, vertices=nodes, directed=T) 
+net <- simplify(net, remove.multiple = F, remove.loops = T) 
+
+node.size= c(10,10,10)
+
+plot(net, edge.arrow.size=.2, edge.curved=0,
+     
+     vertex.color="orange", vertex.frame.color="#555555",
+     
+     vertex.label=V(net)$cod, vertex.label.color="black",
+     
+     vertex.label.cex=.6, vertex.size=node.size*1, arrow.mode = 1  )
+#
+
+node.size= c(10,10,10)
+plot(net, vertex.size=node.size*1)
+
+l <- layout_with_fr(net)
+
+plot(net, vertex.shape="none", vertex.label=nodes$cod,
+     
+     vertex.label.color=V(net)$color, vertex.label.font=2.5, 
+     
+     vertex.label.cex=.8, edge.color="gray70",  edge.width=2,edge.arrow.size=.2)
+
+#
+p <- simpleNetwork(links, height="50px", width="50px",        
+                   Source = 1,                 # column number of source
+                   Target = 2,                 # column number of target
+                   linkDistance = 15,          # distance between node. Increase this value to have more space between nodes
+                   fontSize = 14,               # size of the node names
+                   fontFamily = "serif",       # font og node names
+                   linkColour = "black",        # colour of edges, MUST be a common colour for the whole graph
+                   nodeColour = "midnightblue",     # colour of nodes, MUST be a common colour for the whole graph
+                   opacity = 0.9,              # opacity of nodes. 0=transparent. 1=no transparency
+                   zoom = T,                    # Can you zoom on the figure?
+)
+
+p
+
+
+source <- links$req
+target <- links$cod
+
+forceNetwork(Links = links, Nodes = nodes, Source = source, Target= target,
+             NodeID="idn", Group= links$bloque, linkWidth=1,
+             linkColour = "#afafaf", fontSize=12, zoom=T,legend=T,
+             Nodesize=6, opacity = 0.8, charge =-300,
+             width = 600, height = 400)
+
+
+library(RColorBrewer)
+coul  <- brewer.pal(3, "Set1") 
+
+my_color <- coul[as.numeric(as.factor(V(net)$bloque))]
+
+plot(net, vertex.color=my_color)
+
+#
+tkid <- tkplot(net, vertex.color = "SkyBlue2", label.font = (size=9))
+tkplot(net, vertex.color = "SkyBlue2", label.font = (size=9))#tkid is the id of the tkplot that will open
+tkconfigure(igraph:::.tkplot.get(tkid)$canvas, "bg"="lightyellow")
+tkconfigure(igraph:::.tkplot.get(tkid)$canvas, "bg"="white")
+
+
+l <- tkplot.getcoords(tkid) # grab the coordinates from tkplot
+
+tk_close(tkid, window.close = T)
+
+plot(net, layout=l)
+
+
+
+#Network and node Descriptivos
+edge_density(net, loops=F)
+reciprocity(net)
+sort(degree(net))
+
+
+
+#Matriz Adjunta
+
+# build the graph object
+adjunta <- get.adjacency(graph.edgelist(as.matrix(links[,1:2]), directed=FALSE))
+adjunta <- as.matrix(adjunta)
+
+#Centralidad local
+
+#numero de links que tiene cada nodo. 
+
+degree.cent <- centr_degree(net, mode = "all")
+degree.cent$res
+degree.cent <- as.data.frame(degree.cent)
+
+#Salidas que tiene cada nodo out degree
+
+degree.cent.out <- centr_degree(net, mode = "out")
+degree.cent.out$res
+degree.cent.out <- as.data.frame(degree.cent.out)
+
+
+#Entradas que tiene cada nodo in degree
+
+degree.cent.in <- centr_degree(net, mode = "in")
+degree.cent.in$res
+degree.cent.in <- as.data.frame(degree.cent.in)
+
+#Consolidado de centralidades locales en 1 matriz
+
+centralidad <- as.data.frame(nodes$cod)
+names(centralidad)[1] <- 'cod'
+
+
+centralidad <- cbind(centralidad, degree.cent)
+names(centralidad)[2] <- 'score_centralidad'
+
+centralidad <- cbind(centralidad, degree.cent.out)
+names(centralidad)[5] <- 'score_centralidad_out'
+
+centralidad <- cbind(centralidad, degree.cent.in)
+names(centralidad)[8] <- 'score_centralidad_in'
+
+centralidad <- centralidad %>% dplyr::select(cod,score_centralidad,score_centralidad_out,score_centralidad_in )
+
+centralidad$importancia <- "Baja"
+centralidad$importancia[centralidad$score_centralidad_out >= 2 | centralidad$score_centralidad_in >= 2
+                        | (centralidad$score_centralidad_out + centralidad$score_centralidad_in) >= 3] <- "Alta"
+
+
+#Centralidad Global 
+
+#Da scores a cada nodo dada su cercania a cada nodo dentro del sistema
+#Calcula el camino mas corto entre todos los nodos, luego asisgna a cada nodeo un score basado en
+#la suma de los caminos mas cortos. 
+#Esto permite identificar a nodos de mayor influencia
+#Mas grande, mas influente
+
+closeness.cent <- closeness(net, mode="all")
+closeness.cent <- as.data.frame(closeness.cent)
+
+#betweenness centrality-Rol de la materia en el network
+
+
+betweenness <- betweenness(
+  net,
+  v = V(net),
+  directed = TRUE,
+  weights = NULL,
+  nobigint = TRUE,
+  normalized = FALSE
+)
+
+betweenness <- as.data.frame(betweenness)
+
+betweenness <- cbind(cod = rownames(betweenness), betweenness)
+rownames(betweenness) <- 1:nrow(betweenness)
+
+
+#Total  path lenght- Que tanto te atrasas
+
+distancias <-  as.data.frame(distances(
+  net,
+  v = V(net),
+  to = V(net),
+  mode = c("out"),
+  weights = NULL,
+  algorithm = c("automatic")
+))
+
+
+
+distancias[distancias == Inf] <- 0
+
+distancias$total_path <- rowSums(distancias)
+
+distancias <- cbind(cod = rownames(distancias), distancias)
+rownames(distancias) <- 1:nrow(distancias)
+
+distancias <- distancias %>% dplyr:: select(cod, total_path)
+
+
+##Cruciality value
+
+cruciality <- join(distancias, betweenness, by = 'cod')
+
+cruciality$cruciality <- cruciality$total_path * cruciality$betweenness
+
+cruciality <- cruciality %>% dplyr:: select(cod, cruciality)
+
+
+#Resumen Indicadores
+
+
+core <- join(betweenness, distancias, by ='cod')
+core <- join(core, cruciality, by ='cod')
+core <- join(core, centralidad, by = 'cod')
+core <- join(core, nodes, by = 'cod')
+
+core <- core %>% dplyr::select(cod, nom, bloque, betweenness,total_path,cruciality,score_centralidad_in
+                               ,score_centralidad_out,importancia )
+
+#Tabla de core
+write.table(core, "clipboard", sep="\t", row.names=FALSE)
+
+
+##Trabajo con la base de resultados academicos 
+
+academico <- read.csv("COORDINACION DE PROYECTOS/CurriculumPers/Bases/Mobius.csv")
+names(academico)[1] <- "Carnet"
+academico$Carrera[academico$Carrera == "ADMINISTRACIÃ“N DE NEGOCIOS"] <- "Administración de Negocios"
+academico$Carrera[academico$Carrera == "INGENIERÃ\u008dA INDUSTRIAL"] <- "Ingeniería Industrial"
+
+academico <- filter(academico, Carrera == "Ingeniería Industrial")
+
+
+academico <- filter(academico, Plan.de.Estudio == "BAC01")
+
+
+table(academico$Plan.de.Estudio)
+table(academico$Codigo.Curso,academico$Plan.de.Estudio)
+#Tab de solo bachillerato
+table(academico$Grado.Academico, academico$Plan.de.Estudio)
+
+
+
+#Uno con su homologado correspondiente para las materias que son del plan de bachillerato correspondiente
+#Hay 3 posibles mallas de homolagacion
+#Hay que tener CUDIADO CR toma codigos antiguos y los pone en otras materias, por eso hay que consolidar a nivel
+#Plan de programa 
+# 
+# homologado <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/malla_ing_indus.xlsx", sheet = "malla")
+# 
+names(academico)[21] <- "cod"
+# names(academico)[17] <- "malla"
+# 
+# academico <-  left_join(academico, homologado, by = c("cod","malla"))
+# 
+# names(academico)[21] <- "c"
+# names(academico)[33] <- "cod"
+# 
+# academico <- academico[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,33,22,23,24,25,26,27,28,29,30,31,32,21)]
+# 
+# academico <- academico %>% dplyr::select(-c(c))
+
+#Join con el bloque que le corresponde
+
+bloques <- core %>% dplyr:: select(cod, bloque)
+
+bloques <- bloques %>% mutate(cod= trimws(as.character(cod)))
+bloques <- bloques %>% mutate(bloque= trimws(as.character(bloque)))
+
+academico <- academico %>% mutate(cod = trimws(as.character(cod)))
+
+academico <- left_join(academico, bloques, by = 'cod')
+#names(academico)[33] <- "x"
+
+
+academico <- unique(academico)
+
+academico <- academico %>% dplyr::select(-c(Grupo,Aula,Dia,Hora.Inicio,Hora.Final)) 
+academico <- unique(academico)
+
+academico <- academico %>% dplyr::select(Carnet, Estudiante,Periodo,bloque,cod,Curso, Nota ,Evaluacion ) 
+academico <- unique(academico)
+
+count(academico$Evaluacion)
+
+academico$Evaluacion[academico$Evaluacion == "APROBADO (CURSO LIBRE)"] <- "APROBADO"
+academico$Evaluacion[academico$Evaluacion == "CONVALIDACIÃN"] <- "CONVALIDACIÓN"
+academico$Evaluacion[academico$Evaluacion == "CONVALIDACIÃN INTERNA"] <- "CONVALIDACIÓN"
+academico$Evaluacion[academico$Evaluacion == "CONVALIDACIÃN PROVISIONAL"] <- "CONVALIDACIÓN"
+academico$Evaluacion[academico$Evaluacion == "CURSO ACTUAL PENDIENTE"] <- "CURSO ACTUAL"
+academico$Evaluacion[academico$Evaluacion == "EXTRAORDINARIO"] <- "REPROBADO"
+academico$Evaluacion[academico$Evaluacion == "NO SE PRESENTÃ"] <- "REPROBADO"
+academico$Evaluacion[academico$Evaluacion == "REPROBADO (CURSO LIBRE)"] <- "REPROBADO"
+academico$Evaluacion[academico$Evaluacion == "RETIRO JUSTIFICADO"] <- "RETIRO"
+academico$Evaluacion[academico$Evaluacion == "CONGELAMIENTO"] <- "REPROBADO"
+
+academico$d_rep<- 0 
+academico$d_rep[academico$Evaluacion == "REPROBADO"] <-1
+
+count(academico$Evaluacion)
+
+#solo para codigos vigentes
+
+cod <- as.data.frame(nodes$cod)
+names(cod)[1] <-'cod'
+
+academico <- join(academico, cod, by = 'cod')
+academico_vigente <-  dplyr::inner_join(academico, cod, "cod")
+
+count(academico$cod)
+table(academico$cod, academico$Periodo)
+table(academico$cod, academico$Curso)
+
+
+#solo me interesa hacer un analisis sobre aprobadosy reprobados
+
+#OJO AQUI HAGO TRABAJO SOBRE LOS CURSOS ACTUALES PARA PODER UTILIZAR MOBIUS EN TODOS LOS NIVELES 
+
+table(academico$Evaluacion,academico$Periodo)
+
+########## UNICAMENTE CAMBIOS PROVISIOANLES DADO DISCREPANCIAS DE SUBIDA DE NOTAS
+
+#Solo recomendacion para ultimo periodo 2022-1
+
+#Tabla auxiliar de promedio de notas por Carnet
+#Primero corto la base para evitar sesgos de 0 
+
+academico_aux <- filter(academico, Periodo != "2022-1")
+
+aux_notas_id <- aggregate(academico_aux$Nota, list(academico_aux$Carnet), mean)
+names(aux_notas_id)[1] <- "Carnet"
+names(aux_notas_id)[2] <- "NotaMedia"
+
+#Tabla auxiliar de promedio de notas por materia 
+
+aux_notas_mat <- aggregate(academico_aux$Nota, list(academico_aux$cod), mean)
+names(aux_notas_mat)[1] <- "cod"
+names(aux_notas_mat)[2] <- "NotaMedia_mat"
+
+
+#left join con la base de academico, aunque luego solo hare el reemplazo para los correspondientes
+
+academico <- left_join(academico, aux_notas_id)
+academico <- left_join(academico, aux_notas_mat)
+academico$nota_media_reep <- (academico$NotaMedia + academico$NotaMedia_mat)/2
+
+#Si esta vacio el promedio llenar solo con la nota existente 
+
+academico$nota_media_reep[is.na(academico$nota_media_reep)] <- academico$NotaMedia_mat
+academico$nota_media_reep[is.na(academico$nota_media_reep)] <- academico$NotaMedia
+
+
+#llenamos la categoria de Nota general con la susticion de nota_media_reep si y solo si es Curso Actual y su periodo es 2022-1
+
+
+academico$Nota[academico$Evaluacion == "CURSO ACTUAL" & academico$Periodo == "2022-1"] <- academico$nota_media_reep
+
+#Con estas notas cambiaremos los estados de curso actual para un aprobado y reprobado provisional 
+
+academico$Evaluacion[academico$Evaluacion == "CURSO ACTUAL" & academico$Nota >= 70] <- "APROBADO"
+academico$Evaluacion[academico$Evaluacion == "CURSO ACTUAL" & academico$Nota < 70] <- "REPROBADO"
+
+##########
+
+academico_ap_rep <- filter(academico, Evaluacion == c("APROBADO", "REPROBADO"))
+vigente_academico_ap_rep <- filter(academico_vigente, Evaluacion == c("APROBADO", "REPROBADO"))
+vigente_academico_rep <- filter(academico_vigente, Evaluacion == "REPROBADO")
+
+summary(unique(vigente_academico_ap_rep$Estudiante))
+summary(unique(academico_ap_rep$Estudiante))
+
+#Estadisticas descriptivas
+
+count(vigente_academico_ap_rep$cod)
+est_descrip <- describeBy(vigente_academico_ap_rep$Nota, vigente_academico_ap_rep$cod, mat = TRUE) 
+
+est_descrip <- est_descrip %>% dplyr:: select(group1,n,mean,sd,median)
+names(est_descrip)[1] <- "cod"
+names(est_descrip)[2] <- "num_alumnos"
+names(est_descrip)[3] <- "nota_media"
+names(est_descrip)[4] <- "nota_sd"
+names(est_descrip)[5] <- "nota_mediana"
+
+
+est_descrip2 <- describeBy(vigente_academico_ap_rep$d_rep, vigente_academico_ap_rep$cod, mat = TRUE) 
+est_descrip2 <- est_descrip2 %>% dplyr:: select(group1,n,mean)
+
+names(est_descrip2)[1] <- "cod"
+names(est_descrip2)[2] <- "num_alumnos"
+names(est_descrip2)[3] <- "tasa_rep_media"
+
+count(vigente_academico_ap_rep$d_rep)
+
+est_descrip <- join(est_descrip, est_descrip2, by = 'cod')
+
+#Match con base de resultados topologicos
+
+core <- join(core, est_descrip, by = 'cod')
+
+
+#Total Path y Betweeness media por cuatrimestre
+
+#Path media
+tpath_media_cuatri <- core %>% group_by(bloque) %>% summarise_at(vars(total_path), list(name = mean))
+names(tpath_media_cuatri)[2] <- "tpath_media_cuatri"
+
+core <- join(core, tpath_media_cuatri, by = 'bloque')
+core <- core %>% dplyr:: select(cod,nom,bloque,betweenness,total_path,cruciality,score_centralidad_in,
+                                score_centralidad_out,importancia,num_alumnos,nota_media,nota_sd,tasa_rep_media,
+                                tpath_media_cuatri)
+#betweenness medio 
+
+betw_media_cuatri <- core %>% group_by(bloque) %>% summarise_at(vars(betweenness), list(name = mean))
+names(betw_media_cuatri)[2] <- "betw_media_cuatri"
+
+core <- join(core, betw_media_cuatri, by = 'bloque')
+
+#Nota media cuatrimestre 
+
+nota_media_cuatri <- core %>% group_by(bloque) %>% summarise_at(vars(nota_media), list(name = mean))
+names(nota_media_cuatri)[2] <- "nota_media_cuatri"
+
+core <- join(core, nota_media_cuatri, by = 'bloque')
+
+#Por encima o bajo promedio
+
+core$estado_nota <- "BajoPromedio"
+core$estado_nota[core$nota_media > (core$nota_media_cuatri*1.05)] <- "SobrePromedio"
+
+#tasa de repeticion media cuatrimestre
+
+rep_media_cuatri <- core %>% group_by(bloque) %>% summarise_at(vars(tasa_rep_media), list(name = mean))
+names(rep_media_cuatri)[2] <- "rep_media_cuatri"
+
+core <- join(core, rep_media_cuatri, by = 'bloque')
+
+#Por encima o bajo promedio
+
+core$estado_rep <- "BajoPromedio"
+core$estado_rep[core$tasa_rep_media> core$rep_media_cuatri] <- "SobrePromedio"
+
+
+#Determinacion de curso clave en cuatrimestre 
+
+core$curso_core <- "Otro"
+core$curso_core[core$total_path > core$tpath_media_cuatri | core$betweenness > core$betw_media_cuatri |
+                  core$importancia == "Alta"] <- "Core"
+
+
+#Posibles eliminadas por cuatrimeste
+
+core$pool_elim <- 0
+core$pool_elim[core$curso_core == "Otro" & (core$estado_nota == "BajoPromedio" |
+                                              core$estado_rep == "SobrePromedio")] <- 1
+
+#Materia con su prerrequisito
+
+prereq <-links %>% dplyr:: select(cod, req)
+
+core <- join(core, prereq, by = 'cod')
+
+#Materia con su followup
+
+followup <- links %>% dplyr:: select(req,cod)
+names(followup)[2] <-"followup"
+names(followup)[1] <- "cod"
+
+followup$followup[followup$cod == followup$followup] <- ""
+followup <- filter(followup, followup != "")
+
+
+
+
+#Lista Core
+
+core_resum <-core %>% dplyr:: select(req, cod, nom, bloque, betweenness, total_path, cruciality,
+                                     score_centralidad_in,score_centralidad_out,importancia,
+                                     nota_media,estado_nota,tasa_rep_media,estado_rep,curso_core,pool_elim)
+
+core_resum$req[core_resum$req == core_resum$cod] <- ""
+
+
+core_resum$bloque_num <- 0 
+core_resum$bloque_num[core_resum$bloque == "I Cuatrimestre"] <- 1 
+core_resum$bloque_num[core_resum$bloque == "II Cuatrimestre"] <- 2 
+core_resum$bloque_num[core_resum$bloque == "III Cuatrimestre"] <- 3 
+core_resum$bloque_num[core_resum$bloque == "IV Cuatrimestre"] <- 4 
+core_resum$bloque_num[core_resum$bloque == "V Cuatrimestre"] <- 5 
+core_resum$bloque_num[core_resum$bloque == "VI Cuatrimestre"] <- 6 
+core_resum$bloque_num[core_resum$bloque == "VII Cuatrimestre"] <- 7 
+core_resum$bloque_num[core_resum$bloque == "VIII Cuatrimestre"] <- 8 
+
+#Lista Resumen por Cuatrimestre
+
+core_resum_c1 <- filter(core_resum, bloque == "I Cuatrimestre")
+core_resum_c2 <- filter(core_resum, bloque == "II Cuatrimestre")
+core_resum_c3 <- filter(core_resum, bloque == "III Cuatrimestre")
+core_resum_c4 <- filter(core_resum, bloque == "IV Cuatrimestre")
+core_resum_c5 <- filter(core_resum, bloque == "V Cuatrimestre")
+core_resum_c6 <- filter(core_resum, bloque == "VI Cuatrimestre")
+core_resum_c7 <- filter(core_resum, bloque == "VII Cuatrimestre")
+core_resum_c8 <- filter(core_resum, bloque == "VIII Cuatrimestre")
+
+
+##Comparacion para saber notas para posible reprobacion 
+
+notas_conpreq <- links %>% dplyr:: select(cod, req, bloque)
+notas_conpreq$req[notas_conpreq$req == notas_conpreq$cod]<- ""
+notas_conpreq <- filter(notas_conpreq, req != "")
+
+names(notas_conpreq)[3] <- "bloque_actual"
+
+
+#Resumen de notas por cada cuatrimestre correspondiente
+resum_notas <- group_by(vigente_academico_ap_rep, cod, bloque)
+resum_notas <- summarise(resum_notas, avg = mean(Nota))
+
+resum_notas_cuatr <- group_by(resum_notas, bloque)
+aggregate(resum_notas, list(resum_notas$bloque), mean)
+
+resum_notas$tipo <- "NULL"
+#Notas Actual
+resum_notas$tipo[resum_notas$cod == "BMA 01" & resum_notas$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BFIS 01" & resum_notas$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BING 01" & resum_notas$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "QU 01" & resum_notas$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BIM 21" & resum_notas$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 01" & resum_notas$bloque == "I Cuatrimestre"] <- "Actual"
+
+resum_notas$tipo[resum_notas$cod == "BMA 04" & resum_notas$bloque == "II Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BFIS 02" & resum_notas$bloque == "II Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BMA 12" & resum_notas$bloque == "II Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BCP 17" & resum_notas$bloque == "II Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BIN 01" & resum_notas$bloque == "II Cuatrimestre"] <- "Actual"
+
+resum_notas$tipo[resum_notas$cod == "BMA 05" & resum_notas$bloque == "III Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BMA 06" & resum_notas$bloque == "III Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BFIS 03" & resum_notas$bloque == "III Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 03" & resum_notas$bloque == "III Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BIN 02" & resum_notas$bloque == "III Cuatrimestre"] <- "Actual"
+
+resum_notas$tipo[resum_notas$cod == "BII 04" & resum_notas$bloque == "IV Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BMA 07" & resum_notas$bloque == "IV Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BFIS 04" & resum_notas$bloque == "IV Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 06" & resum_notas$bloque == "IV Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BIN 03" & resum_notas$bloque == "IV Cuatrimestre"] <- "Actual"
+
+resum_notas$tipo[resum_notas$cod == "BII 02" & resum_notas$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 07" & resum_notas$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 08" & resum_notas$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 09" & resum_notas$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 10" & resum_notas$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BIN 04" & resum_notas$bloque == "V Cuatrimestre"] <- "Actual"
+
+resum_notas$tipo[resum_notas$cod == "BII 05" & resum_notas$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BIM 20" & resum_notas$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 12" & resum_notas$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 13" & resum_notas$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BIS 34" & resum_notas$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 14" & resum_notas$bloque == "VI Cuatrimestre"] <- "Actual"
+
+resum_notas$tipo[resum_notas$cod == "BII 15" & resum_notas$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BCS 04." & resum_notas$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 23" & resum_notas$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 16" & resum_notas$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 11" & resum_notas$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 18" & resum_notas$bloque == "VII Cuatrimestre"] <- "Actual"
+
+resum_notas$tipo[resum_notas$cod == "BII 19" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 20" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 21" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BING 02" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 22" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas$tipo[resum_notas$cod == "BII 17" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Actual"
+
+
+#Notas Prerrequisito
+
+resum_notas$tipo[resum_notas$cod == "BMA 01" & resum_notas$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BFIS 01" & resum_notas$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BING 01" & resum_notas$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "QU 01" & resum_notas$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BIM 21" & resum_notas$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 01" & resum_notas$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+
+resum_notas$tipo[resum_notas$cod == "BMA 04" & resum_notas$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BFIS 02" & resum_notas$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BMA 12" & resum_notas$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BCP 17" & resum_notas$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BIN 01" & resum_notas$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas$tipo[resum_notas$cod == "BMA 05" & resum_notas$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BMA 06" & resum_notas$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BFIS 03" & resum_notas$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 03" & resum_notas$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BIN 02" & resum_notas$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas$tipo[resum_notas$cod == "BII 04" & resum_notas$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BMA 07" & resum_notas$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BFIS 04" & resum_notas$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 06" & resum_notas$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BIN 03" & resum_notas$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas$tipo[resum_notas$cod == "BII 02" & resum_notas$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 07" & resum_notas$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 08" & resum_notas$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 09" & resum_notas$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 10" & resum_notas$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BIN 04" & resum_notas$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas$tipo[resum_notas$cod == "BII 05" & resum_notas$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BIM 20" & resum_notas$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 12" & resum_notas$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 13" & resum_notas$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BIS 34" & resum_notas$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 14" & resum_notas$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas$tipo[resum_notas$cod == "BII 15" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BCS 04." & resum_notas$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 23" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 16" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 11" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas$tipo[resum_notas$cod == "BII 18" & resum_notas$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+
+count(resum_notas$tipo)
+
+
+resum_notas <- filter(resum_notas, tipo != "NULL")
+
+#Resumen de notas por cada cuatrimestre correspondiente para reprobados
+
+resum_notas_rep <- group_by(vigente_academico_rep, cod, bloque)
+resum_notas_rep <- summarise(resum_notas_rep, avg = mean(Nota))
+
+resum_notas_rep$tipo <- "NULL"
+
+#Notas Actual
+
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 01" & resum_notas_rep$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BFIS 01" & resum_notas_rep$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BING 01" & resum_notas_rep$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "QU 01" & resum_notas_rep$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIM 21" & resum_notas_rep$bloque == "I Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 01" & resum_notas_rep$bloque == "I Cuatrimestre"] <- "Actual"
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 04" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BFIS 02" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 12" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BCP 17" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIN 01" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Actual"
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 05" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 06" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BFIS 03" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 03" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIN 02" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Actual"
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 04" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 07" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BFIS 04" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 06" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIN 03" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Actual"
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 02" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 07" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 08" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 09" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 10" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIN 04" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Actual"
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 05" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIM 20" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 12" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 13" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIS 34" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 14" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Actual"
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 15" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BCS 04." & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 23" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 16" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 11" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 18" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Actual"
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 19" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 20" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 21" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BING 02" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 22" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Actual"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 17" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Actual"
+
+
+#Notas Prerrequisito
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 01" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BFIS 01" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BING 01" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "QU 01" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIM 21" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 01" & resum_notas_rep$bloque == "II Cuatrimestre"] <- "Prerrequisito"
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 04" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BFIS 02" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 12" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BCP 17" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIN 01" & resum_notas_rep$bloque == "III Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 05" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 06" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BFIS 03" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 03" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIN 02" & resum_notas_rep$bloque == "IV Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 04" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BMA 07" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BFIS 04" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 06" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIN 03" & resum_notas_rep$bloque == "V Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 02" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 07" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 08" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 09" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 10" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIN 04" & resum_notas_rep$bloque == "VI Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 05" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIM 20" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 12" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 13" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BIS 34" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 14" & resum_notas_rep$bloque == "VII Cuatrimestre"] <- "Prerrequisito"
+
+
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 15" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BCS 04." & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 23" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 16" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 11" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+resum_notas_rep$tipo[resum_notas_rep$cod == "BII 18" & resum_notas_rep$bloque == "VIII Cuatrimestre"] <- "Prerrequisito"
+
+resum_notas_rep <- filter(resum_notas_rep, tipo != "NULL")
+count(resum_notas_rep$tipo)
+
+
+setwd("C:/Users/ritaz/OneDrive - Universidad de Las Américas")
+
+#Base alumnos
+#indus <- read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ING INDUSTRIAL).xlsx", sheet = "Ing. Industrial")
+#indus <- filter(indus, `Plan de Estudio` == "BAC01")
+
+indus <- read.csv("COORDINACION DE PROYECTOS/CurriculumPers/Bases/Mobius.csv")
+names(indus)[1] <- "Carnet"
+indus$Carrera[indus$Carrera == "INGENIERÃ\u008dA INDUSTRIAL"] <- "Ingeniería Industrial"
+
+indus <- filter(indus, Carrera == "Ingeniería Industrial")
+
+indus <- filter(indus,  Plan.de.Estudio == "BAC01")
+
+names(indus)[21] <- "cod"
+#names(indus)[17] <- "malla"
+
+#indus <-  left_join(indus, homologado, by = c("cod","malla"))
+
+# names(indus)[21] <- "c"
+# names(indus)[33] <- "cod"
+# 
+# indus <- indus[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,33,22,23,24,25,26,27,28,29,30,31,32,21)]
+
+# indus <- indus %>% dplyr::select(-c(c))
+
+########## UNICAMENTE CAMBIOS PROVISIOANLES DADO DISCREPANCIAS DE SUBIDA DE NOTAS
+
+#Solo recomendacion para ultimo periodo 2022-1
+
+#Tabla auxiliar de promedio de notas por Carnet
+#Primero corto la base para evitar sesgos de 0 
+
+indus_aux <- filter(indus, Periodo != "2022-1")
+
+aux_notas_id <- aggregate(indus_aux$Nota, list(indus_aux$Carnet), mean)
+names(aux_notas_id)[1] <- "Carnet"
+names(aux_notas_id)[2] <- "NotaMedia"
+
+#Tabla auxiliar de promedio de notas por materia 
+
+aux_notas_mat <- aggregate(indus_aux$Nota, list(indus_aux$cod), mean)
+names(aux_notas_mat)[1] <- "cod"
+names(aux_notas_mat)[2] <- "NotaMedia_mat"
+
+
+#left join con la base de indus, aunque luego solo hare el reemplazo para los correspondientes
+
+indus <- left_join(indus, aux_notas_id)
+indus <- left_join(indus, aux_notas_mat)
+indus$nota_media_reep <- (indus$NotaMedia + indus$NotaMedia_mat)/2
+
+#Si esta vacio el promedio llenar solo con la nota existente 
+
+indus$nota_media_reep[is.na(indus$nota_media_reep)] <- indus$NotaMedia_mat
+indus$nota_media_reep[is.na(indus$nota_media_reep)] <- indus$NotaMedia
+
+
+#llenamos la categoria de Nota general con la susticion de nota_media_reep si y solo si es Curso Actual y su periodo es 2022-1
+
+
+indus$Nota[indus$Evaluacion == "CURSO ACTUAL" & indus$Periodo == "2022-1"] <- indus$nota_media_reep
+
+#Con estas notas cambiaremos los estados de curso actual para un aprobado y reprobado provisional 
+
+indus$Evaluacion[indus$Evaluacion == "CURSO ACTUAL" & indus$Nota >= 70] <- "APROBADO"
+indus$Evaluacion[indus$Evaluacion == "CURSO ACTUAL" & indus$Nota < 70] <- "REPROBADO"
+
+######
+
+#Bases de mallas
+indus_malla <-  read_excel("COORDINACION DE PROYECTOS/CurriculumPers/Bases/CARDEX ACADEMICO (ING INDUSTRIAL).xlsx", sheet = "CURRICULA (FING-IIN-IIN-BAC01)")
+#Trabajo en bases:
+
+#1. Codigo de carrera para conseguir su bloque correspondiente
+
+names(indus_malla)[1]<- 'bloque'
+names(indus_malla)[2]<- 'cod'
+names(indus_malla)[3]<- 'carr'
+names(indus_malla)[4]<- 'cred'
+names(indus_malla)[5]<- 'req'
+
+req_split <- as.data.frame(str_split_fixed(indus_malla$req, "       ", 5))
+
+indus_malla <- cbind(indus_malla, req_split)
+
+names(indus_malla)[6] <- 'req1'
+names(indus_malla)[7] <- 'req2'
+names(indus_malla)[8] <- 'req3'
+names(indus_malla)[9] <- 'req4'
+names(indus_malla)[10] <- 'req5'
+
+
+names(indus)[21]<- 'cod'
+names(indus)[22]<- 'carr'
+
+indus$Evaluacion[indus$Evaluacion == "APROBADO (CURSO LIBRE)"] <- "APROBADO"
+indus$Evaluacion[indus$Evaluacion == "CONVALIDACIÃ“N"] <- "CONVALIDACIÓN"
+indus$Evaluacion[indus$Evaluacion == "CONVALIDACIÃ“N INTERNA"] <- "CONVALIDACIÓN"
+indus$Evaluacion[indus$Evaluacion == "CONVALIDACIÃ“N PROVISIONAL"] <- "CONVALIDACIÓN"
+indus$Evaluacion[indus$Evaluacion == "CURSO ACTUAL PENDIENTE"] <- "CURSO ACTUAL"
+indus$Evaluacion[indus$Evaluacion == "EXTRAORDINARIO"] <- "REPROBADO"
+indus$Evaluacion[indus$Evaluacion == "NO SE PRESENTÃ“"] <- "REPROBADO"
+indus$Evaluacion[indus$Evaluacion == "REPROBADO (CURSO LIBRE)"] <- "REPROBADO"
+indus$Evaluacion[indus$Evaluacion == "RETIRO JUSTIFICADO"] <- "RETIRO"
+indus$Evaluacion[indus$Evaluacion == "CONGELAMIENTO"] <- "REPROBADO"
+
+
+indus <- indus %>% mutate(cod= trimws(as.character(cod)))
+indus_malla <- indus_malla %>% mutate(bloque= trimws(as.character(bloque)))
+
+indus <- indus %>% left_join(indus_malla, by = c('cod' = 'cod'))
+
+
+indus$bloque_num <- 0 
+indus$bloque_num[indus$bloque == "I Cuatrimestre"] <- 1 
+indus$bloque_num[indus$bloque == "II Cuatrimestre"] <- 2 
+indus$bloque_num[indus$bloque == "III Cuatrimestre"] <- 3 
+indus$bloque_num[indus$bloque == "IV Cuatrimestre"] <- 4 
+indus$bloque_num[indus$bloque == "V Cuatrimestre"] <- 5 
+indus$bloque_num[indus$bloque == "VI Cuatrimestre"] <- 6 
+indus$bloque_num[indus$bloque == "VII Cuatrimestre"] <- 7 
+indus$bloque_num[indus$bloque == "VIII Cuatrimestre"] <- 8 
+
+indus <- indus %>% dplyr::select(Carnet,Estudiante,bloque,bloque_num,Periodo, cod,req1, req2, req3, req4, req5, carr.x,Evaluacion,Nota)
+
+indus <- filter(indus, !is.na(indus$bloque))
+names(indus)[12] <- 'carr'
+
+
+#Sort por estudiante, bloque y periodo 
+
+indus <-  indus[with(indus,order(Carnet,bloque, Periodo)),]
+indus <- unique(indus)
+
+#Ahora vamos a quedarnos unicamente con la base que cumple tener el cuatrimestre mas alto
+#Se ejecuta esto solo para aplicar al ultimo semestre que paso
+
+indus_completo <- indus 
+indus <- indus %>% group_by(Carnet) %>% top_n(1, bloque_num)
+
+#Nos quedamos con aquellos que no esten en ultimo o penultimo semestre
+
+indus <- filter(indus, bloque_num != 8)
+indus <- filter(indus, bloque_num != 7)
+#Solo notas menores a 7.5
+
+indus <- filter(indus, Nota <= 75)
+
+#Join con followup y con core, que salen de un proceso previo (paso0) de la malla
+
+
+
+indus <- indus %>% mutate(cod= trimws(as.character(cod)))
+followup <- followup %>% mutate(cod= trimws(as.character(cod)))
+core <- core %>% mutate(cod= trimws(as.character(cod)))
+
+
+indus <- join(indus, followup, by = 'cod')
+indus <- join(indus, core, by = "cod")
+
+
+#Para aquellos covalidados dado que tienen nota 0 voy a hacer un reemplazo de nota por la nota media 
+
+indus$Nota[indus$Nota == 0 & indus$Evaluacion == "REPROBADO"] <- indus$nota_media
+
+indus$Evaluacion[indus$Evaluacion == "CONVALIDACIÓN"] <- "APROBADO"
+
+######################## REGLA DE SUPRESION ###########################
+
+names(indus)[3] <- "bloque"
+indus <- indus %>% dplyr:: select(Carnet,Estudiante,req1, req2, req3, req4, req5,cod,carr,bloque,Nota,followup,betweenness,total_path,
+                                  importancia,tasa_rep_media, Evaluacion)
+indus$importancia[indus$importancia == "Baja"] <- 1
+indus$importancia[indus$importancia == "Alta"] <- 0
+
+indus$importancia <- as.numeric(indus$importancia)
+
+#Score de supresion
+
+indus$score_sup <- 0.35*(indus$Nota/100) + 0.10*(indus$importancia) - 0.10*(indus$betweenness/100) -
+  0.20*(indus$total_path/100) - 0.25*(indus$tasa_rep_media)
+
+
+#seleccion se supresion
+
+#ver si las potenciales opciones estan en el siguiente semestre
+
+# indus$existe <-"NULL"
+# indus$existe <- ifelse(indus$bloque == "I Cuatrimestre" & indus$followup %in% core_resum_c2$cod,1,0)
+# indus$existe <- ifelse(indus$bloque == "II Cuatrimestre" & indus$followup %in% core_resum_c3$cod,1,0)
+# indus$existe <- ifelse(indus$bloque == "III Cuatrimestre" & indus$followup %in% core_resum_c4$cod,1,0)
+# indus$existe <- ifelse(indus$bloque == "IV Cuatrimestre" & indus$followup %in% core_resum_c5$cod,1,0)
+# indus$existe <- ifelse(indus$bloque == "V Cuatrimestre" & indus$followup %in% core_resum_c6$cod,1,0)
+# indus$existe <- ifelse(indus$bloque == "VI Cuatrimestre" & indus$followup %in% core_resum_c7$cod,1,0)
+# indus$existe <- ifelse(indus$bloque == "VII Cuatrimestre" & indus$followup %in% core_resum_c8$cod,1,0)
+
+indus$existe <- ifelse(indus$bloque == "I Cuatrimestre" & indus$followup %in% core_resum_c2$cod,1,
+                       ifelse(indus$bloque == "II Cuatrimestre" & indus$followup %in% core_resum_c3$cod,1,
+                              ifelse(indus$bloque == "III Cuatrimestre" & indus$followup %in% core_resum_c4$cod,1,
+                                     ifelse(indus$bloque == "IV Cuatrimestre" & indus$followup %in% core_resum_c5$cod,1,
+                                            ifelse(indus$bloque == "V Cuatrimestre" & indus$followup %in% core_resum_c6$cod,1,
+                                                   ifelse(indus$bloque == "VI Cuatrimestre" & indus$followup %in% core_resum_c7$cod,1,
+                                                          ifelse(indus$bloque == "VII Cuatrimestre" & indus$followup %in% core_resum_c8$cod,1,0)))))))
+
+
+write.table(indus, "clipboard", sep="\t", row.names=FALSE)
+
+indus <- unique(indus)
+
+#Considero aquellas que cumplen con el score y tambien su followup esta en el siguiente semestre
+
+sup_select <- indus[which.max(indus$score_sup) & indus$existe == TRUE,]
+write.table(sup_select, "clipboard", sep="\t", row.names=FALSE)
+
+sup_select <- unique(sup_select)
+
+#Corto en varias bases de datos, una para cada uno de los alumnos y les doy un nombre para aplicar
+#El algoritmo a cada una de esas bases
+df <- split(indus, with(indus, Carnet), drop = TRUE)
+names(df) <- paste0("alumno",1:length(df))
+#list2env(df,envir=.GlobalEnv) #Genero dataframes de cada alumno
+
+
+
+# #Sirve cuando tenga una unica opcion de eleccion
+# 
+# followup_sup <- print(df$alumno1$followup) #check
+# 
+# followup_sup <- as.data.frame(followup_sup) #check
+# names(followup_sup)[1] <- "cod" #check
+# 
+# followup_sup_1 <- setDT(core_resum)[cod %chin% followup_sup$cod] #check
+# 
+# #Score de supresion
+# 
+# followup_sup_1$importancia[followup_sup_1$importancia == "Baja"] <- 1
+# followup_sup_1$importancia[followup_sup_1$importancia == "Alta"] <- 0
+# 
+# followup_sup_1$importancia <- as.numeric(followup_sup_1$importancia)
+# 
+# followup_sup_1$score_sup <- 0.35*(followup_sup_1$nota/100) + 0.10*(followup_sup_1$importancia) - 0.10*(followup_sup_1$betweenness/100) -
+#   0.20*(followup_sup_1$total_path/100) - 0.25*(followup_sup_1$tasa_rep_media)
+# 
+# #Ahora si selecciono la mejor opcion
+# 
+# sup_select_2 <- followup_sup_1[which.max(followup_sup_1$score_sup),]
+# sup_select_2$cod
+# 
+# #
+# 
+# #Extrae el followup de cada alumno en la lista
+# 
+# followup_retrive <- function(x) {
+#   
+#     followup_sup <- as.data.frame(x$followup)
+# }
+# 
+# print(followup_retrive(df$alumno1))
+# 
+# retrive_df <- lapply(df, followup_retrive)
+# 
+# #Ahora cambiamos el nombre del retrive 
+# 
+# rename <- function(x,someNames){
+#   names(x) <- someNames
+#   return(x)
+# }
+# 
+# someNames <- c('cod')
+# 
+# retrive_df <-  lapply(retrive_df, rename, someNames) 
+# 
+# followup_sup <- function(x) {
+#   
+#   setDT(core_resum)[cod %chin% x$cod]
+#   
+# }
+# 
+# followup_sup_df <- lapply(retrive_df, followup_sup)
+# 
+# 
+# #Score de supresion
+# 
+# ##
+# 
+# base_des <- df %>% bind_rows()
+# 
+# score <- function(x) {
+#   
+#   x$score_sup_2 <- 0.35*(x$nota/100) + 0.10*(x$importancia) - 0.10*(x$betweenness/100) -
+#     0.20*(x$total_path/100) - 0.25*(x$tasa_rep_media)
+#   
+# }
+# 
+# a <- sapply(base_des, score)
+# 
+
+
+
+#-------------PARA CADA ALUMNO AUTOMATIZADO-------------------#
+
+
+############ Regla de Supresion Toda la Base #################
+
+indus_des <- df %>% bind_rows() #Base de alumnos para ver sus posibles eliminidas 
+
+#Ahora debo hacer el match entre el followup de cada uno de los alumnos con sus valores de la base core_resum, 
+#que es el trabajo anterior de la malla. 
+
+
+tabla <- core_resum[,c("cod", "nota_media", "importancia","betweenness","total_path","tasa_rep_media")]
+
+names(tabla)[1] <- "followup"
+names(tabla)[2] <- "nota_media_2"
+names(tabla)[3] <- "importancia_2"
+names(tabla)[4] <- "betweenness_2"
+names(tabla)[5] <- "total_path_2"
+names(tabla)[6] <- "tasa_rep_media_2"
+
+#Join entre la base de alumnos con la base procesada de la malla y sus caracteristicas
+indus_des <- indus_des %>% left_join(tabla)
+
+indus_des$importancia_2[indus_des$importancia_2 == "Baja"] <- 1
+indus_des$importancia_2[indus_des$importancia_2 == "Alta"] <- 0
+
+indus_des$importancia_2 <- as.numeric(indus_des$importancia_2)
+
+indus_des$score_sup_2 <- 0.35*(indus_des$Nota/100) + 0.10*(indus_des$importancia_2) - 0.10*(indus_des$betweenness_2/100) -
+  0.20*(indus_des$total_path_2/100) - 0.25*(indus_des$tasa_rep_media_2)
+
+#Selecciono la opcion con score mas alto 
+
+indus_fu_max <- indus_des %>% group_by(Carnet) %>% top_n(1, score_sup_2)
+indus_fu_max <- unique(indus_fu_max)
+
+############ Regla de Reemplazo Toda la Base #################
+
+indus_completo  <-  indus_completo[with(indus_completo,order(Carnet,bloque)),]
+
+#Bloque de materias previamente pasadas
+
+evaluacion <- c("APROBADO", "CONVALIDACIÓN")
+pasadas <- filter(indus_completo, Evaluacion %in% evaluacion)
+
+pasadas <- pasadas %>% dplyr:: select(Carnet,Estudiante,cod)
+pasadas <- unique(pasadas)
+pasadas <- as.data.frame(pasadas)
+
+
+#Bloque de prerequisitos ya aprobados
+
+preaprob <- filter(indus_completo, Evaluacion %in% evaluacion)
+
+preaprob <- preaprob %>% dplyr:: select(Carnet,Estudiante, req1, req2, req3, req4, req5)
+
+preaprob <- as.data.frame(preaprob)
+preaprob <- melt(preaprob, id.vars = c("Carnet", "Estudiante"))
+names(preaprob)[4] <- "req"
+preaprob <- unique(preaprob)
+
+preaprob <- preaprob %>% dplyr:: select(Carnet, Estudiante, req)
+names(preaprob)[3] <- "cod"
+
+#Suma todas las marterias ya aprobadas a nivel de alumno 
+
+aprobadas <- rbind(preaprob, pasadas)
+aprobadas <- unique(aprobadas)
+
+#Bloque de malla para poder hacer el replacement por persona
+
+bloque_malla <- indus_malla %>% dplyr::select(bloque,cod)
+
+bloque_malla  <- as.data.frame(bloque_malla)
+
+bloque_malla  <-  dcast(setDT(bloque_malla), bloque ~ rowid(bloque), value.var = 'cod')
+
+#Id de estudiante con sus correspondientes bloques (pool bruto)
+
+pool_bruto <- indus_fu_max %>% dplyr::select(Carnet,Estudiante, bloque)
+
+pool_bruto$aux1 <- 0
+pool_bruto$aux2 <- 0
+
+pool_bruto$aux1[pool_bruto$bloque == "I Cuatrimestre"] <- "III Cuatrimestre"
+pool_bruto$aux1[pool_bruto$bloque == "II Cuatrimestre"] <- "IV Cuatrimestre"
+pool_bruto$aux1[pool_bruto$bloque == "III Cuatrimestre"] <- "V Cuatrimestre"
+pool_bruto$aux1[pool_bruto$bloque == "IV Cuatrimestre"] <- "VI Cuatrimestre"
+pool_bruto$aux1[pool_bruto$bloque == "V Cuatrimestre"] <- "VII Cuatrimestre"
+pool_bruto$aux1[pool_bruto$bloque == "VI Cuatrimestre"] <- "VIII Cuatrimestre"
+
+pool_bruto$aux2[pool_bruto$bloque == "I Cuatrimestre"] <- "IV Cuatrimestre"
+pool_bruto$aux2[pool_bruto$bloque == "II Cuatrimestre"] <- "V Cuatrimestre"
+pool_bruto$aux2[pool_bruto$bloque == "III Cuatrimestre"] <- "VI Cuatrimestre"
+pool_bruto$aux2[pool_bruto$bloque == "IV Cuatrimestre"] <- "VII Cuatrimestre"
+pool_bruto$aux2[pool_bruto$bloque == "V Cuatrimestre"] <- "VIII Cuatrimestre"
+pool_bruto$aux2[pool_bruto$bloque == "VI Cuatrimestre"] <- "VIII Cuatrimestre"
+
+#Cambio nombres solo para el join
+
+#join con el primer grupo de reemplazo 
+names(pool_bruto)[3] <- "x"
+names(pool_bruto)[4] <- "bloque"
+
+
+pool_bruto <- pool_bruto %>% mutate(bloque= trimws(as.character(bloque)))
+bloque_malla <- bloque_malla %>% mutate(bloque= trimws(as.character(bloque)))
+
+
+pool_bruto <- left_join(pool_bruto, bloque_malla)
+
+names(pool_bruto)[3] <- "bloque"
+names(pool_bruto)[4] <- "aux1"
+
+#join con el segundo grupo de reemplazo 
+names(pool_bruto)[3] <- "x"
+names(pool_bruto)[5] <- "bloque"
+
+pool_bruto <- left_join(pool_bruto, bloque_malla, by = 'bloque')
+
+names(pool_bruto)[3] <- "bloque"
+names(pool_bruto)[5] <- "aux2"
+
+
+#Ahora tenemos que hacerle en un formato long para todas las variables, asi puedo ver prerequisitos
+
+pool_bruto2 <- pool_bruto %>% dplyr::select(-c(bloque, aux1, aux2))
+
+names(pool_bruto2)[3] <- "M1"
+names(pool_bruto2)[4] <- "M2"
+names(pool_bruto2)[5] <- "M3"
+names(pool_bruto2)[6] <- "M4"
+names(pool_bruto2)[7] <- "M5"
+names(pool_bruto2)[8] <- "M6"
+names(pool_bruto2)[9] <- "M7"
+names(pool_bruto2)[10] <- "M8"
+names(pool_bruto2)[11] <- "M9"
+names(pool_bruto2)[12] <- "M10"
+
+pool_bruto2 <- melt(setDT(pool_bruto2), id.vars = c("Carnet","Estudiante")) #Pool de posibles por alumno
+
+#Join entre el pool bruto y adim_malla para saber cual es el prerequisito 
+
+names(pool_bruto2)[4] <- "cod"
+
+pool_bruto2 <- left_join(pool_bruto2, indus_malla)
+
+pool_bruto2 <- pool_bruto2 %>% dplyr::select(Carnet,Estudiante,cod,bloque,carr,req1,req2,req3,req4,req5 )
+
+names(pool_bruto2)[3] <- "pool_cod"
+names(pool_bruto2)[5] <- "pool_nom"
+names(pool_bruto2)[6] <- "pool_pre1"
+names(pool_bruto2)[7] <- "pool_pre2"
+names(pool_bruto2)[8] <- "pool_pre3"
+names(pool_bruto2)[9] <- "pool_pre4"
+names(pool_bruto2)[10] <- "pool_pre5"
+
+#Check si existe posible replacement en la base de aprobadas 
+
+#Paso la lista de pool a formato long considerando las repeticiones de materias debido a sus prerrequisitos
+
+pool_bruto2 <- melt(setDT(pool_bruto2), id.vars = c("Carnet","Estudiante", "pool_cod",
+                                                    "bloque", "pool_nom"), variable.name = "prerreq")
+
+pool_bruto2  <-  pool_bruto2[with(pool_bruto2,order(Carnet,pool_cod)),]
+
+names(pool_bruto2)[7] <- "cod"
+
+pool_bruto3 <- left_join(pool_bruto2, aprobadas, by = c("Carnet", "cod"))
+
+
+#Filter de aquellos cuyo match es un NA
+
+pool_bruto3 <- filter(pool_bruto3, !is.na(Estudiante.y))
+pool_bruto3 <- filter(pool_bruto3, !is.empty(Estudiante.y))
+
+pool_bruto3 <- filter(pool_bruto3, !is.empty(cod))
+
+
+#################### Base limpia para reemplazo #################
+
+pool_elegibles <- pool_bruto3 %>% dplyr:: select(-c(Estudiante.y,cod))
+
+pool_elegibles <- unique(pool_elegibles)
+
+pool_elegibles <- unique(pool_elegibles)
+
+#Calculo de score para replacement en base a la base core_resum y hacemos el match con la de alumnos para
+# efectivamente elegir
+
+
+#Score reemplazo
+
+core_resum$importancia[core_resum$importancia == "Baja"] <- 1
+core_resum$importancia[core_resum$importancia == "Alta"] <- 0
+
+core_resum$importancia <- as.numeric(core_resum$importancia)
+
+core_resum$score_reem <- 0.35*(core_resum$nota_media/100) + 0.10*(core_resum$importancia) + 0.10*(core_resum$betweenness/100) +
+  0.20*(core_resum$total_path/100) - 0.25*(core_resum$tasa_rep_media)
+
+#Match con la base de reemplazo y los scores previamente calculados
+
+names(pool_elegibles)[3] <- "cod"
+pool_elegibles <- left_join(pool_elegibles, core_resum, by = 'cod')
+
+#Me quedo con el mayor por estudiante
+
+pool_elegibles_unico <-  pool_elegibles %>% group_by(Carnet) %>% slice(which.max(score_reem))
+
+
+########### Resumen por estudiante de aquellas para suprimir y reemplazar ###############
+
+evaluacion <- c("APROBADO", "CONVALIDACIÓN")
+indus_fu_max <- filter(indus_fu_max, Evaluacion %in% evaluacion)
+
+tabla_resumen <- indus_fu_max %>% dplyr::select(Carnet,Estudiante,cod,carr,bloque,followup,score_sup_2)
+
+tabla_resumen2 <- pool_elegibles_unico %>% dplyr::select(Carnet,cod,nom,bloque.x,score_reem) 
+
+tabla_resumen <- left_join(tabla_resumen, tabla_resumen2, by = 'Carnet')
+
+
+#
+
+names(tabla_resumen)[3] <- 'cod_materia_vinculada'
+names(tabla_resumen)[4] <- 'materia_vinculada'
+names(tabla_resumen)[5] <- 'bloque_materia_vinculada'
+names(tabla_resumen)[6] <- 'cod_materia_suprimida'
+names(tabla_resumen)[7] <- 'score_supresion'
+names(tabla_resumen)[8] <- 'cod_materia_reemplazo'
+names(tabla_resumen)[9] <- 'materia_reemplazo'
+names(tabla_resumen)[10] <- 'bloque_materia_reemplazo'
+names(tabla_resumen)[11] <- 'score_reemplazo'
+
+
+#
+names(tabla_resumen)[6] <- "cod" 
+nombres <- indus_malla %>% dplyr::select(cod,carr)
+tabla_resumen <- left_join(tabla_resumen, nombres, by = 'cod')
+
+names(tabla_resumen)[6] <- 'cod_materia_suprimida'
+names(tabla_resumen)[12] <- 'materia_suprimida'
+
+#
+
+tabla_resumen <- tabla_resumen %>% dplyr::select(Carnet,Estudiante,cod_materia_vinculada,materia_vinculada,
+                                                 bloque_materia_vinculada,cod_materia_suprimida,materia_suprimida,
+                                                 score_supresion,cod_materia_reemplazo,materia_reemplazo,
+                                                 bloque_materia_reemplazo,score_reemplazo)
+
+
+#Tabla de resumen unico reemplazo
+write.table(tabla_resumen, "clipboard", sep="\t", row.names=FALSE)
+
+
+############ Para mas de una opcion de reemplazo ################
+
+tabla_resumen_varios <- indus_fu_max %>% dplyr::select(Carnet,Estudiante,cod,carr,bloque,followup,score_sup_2)
+
+tabla_resumen_varios_2 <- pool_elegibles %>% dplyr::select(Carnet,cod,nom,bloque.x,score_reem) 
+
+tabla_resumen_varios <- left_join(tabla_resumen_varios, tabla_resumen_varios_2, by = 'Carnet')
+
+
+#
+
+names(tabla_resumen_varios)[3] <- 'cod_materia_vinculada'
+names(tabla_resumen_varios)[4] <- 'materia_vinculada'
+names(tabla_resumen_varios)[5] <- 'bloque_materia_vinculada'
+names(tabla_resumen_varios)[6] <- 'cod_materia_suprimida'
+names(tabla_resumen_varios)[7] <- 'score_supresion'
+names(tabla_resumen_varios)[8] <- 'cod_materia_reemplazo'
+names(tabla_resumen_varios)[9] <- 'materia_reemplazo'
+names(tabla_resumen_varios)[10] <- 'bloque_materia_reemplazo'
+names(tabla_resumen_varios)[11] <- 'score_reemplazo'
+
+
+#
+names(tabla_resumen_varios)[6] <- "cod" 
+nombres <- indus_malla %>% dplyr::select(cod,carr)
+tabla_resumen_varios <- left_join(tabla_resumen_varios, nombres, by = 'cod')
+
+names(tabla_resumen_varios)[6] <- 'cod_materia_suprimida'
+names(tabla_resumen_varios)[12] <- 'materia_suprimida'
+
+#
+
+tabla_resumen_varios <- tabla_resumen_varios %>% dplyr::select(Carnet,Estudiante,cod_materia_vinculada,materia_vinculada,
+                                                               bloque_materia_vinculada,cod_materia_suprimida,materia_suprimida,
+                                                               score_supresion,cod_materia_reemplazo,materia_reemplazo,
+                                                               bloque_materia_reemplazo,score_reemplazo)
+
+tabla_resumen_varios <- unique(tabla_resumen_varios)
+
+tabla_resumen_varios<-tabla_resumen_varios[!(tabla_resumen_varios$materia_suprimida ==  tabla_resumen_varios$materia_reemplazo),]
+
+tabla_resumen_varios <-  tabla_resumen_varios[with(tabla_resumen_varios,order(Carnet,score_reemplazo)),]
+
+
+#Me quedo solo con los que seran unicamente reemplazados
+
+reemplazos <- filter(tabla_resumen_varios, !is.na(score_reemplazo))
+
+reemplazos <-  reemplazos[with(reemplazos,order(Carnet,score_reemplazo)),]
+
+#Tabla de resumen unico reemplazo
+write.table(tabla_resumen_varios, "clipboard", sep="\t", row.names=FALSE)
+
+
+
+#Match con campos de codigo de facultad, enfasis y plan de estudios
+
+
+#Bases de mallas
+
+campos <- read.csv("COORDINACION DE PROYECTOS/CurriculumPers/Bases/Mobius.csv")
+names(campos)[1] <- "Carnet"
+campos$Carrera[campos$Carrera == "INGENIERÃ\u008dA INDUSTRIAL"] <- "Ingeniería Industrial"
+
+campos <- filter(campos, Carrera == "Ingeniería Industrial")
+
+campos <- filter(campos,  Plan.de.Estudio == "BAC01")
+
+campos <- campos %>% dplyr::select(Codigo.Curso, Curso, Codigo.Carrera, Codigo.Facultad,Facultad,
+                                   Codigo.Enfasis, Enfasis, Plan.de.Estudio)
+
+campos <- filter(campos, Plan.de.Estudio == "BAC01")
+
+campos <- unique(campos)
+
+names(campos)[1] <- "cod_materia_reemplazo"
+
+
+
+reemplazos <- reemplazos %>% mutate(cod_materia_reemplazo= trimws(as.character(cod_materia_reemplazo)))
+campos <- campos %>% mutate(cod_materia_reemplazo= trimws(as.character(cod_materia_reemplazo)))
+
+reemplazos <- left_join(reemplazos, campos, by = "cod_materia_reemplazo")
+
+reemplazos <- reemplazos %>% dplyr::select(-Curso)
+
+reemplazos <- as.data.frame(reemplazos)
+#Tabla de resultados a excel
+
+write_xlsx(reemplazos,"COORDINACION DE PROYECTOS/CurriculumPers/Bases//reemplazos_IngIndus.xlsx")
